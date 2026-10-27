@@ -64,7 +64,7 @@ export async function updateCollege(
 
   const task = `College: "${c.name}". Only report facts about THIS institution (not affiliated colleges, departments or other institutes mentioned).
 naac_grade = its current NAAC accreditation grade, one of ${GRADES.join(', ')}. null if not stated or if only NBA/NIRF is mentioned.
-established_year = the year the institution was founded/established (4 digits).
+established_year = the year THIS institution was founded/established under its current identity (4 digits). Not the year of its parent university (e.g. a faculty or institute inside a university), and not of a predecessor trust, society, school or institute it grew out of. If the text only gives such a year, return null.
 annual_fees_min / annual_fees_max = tuition fee in rupees PER YEAR for its regular undergraduate programmes (lowest and highest stated; if only one, put it in both). Use null if the fee is only given per semester, per credit, as a total for the whole course, or is for hostel/mess only.
 JSON: {"naac_grade":{"value":"A++","quote":"..."},"established_year":{"value":1959,"quote":"..."},"annual_fees_min":{"value":150000,"quote":"..."},"annual_fees_max":{"value":250000,"quote":"..."}}`
 
@@ -78,6 +78,7 @@ JSON: {"naac_grade":{"value":"A++","quote":"..."},"established_year":{"value":19
   const fields: Record<string, Change> = {}
   let sourceUrl = c.website_url
   let confirmedAny = false
+  const forceReviewReasons: string[] = []
   const confirm = (key: string, quote: string | null | undefined, supports: (q: string) => boolean): boolean => {
     const url = locateQuote(quote, gathered.pages, norm)
     if (url && isOfficialUrl(url, own) && supports(quote!)) {
@@ -98,6 +99,9 @@ JSON: {"naac_grade":{"value":"A++","quote":"..."},"established_year":{"value":19
   const y = ai.established_year?.value
   if (y && y >= 1800 && y <= today.getFullYear() && confirm('established_year', ai.established_year!.quote, (q) => quoteSupportsYear(y, q)) && y !== c.established_year) {
     fields.established_year = { old: c.established_year, new: y, evidence: ai.established_year!.quote! }
+    // Quotes about a parent university or a predecessor ("Trust", "All India Institute of …")
+    // are a common misreading, so a changed founding year always gets a human look.
+    if (c.established_year) forceReviewReasons.push('Founding year differs from the stored one; check the quote is about this institution, not its parent or predecessor')
   }
 
   for (const k of ['annual_fees_min', 'annual_fees_max'] as const) {
@@ -116,7 +120,8 @@ JSON: {"naac_grade":{"value":"A++","quote":"..."},"established_year":{"value":19
 
   const feeMin = (fields.annual_fees_min?.new as number | undefined) ?? c.annual_fees_min
   const feeMax = (fields.annual_fees_max?.new as number | undefined) ?? c.annual_fees_max
-  const issues = feeMin && feeMax && feeMin > feeMax ? ['minimum fee is above maximum fee'] : []
+  const issues = feeMin && feeMax && feeMin > feeMax ? ['Failed sanity checks: minimum fee is above maximum fee'] : []
+  issues.push(...forceReviewReasons)
 
   res.outcomes.push(
     await submitProposal(
@@ -132,7 +137,7 @@ JSON: {"naac_grade":{"value":"A++","quote":"..."},"established_year":{"value":19
         sourceUrl,
         official: isOfficialUrl(sourceUrl, own),
         overwritesVerified: !!c.verified_at && Object.values(fields).some((x) => x.old !== null),
-        forceReview: issues.length ? `Failed sanity checks: ${issues.join('; ')}` : undefined,
+        forceReview: issues.length ? issues.join('; ') : undefined,
       },
       opts.dryRun
     )
