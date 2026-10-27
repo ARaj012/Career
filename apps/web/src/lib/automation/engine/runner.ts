@@ -206,10 +206,11 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
       }
     }
     const runStatus = allErrors.some((e) => e.item === 'run') ? 'failed' : allErrors.length ? 'partial' : 'success'
-    await db
+    const { error: saveErr } = await db
       .from('automation_runs')
       .update({ finished_at: new Date().toISOString(), status: runStatus, stats: total, errors: allErrors.slice(0, 200) })
       .eq('id', runId)
+    if (saveErr) console.error('  ❌ could not save the run summary:', saveErr.message)
 
     if (opts.notify !== false && (stats.pending > 0 || stats.auto_applied > 0)) {
       await db.from('admin_notifications').insert({
