@@ -73,8 +73,9 @@ marking the rest as unreadable. The small box below it checks a single exam by s
 ## Groq quota
 
 Free tier limits apply. Page caching and line-filtering keep each exam to ~3–4k tokens and
-unchanged pages cost nothing. If you hit limits, set `AUTOMATION_MODEL=llama-3.1-8b-instant`
-(higher limits; the evidence check still blocks bad readings).
+unchanged pages cost nothing. Each Groq model has its own daily limit: if you hit it, set
+`AUTOMATION_MODEL=openai/gpt-oss-20b` (the default is `openai/gpt-oss-120b`; the evidence
+check still blocks bad readings). Groq retires models over time, so check console.groq.com/docs/models.
 
 ## Known limits
 

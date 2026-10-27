@@ -55,7 +55,7 @@ export async function extractJson<T>(task: string, pageText: string, schema: z.Z
       if (status === 429 || status >= 500) {
         const retryAfter = Number(err?.headers?.['retry-after'] ?? 0)
         if (status === 429 && (retryAfter > 120 || /per day|TPD|RPD/i.test(err?.message ?? ''))) {
-          throw new AiQuotaError('Daily Groq AI limit reached. Click "Update everything" again after it resets (or set AUTOMATION_MODEL=llama-3.1-8b-instant); finished records will not be checked twice.')
+          throw new AiQuotaError('Daily Groq AI limit reached. Click "Update everything" again after it resets (or set AUTOMATION_MODEL to another Groq model, e.g. openai/gpt-oss-20b, which has its own daily limit); finished records will not be checked twice.')
         }
         const wait = Math.max(retryAfter * 1000, 5000 * (attempt + 1))
         console.log(`  ⏳ AI rate-limited, waiting ${Math.round(wait / 1000)}s`)
