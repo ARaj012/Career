@@ -8,7 +8,8 @@
 import Groq from 'groq-sdk'
 import type { z } from 'zod'
 
-const MODEL = process.env.AUTOMATION_MODEL || 'openai/gpt-oss-120b'
+// Read per call, not at import: the CLI loads .env.local after its imports run
+const model = () => process.env.AUTOMATION_MODEL || 'openai/gpt-oss-120b'
 let client: Groq | null = null
 
 function groq(): Groq {
@@ -39,7 +40,7 @@ export async function extractJson<T>(task: string, pageText: string, schema: z.Z
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
       const res = await groq().chat.completions.create({
-        model: MODEL,
+        model: model(),
         temperature: 0,
         response_format: { type: 'json_object' },
         messages,
@@ -55,7 +56,8 @@ export async function extractJson<T>(task: string, pageText: string, schema: z.Z
       if (status === 429 || status >= 500) {
         const retryAfter = Number(err?.headers?.['retry-after'] ?? 0)
         if (status === 429 && (retryAfter > 120 || /per day|TPD|RPD/i.test(err?.message ?? ''))) {
-          throw new AiQuotaError('Daily Groq AI limit reached. Click "Update everything" again after it resets (or set AUTOMATION_MODEL to another Groq model, e.g. openai/gpt-oss-20b, which has its own daily limit); finished records will not be checked twice.')
+          const groqSays = (err?.message ?? '').replace(/\s+/g, ' ').slice(0, 300)
+          throw new AiQuotaError(`Daily Groq AI limit reached for ${model()}. Click "Update everything" again after it resets (or set AUTOMATION_MODEL to another Groq model, which has its own daily limit); finished records will not be checked twice. Groq: ${groqSays}`)
         }
         const wait = Math.max(retryAfter * 1000, 5000 * (attempt + 1))
         console.log(`  ⏳ AI rate-limited, waiting ${Math.round(wait / 1000)}s`)

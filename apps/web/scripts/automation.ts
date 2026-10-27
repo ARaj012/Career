@@ -14,7 +14,7 @@ import { config } from 'dotenv'
 config({ path: '.env.local' })
 
 import { createClient } from '@supabase/supabase-js'
-import { runAutomation, type RunOptions } from '../src/lib/automation/engine/runner'
+import type { RunOptions } from '../src/lib/automation/engine/runner'
 
 function arg(name: string): string | undefined {
   const hit = process.argv.find((a) => a === `--${name}` || a.startsWith(`--${name}=`))
@@ -48,6 +48,9 @@ async function main() {
   console.log('🚀 Automation starting', opts)
 
   const db = createClient(url, key, { auth: { persistSession: false } })
+  // Imported here, after config() above, so engine settings read at import time
+  // (AUTOMATION_MODEL, AUTOMATION_AUTO_APPLY, NEXT_PUBLIC_APP_URL) see .env.local
+  const { runAutomation } = await import('../src/lib/automation/engine/runner')
   const result = await runAutomation(db, opts)
   // Non-zero exit only when the whole run failed, so GitHub shows a red X when it matters
   process.exit(result.status === 'failed' ? 1 : 0)
