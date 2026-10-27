@@ -8,6 +8,10 @@ on:
     - cron: '0 0 * * 0'
     # 1st of the month 07:30 IST — 120 least-recently-checked colleges (NAAC, fees, founded); all 366 every ~3 months
     - cron: '0 2 1 * *'
+    # 15th of the month 07:30 IST — 50 colleges' websites: programmes & fees, placement reports, admission, scholarships
+    - cron: '0 2 15 * *'
+    # 5th of Aug, Sep, Oct 07:30 IST — official NIRF placement sheets and JoSAA cutoffs (published once a year)
+    - cron: '0 2 5 8,9,10 *'
   workflow_dispatch:
     inputs:
       mode:
@@ -28,7 +32,7 @@ concurrency:
 jobs:
   automation:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
 
@@ -57,6 +61,10 @@ jobs:
             ARGS="--mode=hot"
           elif [ "${{ github.event.schedule }}" = "0 2 1 * *" ]; then
             ARGS="--only=colleges --limit=120"
+          elif [ "${{ github.event.schedule }}" = "0 2 15 * *" ]; then
+            ARGS="--only=college_details --limit=50"
+          elif [ "${{ github.event.schedule }}" = "0 2 5 8,9,10 *" ]; then
+            ARGS="--only=placements,cutoffs"
           else
             ARGS="--mode=full --only=exams,scholarships,nirf"
           fi
@@ -69,6 +77,6 @@ jobs:
         run: |
           echo "## Data automation" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          grep -E "Summary|Exams to check|Scholarships to check|Colleges to check|NIRF|errors|Daily Groq" automation.log >> $GITHUB_STEP_SUMMARY || true
+          grep -E "Summary|Exams to check|Scholarships to check|Colleges to check|College details|JoSAA|NIRF|errors|Daily Groq" automation.log >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "Review queued changes in Admin → Automation." >> $GITHUB_STEP_SUMMARY

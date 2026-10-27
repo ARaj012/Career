@@ -70,6 +70,8 @@ export async function POST(request: NextRequest) {
         failed.push({ id, error: err instanceof Error ? err.message : 'failed' })
       }
     }
+    // An approved official value replaces the old unverified one straight away
+    if (body.action === 'approve' && done.length) await db.rpc('retire_replaced_unverified')
     return NextResponse.json({ done, failed })
   }
 

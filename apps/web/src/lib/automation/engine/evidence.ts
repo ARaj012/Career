@@ -49,15 +49,28 @@ export function quoteSupportsDate(iso: string, quote: string): boolean {
   return tokens.some((t) => t === day || t === dd || t === `${day}st` || t === `${day}nd` || t === `${day}rd` || t === `${day}th`)
 }
 
-/** The quote must contain the number (₹1,25,000 / 125000 / 1.25 lakh). */
+const UNIT: [RegExp, number][] = [
+  [/^(crores?|cr)\b/i, 10_000_000],
+  [/^(lakhs?|lacs?|lpa|l\.p\.a\.?|l)\b/i, 100_000],
+  [/^(thousand|k)\b/i, 1_000],
+]
+
+/** Every amount written in the quote, in rupees: 1,25,000 / 125000 / 1.25 lakh / 18.5 LPA / ₹2.1 Cr / 24 L. */
+export function amountsIn(quote: string): number[] {
+  const out: number[] = []
+  for (const m of quote.matchAll(/\d[\d,]*(?:\.\d+)?/g)) {
+    const n = parseFloat(m[0].replace(/,/g, ''))
+    if (Number.isNaN(n)) continue
+    const after = quote.slice(m.index! + m[0].length).replace(/^\s*/, '')
+    const unit = UNIT.find(([re]) => re.test(after))
+    out.push(unit ? Math.round(n * unit[1]) : n)
+  }
+  return out
+}
+
+/** The quote must contain exactly this amount (whole number, not a substring of a bigger one). */
 export function quoteSupportsNumber(value: number, quote: string): boolean {
-  const digits = quote.replace(/[,\s]/g, '')
-  if (digits.includes(String(value))) return true
-  const lakh = /(\d+(?:\.\d+)?)\s*(lakh|lac)/i.exec(quote)
-  if (lakh && Math.round(parseFloat(lakh[1]) * 100000) === value) return true
-  const crore = /(\d+(?:\.\d+)?)\s*crore/i.exec(quote)
-  if (crore && Math.round(parseFloat(crore[1]) * 10000000) === value) return true
-  return false
+  return amountsIn(quote).includes(value)
 }
 
 export function isTentative(quote: string): boolean {

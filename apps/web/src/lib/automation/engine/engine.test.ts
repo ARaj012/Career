@@ -3,6 +3,8 @@ import { normalize, quoteOnPage, quoteSupportsDate, quoteSupportsNumber, isTenta
 import { validateSchedule, validateScholarship } from './validate'
 import { normalizeSession } from './exams'
 import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
+import { quoteNamesCourse, quoteNamesYear } from './college-details'
+import { matchInstitute } from './josaa'
 import { canonName, parseNirfTable } from './nirf'
 import { isOfficialUrl, locateQuote } from './sources'
 import { focusText, itemsToLines } from './http'
@@ -52,6 +54,16 @@ describe('quoteSupportsNumber', () => {
     expect(quoteSupportsNumber(125000, 'Rs. 1,25,000 per annum')).toBe(true)
     expect(quoteSupportsNumber(150000, 'up to ₹1.5 lakh per year')).toBe(true)
     expect(quoteSupportsNumber(50000, 'Rs. 12,000 per annum')).toBe(false)
+  })
+  it('reads LPA, crore and short units, and every amount in the quote', () => {
+    expect(quoteSupportsNumber(1_850_000, 'Average CTC: 18.5 LPA, highest 1.2 Cr')).toBe(true)
+    expect(quoteSupportsNumber(12_000_000, 'Average CTC: 18.5 LPA, highest 1.2 Cr')).toBe(true)
+    expect(quoteSupportsNumber(2_450_000, 'Median package ₹24.5 L (2023-24)')).toBe(true)
+    expect(quoteSupportsNumber(150_000, 'UG ₹1 lakh, PG ₹1.5 lakh per year')).toBe(true)
+  })
+  it('does not find a number inside a bigger one', () => {
+    expect(quoteSupportsNumber(12_000, 'Tuition fee Rs. 1,20,000 per year')).toBe(false)
+    expect(quoteSupportsNumber(2024, 'Placements 2024: 95% placed')).toBe(true)
   })
 })
 
@@ -205,5 +217,57 @@ describe('PDF line rebuilding', () => {
   it('handles pages rotated 90 degrees (text running down the page)', () => {
     const items = [w('Examination', 731, 400, true), w('Date', 731, 480, true), w('January', 704, 300, true), w('20', 704, 470, true)]
     expect(itemsToLines(items)).toBe('Date Examination\n20 January')
+  })
+})
+
+describe('college detail evidence', () => {
+  it('ties a fee quote to its programme', () => {
+    expect(quoteNamesCourse('B.Tech Computer Science', 'B. Tech (all branches): Rs. 2,25,000 per annum')).toBe(true)
+    expect(quoteNamesCourse('MBA', 'MBA Programme fee ₹ 12,50,000 (two years)')).toBe(true)
+    expect(quoteNamesCourse('B.A. Economics', 'Tuition for Bachelor programmes: ₹ 40,000')).toBe(false)
+    expect(quoteNamesCourse('M.Sc Biotechnology', 'Biotechnology (M.Sc.) Rs 60,000/year')).toBe(true)
+    expect(quoteNamesCourse('MBA', 'M.Tech fee ₹1,40,000')).toBe(false)
+  })
+  it('ties a placement figure to its season', () => {
+    expect(quoteNamesYear(2024, 'Placement 2023-24: highest CTC 1.2 Cr')).toBe(true)
+    expect(quoteNamesYear(2024, 'Batch 2024 average package 18.5 LPA')).toBe(true)
+    expect(quoteNamesYear(2024, 'Highest package 1.2 Cr in 2022-23')).toBe(false)
+  })
+})
+
+describe('JoSAA institute matching', () => {
+  const josaa = [
+    'Indian Institute of Information Technology, Agartala',
+    'National Institute of Electronics and Information Technology, Agartala',
+    'Indian Institute of Information Technology(IIIT), Vadodara, Gujrat',
+    'Indian Institute of Information Technology, Vadodara International Campus Diu (IIITVICD)',
+    'Pt. Dwarka Prasad Mishra Indian Institute of Information Technology, Design & Manufacture Jabalpur',
+    'Birla Institute of Technology, Mesra, Ranchi',
+    'Birla Institute of Technology, Patna Off-Campus',
+    'Institute of Chemical Technology, Mumbai: Indian Oil Odisha Campus, Bhubaneswar',
+    'National Institute of Technology, Tiruchirappalli',
+    'Indian Institute of Information Technology Tiruchirappalli',
+    'Indian Institute of Technology (BHU) Varanasi',
+    'Indian Institute of Technology (ISM) Dhanbad',
+    'National Institute of Technology, Srinagar',
+    'National Institute of Technology, Uttarakhand',
+  ]
+  const m = (name: string, city: string) => matchInstitute({ name, city }, josaa)
+  it('matches by type plus distinguishing word or city', () => {
+    expect(m('National Institute of Technology Trichy', 'Tiruchirappalli')).toBe('National Institute of Technology, Tiruchirappalli')
+    expect(m('Indian Institute of Information Technology (IIIT) Tiruchirappalli', 'Tiruchirappalli')).toBe('Indian Institute of Information Technology Tiruchirappalli')
+    expect(m('Indian Institute of Technology BHU', 'Varanasi')).toBe('Indian Institute of Technology (BHU) Varanasi')
+    expect(m('Indian Institute of Technology Dhanbad', 'Dhanbad')).toBe('Indian Institute of Technology (ISM) Dhanbad')
+    expect(m('National Institute of Technology Uttarakhand', 'Srinagar (Garhwal)')).toBe('National Institute of Technology, Uttarakhand')
+  })
+  it('handles NIELIT, extra campuses and spelling variants', () => {
+    expect(m('Indian Institute of Information Technology (IIIT) Agartala', 'Agartala')).toBe('Indian Institute of Information Technology, Agartala')
+    expect(m('Indian Institute of Information Technology (IIIT) Vadodara', 'Vadodara')).toBe('Indian Institute of Information Technology(IIIT), Vadodara, Gujrat')
+    expect(m('Indian Institute of Information Technology, Design and Manufacturing (IIITDM) Jabalpur', 'Jabalpur')).toMatch(/Jabalpur$/)
+    expect(m('Birla Institute of Technology Mesra', 'Ranchi')).toBe('Birla Institute of Technology, Mesra, Ranchi')
+  })
+  it('never matches a different campus or a one-word guess', () => {
+    expect(m('Institute of Chemical Technology Mumbai', 'Mumbai')).toBeNull()
+    expect(m('Institute of Technology, Nirma University', 'Ahmedabad')).toBeNull()
   })
 })

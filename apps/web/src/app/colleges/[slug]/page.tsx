@@ -9,6 +9,7 @@ import PlacementCharts from "@/components/college/PlacementCharts";
 import PlacementSummary from "@/components/college/PlacementSummary";
 import type { PlacementRow } from "@/lib/placements";
 import CutoffTrendsChart from "@/components/college/CutoffTrendsChart";
+import CutoffExplorer, { type OfficialCutoff } from "@/components/college/CutoffExplorer";
 import CollegeFaqs from "@/components/college/CollegeFaqs";
 import CollegeReviews from "@/components/college/CollegeReviews";
 
@@ -159,15 +160,31 @@ export default async function CollegeDetailPage({
 
   const courses: any[] = coursesRaw ?? [];
 
-  const { data: cutoffsRaw } = await supabase
-    .from("college_exam_cutoffs")
-    .select("*, exams(name, slug), college_courses(course_name)")
-    .eq("college_id", college.id)
-    .order("year", { ascending: false });
+  // Official JoSAA data runs to thousands of rows per college; PostgREST returns 1000 per request
+  const cutoffsAll: any[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: page } = await supabase
+      .from("college_exam_cutoffs")
+      .select("id, year, category, quota, program_name, opening_rank, cutoff_rank, cutoff_score, round, source_type, source_url, exams(name, slug), college_courses(course_name)")
+      .eq("college_id", college.id)
+      .order("year", { ascending: false })
+      .order("id")
+      .range(from, from + 999);
+    cutoffsAll.push(...(page ?? []));
+    if (!page || page.length < 1000) break;
+  }
+  const officialCutoffs: OfficialCutoff[] = cutoffsAll
+    .filter((c) => c.source_type === "official")
+    .map((c) => ({ ...c, exam_name: c.exams?.name ?? null }));
+  const cutoffs: any[] = cutoffsAll.filter((c) => c.source_type !== "official");
+  // Sidebar: the most competitive programmes in the latest official year (OPEN, gender-neutral)
+  const latestCutoffYear = officialCutoffs[0]?.year;
+  const topCutoffs = officialCutoffs
+    .filter((c) => c.year === latestCutoffYear && c.category === "OPEN" && (c.quota === "AI" || c.quota === "OS"))
+    .sort((a, b) => (a.cutoff_rank ?? Infinity) - (b.cutoff_rank ?? Infinity))
+    .slice(0, 5);
 
-  const cutoffs: any[] = cutoffsRaw ?? [];
-
-  // Shaped for the trend chart — only series with 2+ real years render anything
+  // Shaped for the trend chart (unverified rows only) — only series with 2+ real years render anything
   const cutoffTrendData = cutoffs.map((c: any) => ({
     year: c.year,
     category: c.category,
@@ -605,7 +622,8 @@ export default async function CollegeDetailPage({
             <PlacementCharts data={placements} />
 
             {/* Admission Cutoff Trends — click to expand, only shown for exam/category series with 2+ real years */}
-            <CutoffTrendsChart cutoffs={cutoffTrendData} />
+            <CutoffExplorer rows={officialCutoffs} />
+            {officialCutoffs.length === 0 && <CutoffTrendsChart cutoffs={cutoffTrendData} />}
 
             {/* FAQs */}
             <CollegeFaqs faqs={faqs} />
@@ -621,8 +639,26 @@ export default async function CollegeDetailPage({
               <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-orange-500" /> Admission Cutoffs
               </h2>
-              {cutoffs.length > 0 ? (
+              {topCutoffs.length > 0 ? (
+                <div>
+                  <p className="text-xs text-gray-500 mb-3">
+                    {topCutoffs[0].exam_name} {latestCutoffYear}, OPEN, closing rank (JoSAA {topCutoffs[0].round})
+                  </p>
+                  <ul className="space-y-2">
+                    {topCutoffs.map((c) => (
+                      <li key={`${c.program_name}-${c.quota}`} className="flex justify-between gap-3 text-sm">
+                        <span className="text-gray-700 line-clamp-2">{c.program_name}</span>
+                        <span className="font-medium text-gray-900 tabular-nums shrink-0">{c.cutoff_rank?.toLocaleString("en-IN")}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <a href="#cutoffs" className="mt-3 inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline">
+                    <BadgeCheck className="w-3.5 h-3.5" /> Official · see every programme and category
+                  </a>
+                </div>
+              ) : cutoffs.length > 0 ? (
                 <div className="space-y-3">
+                  <p className="text-xs text-amber-700">Unverified figures; not yet confirmed from an official counselling source.</p>
                   {cutoffs.map((cutoff: any) => (
                     <div
                       key={cutoff.id}

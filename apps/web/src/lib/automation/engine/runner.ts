@@ -4,11 +4,13 @@ import { updateScholarship, type ScholarshipRow } from './scholarships'
 import { updateNirf } from './nirf'
 import { updateCollege, type CollegeRow } from './colleges'
 import { updateNirfPlacements } from './nirf-data'
+import { updateCollegeDetails, type CollegeDetailRow } from './college-details'
+import { updateJosaaCutoffs } from './josaa'
 import type { ProposalOutcome } from './proposals'
 import { AiQuotaError } from './llm'
 
 export type RunOptions = {
-  targets: ('exams' | 'scholarships' | 'colleges' | 'nirf' | 'placements')[]
+  targets: ('exams' | 'scholarships' | 'colleges' | 'nirf' | 'placements' | 'college_details' | 'cutoffs')[]
   mode: 'full' | 'hot' | 'single'
   slug?: string             // exam slug (mode=single)
   limit?: number
@@ -64,11 +66,11 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
   const errors: { item: string; error: string }[] = []
   const log: string[] = []
   const timeUp = () => opts.deadlineMs !== undefined && Date.now() > opts.deadlineMs
-  const remaining = { exams: 0, scholarships: 0, colleges: 0, nirf: 0 }
-  const dueAtStart = { exams: 0, scholarships: 0, colleges: 0 }
+  const remaining = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, nirf: 0 }
+  const dueAtStart = { exams: 0, scholarships: 0, colleges: 0, college_details: 0 }
   let quotaStop: string | undefined
-  const stamp = async (table: 'exams' | 'scholarships' | 'colleges', id: string) => {
-    if (opts.sweepStartedAt) await db.from(table).update({ last_checked_at: new Date().toISOString() }).eq('id', id)
+  const stamp = async (table: 'exams' | 'scholarships' | 'colleges', id: string, column = 'last_checked_at') => {
+    if (opts.sweepStartedAt) await db.from(table).update({ [column]: new Date().toISOString() }).eq('id', id)
   }
 
   let runId: string | null = opts.runId ?? null
@@ -178,6 +180,34 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
       }
     }
 
+    // ------- College details: programmes & fees, placement reports, admission, scholarships -------
+    if (opts.targets.includes('college_details') && opts.mode !== 'single') {
+      const { data: rows, error } = await db
+        .from('colleges')
+        .select('id, name, website_url, admission_process, admission_verified_at, annual_fees_min, annual_fees_max, fees_verified_at, institute_scholarships, last_checked_at:details_checked_at')
+        .eq('automation_enabled', true)
+        .not('website_url', 'is', null)
+        .order('details_checked_at', { ascending: true, nullsFirst: true })
+      if (error) throw new Error(`college details query failed: ${error.message}`)
+      let list = due((rows ?? []) as (CollegeDetailRow & { last_checked_at: string | null })[], opts)
+      if (opts.limit) list = list.slice(0, opts.limit)
+      console.log(`\n🏫 College details to read: ${list.length}`)
+      remaining.college_details = dueAtStart.college_details = list.length
+      for (const c of list) {
+        if (timeUp()) { log.push('Stopped early: time budget reached'); break }
+        console.log(`  🔍 ${c.name}`)
+        try {
+          tally(await updateCollegeDetails(db, c, { runId, dryRun, force: !!opts.force }), c.name)
+        } catch (err) {
+          if (err instanceof AiQuotaError) throw err
+          errors.push({ item: c.name, error: (err as Error).message })
+        }
+        // Stamped even after a failure so one broken site cannot stall the queue
+        if (!dryRun) await db.from('colleges').update({ details_checked_at: new Date().toISOString() }).eq('id', c.id)
+        remaining.college_details--
+      }
+    }
+
     // ---------------- NIRF ----------------
     if (opts.targets.includes('nirf') && opts.mode === 'full' && timeUp()) remaining.nirf = 1
     else if (opts.targets.includes('nirf') && opts.mode === 'full') {
@@ -186,6 +216,14 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
       log.push(r.year ? `NIRF ${r.year}: matched ${r.matched} colleges` : 'NIRF: not available')
       for (const o of r.outcomes) stats[o]++
       for (const e of r.errors) errors.push({ item: 'nirf', error: e })
+    }
+
+    // ------------- Official JEE cutoffs from JoSAA (final round, last 6 years) -------------
+    if (opts.targets.includes('cutoffs') && opts.mode === 'full' && !timeUp()) {
+      console.log('\n🎯 JoSAA opening/closing ranks')
+      const r = await updateJosaaCutoffs(db, { dryRun })
+      log.push(`JoSAA ${r.years.join(', ')}: ${r.rows} cutoff rows for ${r.colleges} colleges`)
+      for (const e of r.errors) errors.push({ item: 'cutoffs', error: e })
     }
 
     // ------------- Official placements from NIRF data sheets -------------
@@ -201,6 +239,13 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
   } catch (err) {
     errors.push({ item: 'run', error: (err as Error).message })
     if (err instanceof AiQuotaError) quotaStop = err.message
+  }
+
+  // Old hand-typed / third-party values are deleted once an official value replaces them
+  if (!dryRun) {
+    const { data: retired, error: retireErr } = await db.rpc('retire_replaced_unverified')
+    if (retireErr) errors.push({ item: 'retire', error: retireErr.message })
+    else if (retired) log.push(`replaced old values: ${JSON.stringify(retired)}`)
   }
 
   const status = errors.some((e) => e.item === 'run') ? 'failed' : errors.length ? 'partial' : 'success'
