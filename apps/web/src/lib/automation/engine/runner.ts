@@ -3,11 +3,12 @@ import { updateExam, type ExamRow } from './exams'
 import { updateScholarship, type ScholarshipRow } from './scholarships'
 import { updateNirf } from './nirf'
 import { updateCollege, type CollegeRow } from './colleges'
+import { updateNirfPlacements } from './nirf-data'
 import type { ProposalOutcome } from './proposals'
 import { AiQuotaError } from './llm'
 
 export type RunOptions = {
-  targets: ('exams' | 'scholarships' | 'colleges' | 'nirf')[]
+  targets: ('exams' | 'scholarships' | 'colleges' | 'nirf' | 'placements')[]
   mode: 'full' | 'hot' | 'single'
   slug?: string             // exam slug (mode=single)
   limit?: number
@@ -185,6 +186,17 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
       log.push(r.year ? `NIRF ${r.year}: matched ${r.matched} colleges` : 'NIRF: not available')
       for (const o of r.outcomes) stats[o]++
       for (const e of r.errors) errors.push({ item: 'nirf', error: e })
+    }
+
+    // ------------- Official placements from NIRF data sheets -------------
+    // Deterministic (no AI), so it is not limited by the Groq quota
+    if (opts.targets.includes('placements') && opts.mode === 'full' && !timeUp()) {
+      console.log('\n💼 NIRF placement data (median salary, placed, higher studies)')
+      const r = await updateNirfPlacements(db, { runId, dryRun, limit: opts.limit })
+      log.push(`NIRF placements: ${r.colleges} colleges with official sheets, ${r.rows} rows changed`)
+      for (const o of r.outcomes) stats[o]++
+      for (const e of r.errors) errors.push({ item: 'placements', error: e })
+      for (const i of r.issues.slice(0, 50)) log.push(`median left empty: ${i}`)
     }
   } catch (err) {
     errors.push({ item: 'run', error: (err as Error).message })

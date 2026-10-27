@@ -6,6 +6,8 @@ import { Metadata } from "next";
 import SaveCollegeButton from "@/components/SaveCollegeButton";
 import EnrollmentChart from "@/components/college/EnrollmentChart";
 import PlacementCharts from "@/components/college/PlacementCharts";
+import PlacementSummary from "@/components/college/PlacementSummary";
+import type { PlacementRow } from "@/lib/placements";
 import CutoffTrendsChart from "@/components/college/CutoffTrendsChart";
 import CollegeFaqs from "@/components/college/CollegeFaqs";
 import CollegeReviews from "@/components/college/CollegeReviews";
@@ -25,8 +27,6 @@ import {
   Award,
   IndianRupee,
   ChevronRight,
-  TrendingUp,
-  Briefcase,
   Sparkles,
   ClipboardList,
   Heart,
@@ -67,12 +67,6 @@ function formatFees(min: number | null, max: number | null): string {
   return `Up to ${fmt(max!)}/yr`;
 }
 
-function formatPackage(n: number | null): string | null {
-  if (!n) return null;
-  if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)}Cr`;
-  if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
-  return `₹${n.toLocaleString("en-IN")}`;
-}
 
 export async function generateMetadata({
   params,
@@ -189,8 +183,7 @@ export default async function CollegeDetailPage({
     .eq("college_id", college.id)
     .order("year", { ascending: false });
 
-  const placements: any[] = placementsRaw ?? [];
-  const latestPlacement = placements[0] ?? null;
+  const placements = (placementsRaw ?? []) as PlacementRow[];
 
   // year-wise student enrollment (last 8 years) — powers the students-vs-years chart
   const { data: enrollmentRaw } = await supabase
@@ -667,69 +660,8 @@ export default async function CollegeDetailPage({
               </Link>
             </div>
 
-            {/* Placements */}
-            {latestPlacement && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-emerald-500" /> Placements
-                  ({latestPlacement.year})
-                </h2>
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  {latestPlacement.placement_rate && (
-                    <div className="bg-emerald-50 rounded-lg p-3 text-center">
-                      <div className="text-lg font-bold text-emerald-700">
-                        {latestPlacement.placement_rate}%
-                      </div>
-                      <div className="text-xs text-emerald-500">Placed</div>
-                    </div>
-                  )}
-                  {formatPackage(latestPlacement.average_package) && (
-                    <div className="bg-gray-50 rounded-lg p-3 text-center">
-                      <div className="text-lg font-bold text-gray-800">
-                        {formatPackage(latestPlacement.average_package)}
-                      </div>
-                      <div className="text-xs text-gray-400">Average</div>
-                    </div>
-                  )}
-                  {formatPackage(latestPlacement.median_package) && (
-                    <div className="bg-gray-50 rounded-lg p-3 text-center">
-                      <div className="text-lg font-bold text-gray-800">
-                        {formatPackage(latestPlacement.median_package)}
-                      </div>
-                      <div className="text-xs text-gray-400">Median</div>
-                    </div>
-                  )}
-                  {formatPackage(latestPlacement.highest_package) && (
-                    <div className="bg-amber-50 rounded-lg p-3 text-center">
-                      <div className="text-lg font-bold text-amber-700">
-                        {formatPackage(latestPlacement.highest_package)}
-                      </div>
-                      <div className="text-xs text-amber-500">Highest</div>
-                    </div>
-                  )}
-                </div>
-                {latestPlacement.top_recruiters && (
-                  <div className="mt-2">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                      <Briefcase className="w-3 h-3" /> Top Recruiters
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {latestPlacement.top_recruiters}
-                    </p>
-                  </div>
-                )}
-                {latestPlacement.source_url && (
-                  <a
-                    href={latestPlacement.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-block text-xs text-indigo-600 hover:underline"
-                  >
-                    Source →
-                  </a>
-                )}
-              </div>
-            )}
+            {/* Placements: official NIRF figures first, third-party numbers only when labelled */}
+            <PlacementSummary rows={placements} />
 
             {/* Fees Summary */}
             <div className="bg-green-50 rounded-2xl border border-green-100 p-5">

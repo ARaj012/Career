@@ -115,3 +115,13 @@ alter table public.automation_proposals enable row level security;
 alter table public.colleges add column if not exists automation_enabled boolean not null default true;
 alter table public.colleges add column if not exists last_checked_at timestamptz;
 alter table public.colleges add column if not exists verified_at timestamptz;
+
+-- ---------- 7. Placement provenance (official NIRF data vs unverified) ----------
+alter table public.college_placements add column if not exists program_level text not null default 'All programs';
+alter table public.college_placements add column if not exists source_type text not null default 'unverified';
+alter table public.college_placements add column if not exists higher_studies integer;
+alter table public.college_placements drop constraint if exists college_placements_source_type_check;
+alter table public.college_placements add constraint college_placements_source_type_check check (source_type in ('nirf', 'official_report', 'unverified'));
+alter table public.college_placements drop constraint if exists college_placements_college_id_year_key;
+alter table public.college_placements drop constraint if exists college_placements_college_year_level_source_key;
+alter table public.college_placements add constraint college_placements_college_year_level_source_key unique (college_id, year, program_level, source_type);
