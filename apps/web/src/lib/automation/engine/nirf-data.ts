@@ -151,7 +151,7 @@ export function parseStudentStrength(text: string): number | null {
 const CATEGORIES = ['Overall', 'University', 'College', 'Engineering', 'Management', 'Medical', 'Law', 'Pharmacy', 'Architecture', 'Dental', 'Research', 'Agriculture'] as const
 const BAND_PAGES = ['', '150', '200', '300'] // top list, then the rank-band pages
 
-type DirEntry = { name: string; city: string; category: string; edition: number; pdf: string; rank: string }
+export type DirEntry = { name: string; city: string; category: string; edition: number; pdf: string; rank: string }
 
 async function fetchDirectory(edition: number): Promise<DirEntry[]> {
   const out: DirEntry[] = []
@@ -195,15 +195,34 @@ function preferred(name: string, current: string | null): string[] {
   return [...new Set([...first, 'Overall', ...CATEGORIES])]
 }
 
+/** Disciplines a college's own name commits it to ("Faculty of Law" → Law). */
+export function disciplinesOf(name: string): string[] {
+  const n = name.toLowerCase()
+  const out: string[] = []
+  if (/\blaw\b|legal|juridical/.test(n)) out.push('Law')
+  if (/medical|medicine|aiims/.test(n)) out.push('Medical')
+  if (/dental/.test(n)) out.push('Dental')
+  if (/pharma/.test(n)) out.push('Pharmacy')
+  if (/management|business/.test(n)) out.push('Management')
+  if (/technology|engineering/.test(n)) out.push('Engineering')
+  if (/architecture|planning/.test(n)) out.push('Architecture')
+  return out
+}
+
 /** One sheet per edition for this college: exact name, else unique name-contains + same city. */
-function findSheets(col: { name: string; city: string | null; nirf_category: string | null }, dir: DirEntry[]) {
+export function findSheets(col: { name: string; city: string | null; nirf_category: string | null }, dir: DirEntry[]) {
   const canon = canonName(col.name)
   const picks: { entry: DirEntry; exact: boolean }[] = []
+  // A loose match must come from the college's own discipline: "BHU Faculty of Law" may use the
+  // Law sheet but never BHU's whole-university sheet; "Institute of Technology, Nirma" never
+  // Nirma's management school
+  const own = disciplinesOf(col.name)
   for (const edition of [...new Set(dir.map((d) => d.edition))]) {
     for (const cat of preferred(col.name, col.nirf_category)) {
       const rows = dir.filter((d) => d.edition === edition && d.category === cat)
       const exact = rows.filter((r) => canonName(r.name) === canon)
       if (exact.length === 1) { picks.push({ entry: exact[0], exact: true }); break }
+      if (own.length && !own.includes(cat)) continue
       const city = (col.city ?? '').toLowerCase()
       const loose = rows.filter((r) => {
         const c = canonName(r.name)

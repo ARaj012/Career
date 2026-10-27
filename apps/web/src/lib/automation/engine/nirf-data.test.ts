@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parsePlacementSections, parseStudentStrength, wordsToNumber } from './nirf-data'
+import { findSheets, parsePlacementSections, parseStudentStrength, wordsToNumber, type DirEntry } from './nirf-data'
 
 // Lines as they come out of real NIRF 2025/2023 sheets (IIT Madras, IIM Ahmedabad, Miranda House)
 const IITM = `Total Actual Student Strength (Program(s) Offered by your Institution)
@@ -65,5 +65,23 @@ describe('parsePlacementSections', () => {
 describe('parseStudentStrength', () => {
   it('adds the program totals only when male + female = total', () => {
     expect(parseStudentStrength(IITM)).toBe(3589 + 1186)
+  })
+})
+
+describe('findSheets', () => {
+  const e = (name: string, city: string, category: string): DirEntry => ({ name, city, category, edition: 2025, pdf: `${category}/${name}.pdf`, rank: '1' })
+  const dir = [
+    e('Banaras Hindu University', 'Varanasi', 'University'),
+    e('Banaras Hindu University', 'Varanasi', 'Medical'),
+    e('Nirma University', 'Ahmedabad', 'Management'),
+    e('Nirma University', 'Ahmedabad', 'Engineering'),
+    e('Aligarh Muslim University', 'Aligarh', 'Law'),
+  ]
+  const pick = (name: string, city: string) => findSheets({ name, city, nirf_category: null }, dir).map((p) => p.entry.category)
+  it('keeps loose matches inside the discipline named by the college', () => {
+    expect(pick('Banaras Hindu University Faculty of Law', 'Varanasi')).toEqual([])
+    expect(pick('Banaras Hindu University Institute of Medical Sciences', 'Varanasi')).toEqual(['Medical'])
+    expect(pick('Institute of Technology, Nirma University', 'Ahmedabad')).toEqual(['Engineering'])
+    expect(pick('Aligarh Muslim University Faculty of Law', 'Aligarh')).toEqual(['Law'])
   })
 })
