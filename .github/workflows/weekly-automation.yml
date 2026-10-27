@@ -1,0 +1,74 @@
+name: Data Automation
+
+on:
+  schedule:
+    # Daily 07:00 IST — exams with registration open / exam or result within 90 days
+    - cron: '30 1 * * *'
+    # Sunday 05:30 IST — all exams, scholarships, NIRF ranks
+    - cron: '0 0 * * 0'
+    # 1st of the month 07:30 IST — 120 least-recently-checked colleges (NAAC, fees, founded); all 366 every ~3 months
+    - cron: '0 2 1 * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'full | hot'
+        default: 'hot'
+      slug:
+        description: 'Optional: check a single exam by slug (e.g. gate)'
+        default: ''
+      dry_run:
+        description: 'Dry run (log only, change nothing)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: data-automation
+  cancel-in-progress: false
+
+jobs:
+  automation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run automation
+        working-directory: apps/web
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CAREER_GUIDANCE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ vars.APP_URL }}
+          AUTOMATION_AUTO_APPLY: ${{ vars.AUTOMATION_AUTO_APPLY || 'safe' }}
+        run: |
+          ARGS=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            [ -n "${{ inputs.slug }}" ] && ARGS="--slug=${{ inputs.slug }}" || ARGS="--mode=${{ inputs.mode }}"
+            [ "${{ inputs.dry_run }}" = "true" ] && ARGS="$ARGS --dry-run"
+          elif [ "${{ github.event.schedule }}" = "30 1 * * *" ]; then
+            ARGS="--mode=hot"
+          elif [ "${{ github.event.schedule }}" = "0 2 1 * *" ]; then
+            ARGS="--only=colleges --limit=120"
+          else
+            ARGS="--mode=full --only=exams,scholarships,nirf"
+          fi
+          echo "Running: npx tsx scripts/automation.ts $ARGS"
+          npx tsx scripts/automation.ts $ARGS | tee automation.log
+
+      - name: Summary
+        if: always()
+        working-directory: apps/web
+        run: |
+          echo "## Data automation" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E "Summary|Exams to check|Scholarships to check|Colleges to check|NIRF|errors|Daily Groq" automation.log >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "Review queued changes in Admin → Automation." >> $GITHUB_STEP_SUMMARY

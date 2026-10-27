@@ -1,0 +1,73 @@
+/**
+ * Reads official page text and returns structured JSON.
+ * Uses the GROQ_API_KEY the project already has for the chat widget.
+ *
+ * The model is a *reader*, not a source: every value must carry a verbatim
+ * quote, and evidence.ts throws away anything the page does not support.
+ */
+import Groq from 'groq-sdk'
+import type { z } from 'zod'
+
+const MODEL = process.env.AUTOMATION_MODEL || 'openai/gpt-oss-120b'
+let client: Groq | null = null
+
+function groq(): Groq {
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error('GROQ_API_KEY is not set. Automation needs it to read official pages.')
+  }
+  client ??= new Groq({ apiKey: process.env.GROQ_API_KEY })
+  return client
+}
+
+export const READER_RULES = `You read text copied from an OFFICIAL website and report facts that are written in it.
+Rules:
+- Use ONLY what the text states. Never use outside knowledge, never estimate, never fill gaps.
+- For every value include "quote": a short passage copied CHARACTER-FOR-CHARACTER from the text (8-200 chars) that contains the value. Do not paraphrase, translate or fix typos in quotes.
+- If a value is not explicitly stated, return null for it. Returning null is always better than guessing.
+- Dates must be ISO YYYY-MM-DD. If the text gives a date without a year, use the year implied by the same table/heading; if unclear, null.
+- Respond with JSON only.`
+
+/** Daily AI quota is used up; retrying won't help until it resets, so the run should stop. */
+export class AiQuotaError extends Error {}
+
+export async function extractJson<T>(task: string, pageText: string, schema: z.ZodType<T>): Promise<T | null> {
+  const messages = [
+    { role: 'system' as const, content: READER_RULES },
+    { role: 'user' as const, content: `${task}\n\n----- PAGE TEXT START -----\n${pageText}\n----- PAGE TEXT END -----` },
+  ]
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const res = await groq().chat.completions.create({
+        model: MODEL,
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages,
+      })
+      const raw = res.choices[0]?.message?.content ?? ''
+      const parsed = schema.safeParse(JSON.parse(raw))
+      if (parsed.success) return parsed.data
+      console.warn('  ⚠️ AI output did not match schema:', parsed.error.issues.slice(0, 3))
+      return null
+    } catch (caught) {
+      const err = caught as { status?: number; headers?: Record<string, string>; message?: string }
+      const status = err?.status ?? 0
+      if (status === 429 || status >= 500) {
+        const retryAfter = Number(err?.headers?.['retry-after'] ?? 0)
+        if (status === 429 && (retryAfter > 120 || /per day|TPD|RPD/i.test(err?.message ?? ''))) {
+          throw new AiQuotaError('Daily Groq AI limit reached. Click "Update everything" again after it resets (or set AUTOMATION_MODEL=llama-3.1-8b-instant); finished records will not be checked twice.')
+        }
+        const wait = Math.max(retryAfter * 1000, 5000 * (attempt + 1))
+        console.log(`  ⏳ AI rate-limited, waiting ${Math.round(wait / 1000)}s`)
+        await new Promise((r) => setTimeout(r, wait))
+        continue
+      }
+      if (caught instanceof SyntaxError) {
+        console.warn('  ⚠️ AI returned invalid JSON')
+        return null
+      }
+      throw caught
+    }
+  }
+  return null
+}

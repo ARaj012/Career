@@ -1,0 +1,310 @@
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { Metadata } from 'next'
+import { GraduationCap, MapPin, ExternalLink, FileText, User, CheckCircle2, ListOrdered } from 'lucide-react'
+
+interface Scholarship {
+  id: string
+  name: string
+  slug: string
+  description: string
+  how_to_apply: string | null
+  provider: string
+  amount_min: number | null
+  amount_max: number | null
+  amount_type: string
+  eligibility_criteria: string
+  required_documents: string[] | null
+  application_deadline: string | null
+  application_url: string | null
+  category: string
+  level: string
+  field_of_study: string[] | null
+  country: string
+  state: string | null
+  is_active: boolean
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const supabase = await createServerSupabaseClient()
+  
+  // Try the slug as-is first
+  let { data: scholarship } = await supabase
+    .from('scholarships')
+    .select('name, description, provider, amount_min, amount_max, amount_type, application_deadline, category, level, state, country')
+    .eq('slug', slug)
+    .maybeSingle()
+
+  // If not found, try replacing underscores with hyphens
+  if (!scholarship && slug.includes('_')) {
+    const altSlug = slug.replace(/_/g, '-')
+    const { data: altScholarship } = await supabase
+      .from('scholarships')
+      .select('name, description, provider, amount_min, amount_max, amount_type, application_deadline, category, level, state, country')
+      .eq('slug', altSlug)
+      .maybeSingle()
+    if (altScholarship) scholarship = altScholarship
+  }
+
+  if (!scholarship) {
+    return {
+      title: 'Scholarship Not Found | CareerGuide',
+      description: 'The scholarship you are looking for does not exist.',
+    }
+  }
+
+  const formatAmount = (min: number | null, max: number | null, type: string) => {
+    if (type === 'full_tuition') return 'Full Tuition'
+    if (type === 'partial_tuition') return 'Partial Tuition'
+    if (type === 'fixed_amount') {
+      if (min && max && min !== max) return `₹${min.toLocaleString()} - ₹${max.toLocaleString()}`
+      if (min) return `₹${min.toLocaleString()}`
+      if (max) return `₹${max.toLocaleString()}`
+    }
+    return 'Amount varies'
+  }
+
+  const amountText = formatAmount(scholarship.amount_min, scholarship.amount_max, scholarship.amount_type)
+  const deadline = scholarship.application_deadline ? new Date(scholarship.application_deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Rolling deadline'
+  const location = scholarship.state ? `${scholarship.state}, India` : scholarship.country
+  const levelText = scholarship.level === 'all' ? 'All Levels' : scholarship.level
+
+  const description = `${scholarship.name}: ${amountText} by ${scholarship.provider}. ${levelText} students. Deadline: ${deadline}. ${scholarship.description?.slice(0, 120) || ''}. Eligibility, documents, and application details.`
+
+  return {
+    title: `${scholarship.name} - ${amountText} | CareerGuide`,
+    description,
+    keywords: `${scholarship.name}, ${scholarship.provider}, ${amountText}, ${levelText} scholarship, ${location}, ${deadline}, financial aid, education funding`,
+    openGraph: {
+      type: 'article',
+      locale: 'en_IN',
+      url: `https://careerguide.com/scholarships/${slug}`,
+      title: `${scholarship.name} - ${amountText}`,
+      description,
+      siteName: 'CareerGuide',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${scholarship.name} | CareerGuide`,
+      description,
+    },
+    alternates: {
+      canonical: `https://careerguide.com/scholarships/${slug}`,
+    },
+  }
+}
+
+export default async function ScholarshipDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  const supabase = await createServerSupabaseClient()
+
+  const { data } = await supabase
+    .from('scholarships')
+    .select('*')
+    .eq('slug', slug)
+    .single()
+
+  const scholarship = data as Scholarship | null
+
+  if (!scholarship) {
+    notFound()
+  }
+
+  const formatAmount = (scholarship: Scholarship) => {
+    if (scholarship.amount_type === 'full_tuition') return 'Full Tuition'
+    if (scholarship.amount_type === 'partial_tuition') return 'Partial Tuition'
+    if (scholarship.amount_type === 'stipend') return 'Stipend'
+
+    if (scholarship.amount_min && scholarship.amount_max) {
+      return `₹${(scholarship.amount_min / 100000).toFixed(1)}L - ₹${(scholarship.amount_max / 100000).toFixed(1)}L`
+    }
+    if (scholarship.amount_min) return `₹${(scholarship.amount_min / 100000).toFixed(1)}L+`
+    if (scholarship.amount_max) return `Up to ₹${(scholarship.amount_max / 100000).toFixed(1)}L`
+    return 'Amount not specified'
+  }
+
+  const formatDate = (date: string | null) => {
+    if (!date) return 'No deadline'
+    return new Date(date).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  }
+
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, { bg: string; text: string }> = {
+      merit: { bg: 'bg-blue-50', text: 'text-blue-700' },
+      need_based: { bg: 'bg-green-50', text: 'text-green-700' },
+      sports: { bg: 'bg-orange-50', text: 'text-orange-700' },
+      arts: { bg: 'bg-purple-50', text: 'text-purple-700' },
+      minority: { bg: 'bg-yellow-50', text: 'text-yellow-700' },
+      women: { bg: 'bg-pink-50', text: 'text-pink-700' },
+      government: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
+      general: { bg: 'bg-gray-50', text: 'text-gray-700' },
+    }
+    return colors[category] || { bg: 'bg-gray-50', text: 'text-gray-700' }
+  }
+
+  // how_to_apply is stored as numbered steps separated by newlines,
+  // e.g. "1. Visit the portal...\n2. Register...\n3. ..."
+  // Split into a clean array and strip the leading "1. " numbering
+  // since we render our own numbered list markers in the UI.
+  const applySteps: string[] = scholarship.how_to_apply
+    ? scholarship.how_to_apply
+        .split('\n')
+        .map((step: string) => step.replace(/^\d+\.\s*/, '').trim())
+        .filter((step: string) => step.length > 0)
+    : []
+
+  const catColor = getCategoryColor(scholarship.category)
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-emerald-600 to-teal-500 text-white">
+        <div className="max-w-4xl mx-auto px-4 py-14">
+          <Link href="/scholarships" className="text-emerald-200 hover:text-white text-sm">
+            ← Back to Scholarships
+          </Link>
+          <h1 className="text-3xl md:text-4xl font-bold mt-4">{scholarship.name}</h1>
+          <p className="text-emerald-100 mt-3 text-lg max-w-2xl">{scholarship.description}</p>
+          <div className="flex flex-wrap gap-3 mt-6">
+            <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${catColor.bg} ${catColor.text}`}>
+              {scholarship.category.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+            </span>
+            <span className="bg-white/10 backdrop-blur px-4 py-1.5 rounded-full text-sm">
+              <GraduationCap className="w-4 h-4 inline mr-1" />
+              {scholarship.level.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+            </span>
+            {scholarship.state && (
+              <span className="bg-white/10 backdrop-blur px-4 py-1.5 rounded-full text-sm">
+                <MapPin className="w-4 h-4 inline mr-1" />
+                {scholarship.state}, {scholarship.country}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        {/* Key Details */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Scholarship Details</h2>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="bg-emerald-50 rounded-xl p-4">
+              <p className="text-xs text-gray-500">Amount</p>
+              <p className="font-bold text-emerald-700 text-lg mt-1">{formatAmount(scholarship)}</p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-4">
+              <p className="text-xs text-gray-500">Provider</p>
+              <p className="font-bold text-blue-700 text-lg mt-1">{scholarship.provider}</p>
+            </div>
+            <div className="bg-purple-50 rounded-xl p-4">
+              <p className="text-xs text-gray-500">Application Deadline</p>
+              <p className="font-bold text-purple-700 text-lg mt-1">{formatDate(scholarship.application_deadline)}</p>
+            </div>
+            <div className="bg-orange-50 rounded-xl p-4">
+              <p className="text-xs text-gray-500">Education Level</p>
+              <p className="font-bold text-orange-700 text-lg mt-1 capitalize">{scholarship.level.replace('_', ' ')}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Eligibility */}
+        {scholarship.eligibility_criteria && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <User className="w-5 h-5 text-emerald-500" />
+              Eligibility Criteria
+            </h2>
+            <div className="prose prose-sm text-gray-600">
+              <p>{scholarship.eligibility_criteria}</p>
+            </div>
+          </div>
+        )}
+
+        {/* How to Apply */}
+        {applySteps.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <ListOrdered className="w-5 h-5 text-emerald-500" />
+              How to Apply
+            </h2>
+            <ol className="space-y-4">
+              {applySteps.map((step, index) => (
+                <li key={index} className="flex items-start gap-3">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold shrink-0 mt-0.5">
+                    {index + 1}
+                  </span>
+                  <span className="text-sm text-gray-600 leading-relaxed">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {/* Required Documents */}
+        {scholarship.required_documents && scholarship.required_documents.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-emerald-500" />
+              Required Documents
+            </h2>
+            <ul className="space-y-2">
+              {scholarship.required_documents.map((doc: string, index: number) => (
+                <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <span>{doc}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Field of Study */}
+        {scholarship.field_of_study && scholarship.field_of_study.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Field of Study</h2>
+            <div className="flex flex-wrap gap-2">
+              {scholarship.field_of_study.map((field: string, index: number) => (
+                <span key={index} className="text-sm bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full">
+                  {field}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Apply Button */}
+        {scholarship.application_url && (
+          <div className="bg-emerald-600 rounded-2xl p-8 text-center mb-8">
+            <h3 className="text-white text-xl font-semibold mb-2">Ready to Apply?</h3>
+            <p className="text-emerald-100 mb-4">Make sure you have all required documents before applying</p>
+            <a
+              href={scholarship.application_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-white text-emerald-600 font-medium px-8 py-3 rounded-lg hover:bg-emerald-50 transition"
+            >
+              Apply Now <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+        )}
+
+        {/* Back to Scholarships */}
+        <div className="text-center">
+          <Link href="/scholarships" className="text-emerald-600 hover:text-emerald-800 text-sm font-medium">
+            ← Back to all scholarships
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
