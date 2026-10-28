@@ -3,7 +3,7 @@ import { normalize, quoteOnPage, quoteSupportsDate, quoteSupportsNumber, isTenta
 import { validateSchedule, validateScholarship } from './validate'
 import { normalizeSession } from './exams'
 import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
-import { quoteNamesCourse, quoteNamesYear } from './college-details'
+import { NOT_A_PROGRAMME, quoteNamesCourse, quoteNamesYear } from './college-details'
 import { matchInstitute } from './josaa'
 import { canonName, parseNirfTable } from './nirf'
 import { isOfficialUrl, locateQuote } from './sources'
@@ -269,5 +269,16 @@ describe('JoSAA institute matching', () => {
   it('never matches a different campus or a one-word guess', () => {
     expect(m('Institute of Chemical Technology Mumbai', 'Mumbai')).toBeNull()
     expect(m('Institute of Technology, Nirma University', 'Ahmedabad')).toBeNull()
+  })
+})
+
+describe('programme names', () => {
+  it('rejects application rounds and entrance tests', () => {
+    for (const n of ['B.Tech Foreign 2026 (December session)', 'VITREE-2027 (Ph.D.)', 'VITEEE', 'MBA Admission Notification', 'Entrance Test for M.Sc'])
+      expect(NOT_A_PROGRAMME.test(n)).toBe(true)
+  })
+  it('keeps real programmes', () => {
+    for (const n of ['MBA-PGPX', 'One Year MBA', 'Executive MBA', 'B.Tech Computer Science and Engineering', 'M.Sc. Biotechnology', 'Ph.D.', 'B.Arch', 'Integrated M.Tech (Software Engineering)'])
+      expect(NOT_A_PROGRAMME.test(n)).toBe(false)
   })
 })

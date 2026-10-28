@@ -271,6 +271,8 @@ type Res = { outcomes: ProposalOutcome[]; dropped: string[] }
 type OnSite = (q: string | null | undefined) => string | null
 type Opts = { runId: string | null; dryRun: boolean }
 
+export const NOT_A_PROGRAMME = /(\b(19|20)\d{2}\b|session|application|registration|entrance|\bexam|\btest\b|admission|notification|result|counsel|brochure|[A-Z]{3,}EE\b|\bREE\b)/i
+
 async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSite: OnSite, nameOnSite: (n: string) => string | null, res: Res, opts: Opts) {
   const { data: existing } = await db.from('college_courses').select('id, course_name, annual_fees_min, total_fees, total_seats').eq('college_id', c.id).eq('source_type', 'official')
   const byName = new Map((existing ?? []).map((r) => [normalize(r.course_name), r]))
@@ -280,6 +282,8 @@ async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSi
     const name = p.course_name.replace(/\s+/g, ' ').trim()
     const key = normalize(name)
     if (!key || seen.has(key)) continue
+    // Application rounds and entrance tests ("B.Tech Foreign 2026 (December session)", "VITREE-2027") are not programmes
+    if (NOT_A_PROGRAMME.test(name)) { res.dropped.push(`${c.name} · "${name}": not a degree programme`); continue }
     seen.add(key)
 
     const fact = (f: { value?: number | null; quote?: string | null } | null | undefined, label: string, needsName: boolean) => {
