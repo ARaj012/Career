@@ -5,6 +5,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Metadata } from 'next'
 import TrackExamButton from '@/components/TrackExamButton'
 import KeyDates, { type ScheduleRow } from '@/components/exams/KeyDates'
+import { ExamQualifyingCutoffs, ExamCollegeCutoffs, BRANCHES, RANK_CATEGORIES } from '@/components/exams/ExamCutoffs'
 
 const STRATEGY_STEPS = [
   {
@@ -59,10 +60,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function ExamDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ branch?: string; cat?: string }>
 }) {
   const { slug } = await params
+  const query = await searchParams
+  const branch = query.branch && BRANCHES[query.branch] ? query.branch : 'cse'
+  const rankCategory = query.cat && RANK_CATEGORIES.includes(query.cat) ? query.cat : 'OPEN'
   const supabase = await createServerSupabaseClient()
 
   // Try the slug as-is first
@@ -120,15 +126,39 @@ export default async function ExamDetailPage({
   const latestSchedule = [...schedules].filter((s) => s.total_applicants).sort((a, b) => (b.year ?? 0) - (a.year ?? 0))[0] ?? null
   const eligibility = ((exam as any).exam_eligibility ?? [])[0] ?? null
 
-  // Full cutoff history across all colleges for this exam
-  const { data: cutoffRows } = await supabase
+  // Official counselling closing ranks (JoSAA) for one branch and category, last five years
+  const { data: latestOfficial } = await supabase
     .from('college_exam_cutoffs')
-    .select(
-      'year, category, cutoff_score, cutoff_rank, colleges ( name, slug, city, state, nirf_rank ), college_courses ( course_name, degree_type )'
-    )
+    .select('year')
     .eq('exam_id', exam.id)
+    .eq('source_type', 'official')
     .order('year', { ascending: false })
-    .limit(500)
+    .limit(1)
+  const latestRankYear = latestOfficial?.[0]?.year as number | undefined
+  const { data: rankRows } = latestRankYear
+    ? await supabase
+        .from('college_exam_cutoffs')
+        .select('year, quota, opening_rank, cutoff_rank, colleges ( name, slug, nirf_rank )')
+        .eq('exam_id', exam.id)
+        .eq('source_type', 'official')
+        .eq('program_name', BRANCHES[branch].program)
+        .eq('category', rankCategory)
+        .in('quota', ['AI', 'OS'])
+        .gte('year', latestRankYear - 4)
+        .limit(1000)
+    : { data: [] }
+
+  // Older college cutoffs not (yet) from an official source, only for exams without official ones
+  const { data: cutoffRows } = latestRankYear
+    ? { data: [] }
+    : await supabase
+        .from('college_exam_cutoffs')
+        .select(
+          'year, category, cutoff_score, cutoff_rank, colleges ( name, slug, city, state, nirf_rank ), college_courses ( course_name, degree_type )'
+        )
+        .eq('exam_id', exam.id)
+        .order('year', { ascending: false })
+        .limit(500)
 
   const rows = (cutoffRows ?? []) as any[]
   const byYear = new Map<number, any[]>()
@@ -158,85 +188,10 @@ export default async function ExamDetailPage({
     .order('year', { ascending: false })
     .limit(2000)
 
-  const nationalCutoffs = (nationalCutoffRows ?? []) as any[]
+  // Some old rows hold toppers' scores, which are not cutoffs
+  const nationalCutoffs = ((nationalCutoffRows ?? []) as any[]).filter((r) => !/topper/i.test(r.notes ?? ''))
 
-  // Fill in missing data based on context
-  const enrichedCutoffs = nationalCutoffs.map((row) => {
-    const enriched = { ...row }
-
-    // If institute_name is missing, use the exam's conducting body
-    if (!enriched.institute_name && exam.conducting_body) {
-      enriched.institute_name = exam.conducting_body
-    }
-
-    // If program_or_post is missing but we have exam info, derive it
-    if (!enriched.program_or_post) {
-      // For service exams, use the exam name or conducting body as program
-      if (exam.exam_level === 'National' || exam.exam_level === 'State') {
-        enriched.program_or_post = exam.name
-      }
-    }
-
-    // If stage is missing, try to infer from context or use a default
-    if (!enriched.stage) {
-      // Check if category or other fields indicate stage
-      if (row.category && (row.category.includes('Prelim') || row.category.includes('Mains') || row.category.includes('Final'))) {
-        // Stage might be in the category name
-        if (row.category.includes('Prelim')) enriched.stage = 'Prelims'
-        else if (row.category.includes('Mains')) enriched.stage = 'Mains'
-        else if (row.category.includes('Final')) enriched.stage = 'Final'
-      }
-    }
-
-    return enriched
-  })
-
-  const nationalByYear = new Map<number, any[]>()
-  for (const row of enrichedCutoffs) {
-    if (!nationalByYear.has(row.year)) nationalByYear.set(row.year, [])
-    nationalByYear.get(row.year)!.push(row)
-  }
-  const nationalYears = Array.from(nationalByYear.keys()).sort((a, b) => b - a)
-  const nationalYearsAsc = [...nationalYears].sort((a, b) => a - b)
-
-  const hasInstitute = enrichedCutoffs.some((r) => r.institute_name)
-  const hasProgram = enrichedCutoffs.some((r) => r.program_or_post)
-  const hasPaper = enrichedCutoffs.some((r) => r.paper_or_branch)
-  const hasSection = enrichedCutoffs.some((r) => r.section)
-  const hasStage = enrichedCutoffs.some((r) => r.stage)
-
-  // Build a "Last N Years" pivot: one row per unique
-  // institute/branch/program/category/stage combo, one column per year.
-  // This is what actually answers "show me the trend across years" —
-  // the per-year blocks further down are for full record-level detail.
-  function pivotKey(row: any) {
-    return [row.institute_name, row.paper_or_branch, row.program_or_post, row.stage, row.category ?? 'Common']
-      .filter((v) => v !== null && v !== undefined && v !== '')
-      .join(' • ')
-  }
-  function pivotLabel(row: any) {
-    return {
-      institute: row.institute_name || '',
-      branch: row.paper_or_branch || '',
-      program: row.program_or_post || '',
-      stage: row.stage || '',
-      category: row.category || 'Common (all categories)',
-    }
-  }
-  const pivotMap = new Map<string, { label: any; byYear: Map<number, any> }>()
-  for (const row of enrichedCutoffs) {
-    const key = pivotKey(row)
-    if (!pivotMap.has(key)) pivotMap.set(key, { label: pivotLabel(row), byYear: new Map() })
-    pivotMap.get(key)!.byYear.set(row.year, row)
-  }
-  const pivotRows = Array.from(pivotMap.values())
-
-  function formatCutoffCell(row: any | undefined) {
-    if (!row || row.cutoff_score == null) return '—'
-    let s = String(row.cutoff_score)
-    if (row.cutoff_score_to != null) s += ` – ${row.cutoff_score_to}`
-    return s
-  }
+  const nationalYearsAsc = [...new Set(nationalCutoffs.map((r) => r.year as number))].sort((a, b) => a - b)
 
   // Toppers — most recent year available, if any have been entered
   const { data: allToppers } = await supabase
@@ -470,162 +425,25 @@ export default async function ExamDetailPage({
           )}
         </div>
 
-        {/* Last N Years — pivot table, one row per institute/branch/category, one column per year */}
-        {pivotRows.length > 0 && (
-          <div className="mb-8 sm:mb-10">
-            <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-                Cutoff Trend — Last {nationalYearsAsc.length} Year{nationalYearsAsc.length > 1 ? 's' : ''}
-                <span className="text-gray-400 font-normal text-base sm:text-lg"> ({nationalYearsAsc[0]}–{nationalYearsAsc[nationalYearsAsc.length - 1]})</span>
-              </h2>
-            </div>
-            <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">Compare how cutoffs have moved year over year, side by side</p>
-            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
-              <div className="overflow-x-auto rounded-lg border border-gray-100">
-                <table className="w-full text-xs sm:text-sm">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-indigo-50 to-purple-50 text-left text-gray-700">
-                      {hasInstitute && <th className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">Institute / Body</th>}
-                      {hasPaper && <th className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">Branch / Paper</th>}
-                      {hasProgram && <th className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">Program / Post</th>}
-                      {hasStage && <th className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">Stage</th>}
-                      <th className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">Category</th>
-                      {nationalYearsAsc.map((y) => (
-                        <th key={y} className="px-2 sm:px-3 py-2 font-medium text-right whitespace-nowrap">{y}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pivotRows.map((pr, idx) => (
-                      <tr key={idx} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
-                        {hasInstitute && <td className="px-2 sm:px-3 py-3 text-gray-900 whitespace-nowrap text-xs sm:text-sm font-medium">{pr.label.institute}</td>}
-                        {hasPaper && <td className="px-2 sm:px-3 py-3 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.branch}</td>}
-                        {hasProgram && <td className="px-2 sm:px-3 py-3 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.program}</td>}
-                        {hasStage && <td className="px-2 sm:px-3 py-3 text-gray-600 whitespace-nowrap text-xs sm:text-sm">{pr.label.stage}</td>}
-                        <td className="px-2 sm:px-3 py-3 text-gray-600 whitespace-nowrap text-xs sm:text-sm">
-                          <span className="px-2 py-1 bg-gray-100 rounded-full text-xs font-medium">{pr.label.category}</span>
-                        </td>
-                        {nationalYearsAsc.map((y) => {
-                          const value = pr.byYear.get(y);
-                          const previousYear = nationalYearsAsc[nationalYearsAsc.indexOf(y) - 1];
-                          const previousValue = previousYear ? pr.byYear.get(previousYear) : null;
-                          const trend = previousValue && value && value > previousValue ? 'up' : previousValue && value && value < previousValue ? 'down' : 'neutral';
-                          
-                          return (
-                            <td key={y} className="px-2 sm:px-3 py-3 text-right whitespace-nowrap text-xs sm:text-sm">
-                              <span className={`font-bold ${
-                                trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-600' : 'text-gray-900'
-                              }`}>
-                                {formatCutoffCell(value)}
-                              </span>
-                              {trend === 'up' && <span className="ml-1 text-green-500">↑</span>}
-                              {trend === 'down' && <span className="ml-1 text-red-500">↓</span>}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 p-3 bg-indigo-50 rounded-lg">
-                <p className="text-xs text-indigo-700 flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Values shown as marks, percentile, or rank depending on the exam. Green ↑ indicates cutoff increased, Red ↓ indicates cutoff decreased.
-                </p>
-              </div>
-            </div>
-          </div>
+        {nationalCutoffs.length > 0 && <ExamQualifyingCutoffs rows={nationalCutoffs} examName={exam.name} />}
+
+        {latestRankYear && (
+          <ExamCollegeCutoffs rows={(rankRows ?? []) as any} slug={exam.slug} branch={branch} category={rankCategory} examName={exam.name} />
         )}
 
-        {/* Detailed cutoff records — full record-level detail with sources, grouped by year */}
-        {nationalYears.length > 0 && (
-          <div className="mb-10">
-            <h2 className="text-2xl font-bold text-gray-900 mb-1">Detailed Cutoff Records</h2>
-            <p className="text-gray-500 mb-6">Full breakdown with sources for each year</p>
-            <div className="space-y-6">
-              {nationalYears.map((year) => (
-                <div key={year} className="bg-white rounded-2xl border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    {year} <span className="text-sm font-normal text-gray-400">({nationalByYear.get(year)!.length} record{nationalByYear.get(year)!.length > 1 ? 's' : ''})</span>
-                  </h3>
-                  <div className="overflow-x-auto rounded-lg border border-gray-100">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gradient-to-r from-indigo-50 to-purple-50 text-left text-gray-700">
-                          {hasInstitute && <th className="px-3 py-2 font-medium">Institute / Body</th>}
-                          {hasPaper && <th className="px-3 py-2 font-medium">Branch / Paper</th>}
-                          {hasProgram && <th className="px-3 py-2 font-medium">Program / Post</th>}
-                          {hasStage && <th className="px-3 py-2 font-medium">Stage</th>}
-                          {hasSection && <th className="px-3 py-2 font-medium">Section</th>}
-                          <th className="px-3 py-2 font-medium">Category</th>
-                          <th className="px-3 py-2 font-medium">Cutoff</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {nationalByYear.get(year)!.map((row) => (
-                          <tr key={row.id} className="border-t border-gray-100">
-                            {hasInstitute && <td className="px-3 py-2 text-gray-900">{row.institute_name}</td>}
-                            {hasPaper && <td className="px-3 py-2 text-gray-600">{row.paper_or_branch}</td>}
-                            {hasProgram && <td className="px-3 py-2 text-gray-600">{row.program_or_post}</td>}
-                            {hasStage && <td className="px-3 py-2 text-gray-600">{row.stage}</td>}
-                            {hasSection && <td className="px-3 py-2 text-gray-600">{row.section}</td>}
-                            <td className="px-3 py-2 text-gray-600">{row.category || 'Common (all categories)'}</td>
-                            <td className="px-3 py-2 text-gray-900 font-medium">
-                              {row.cutoff_score != null ? (
-                                <>
-                                  {row.cutoff_score}
-                                  {row.cutoff_score_to != null ? ` – ${row.cutoff_score_to}` : ''}
-                                  {row.max_score ? ` / ${row.max_score}` : ''}
-                                  {row.cutoff_metric ? (
-                                    <span className="text-gray-400 font-normal"> ({row.cutoff_metric})</span>
-                                  ) : null}
-                                </>
-                              ) : (
-                                '—'
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {nationalByYear.get(year)!.some((r) => r.source_url) && (
-                    <p className="text-xs text-gray-400 mt-3">
-                      Source:{' '}
-                      <a
-                        href={nationalByYear.get(year)!.find((r) => r.source_url)?.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-indigo-600 hover:underline"
-                      >
-                        verified official data →
-                      </a>
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* College-based cutoff history — only shown when it's actually relevant */}
-        {(years.length > 0 || nationalYears.length === 0) && (
+        {/* Older college-wise cutoffs, for exams without official counselling data */}
+        {years.length > 0 && (
           <>
             <h2 className="text-2xl font-bold text-gray-900 mb-1">College Cutoff History</h2>
-            <p className="text-gray-500 mb-6">
-              {years.length > 0
-                ? `Showing cutoff data across ${years.length} year${years.length > 1 ? 's' : ''} for colleges in our database`
-                : 'No college-wise cutoff data available yet for this exam.'}
+            <p className="text-gray-500 mb-2">Cutoffs for colleges in our database, {years[years.length - 1]}–{years[0]}</p>
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-6">
+              Not yet confirmed from an official counselling source; check the college&apos;s own notice before relying on it.
             </p>
           </>
         )}
 
-
         <div className="space-y-8">
-          {years.map((year) => (
+          {years.slice(0, 5).map((year) => (
             <div key={year} className="bg-white rounded-2xl border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">{year}</h3>
               <div className="overflow-x-auto rounded-lg border border-gray-100">

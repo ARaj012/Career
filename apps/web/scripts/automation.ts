@@ -6,6 +6,8 @@
  *   npx tsx scripts/automation.ts --mode=hot           # only exams with open/near dates
  *   npx tsx scripts/automation.ts --slug=gate --dry-run
  *   npx tsx scripts/automation.ts --only=scholarships --limit=10 --force
+ *   npx tsx scripts/automation.ts --only=syllabus,exam_cutoffs --slug=jee-main
+ *   npx tsx scripts/automation.ts --only=college_details --college=<college id>
  *
  * Env: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GROQ_API_KEY
  * Optional: AUTOMATION_AUTO_APPLY=safe|all|none, AUTOMATION_MODEL
@@ -36,10 +38,12 @@ async function main() {
 
   const slug = arg('slug')
   const only = arg('only')
+  const collegeId = arg('college')
   const opts: RunOptions = {
     targets: only ? (only.split(',') as RunOptions['targets']) : slug ? ['exams'] : ['exams', 'scholarships', 'colleges', 'nirf'],
-    mode: slug ? 'single' : ((arg('mode') as RunOptions['mode']) ?? 'full'),
+    mode: slug || collegeId ? 'single' : ((arg('mode') as RunOptions['mode']) ?? 'full'),
     slug,
+    collegeId,
     limit: arg('limit') ? Number(arg('limit')) : undefined,
     dryRun: arg('dry-run') === 'true',
     force: arg('force') === 'true',

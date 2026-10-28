@@ -38,7 +38,10 @@ const TABS = [
 const SWEEP_TARGETS = [
   { key: 'exams', label: 'Exam dates' },
   { key: 'scholarships', label: 'Scholarships' },
-  { key: 'colleges', label: 'Colleges (NAAC, fees, founded)' },
+  { key: 'college_details', label: 'College courses, fees, placements, admission' },
+  { key: 'colleges', label: 'Colleges (NAAC, founded)' },
+  { key: 'syllabus', label: 'Exam syllabus' },
+  { key: 'exam_cutoffs', label: 'Exam cutoffs' },
   { key: 'nirf', label: 'College NIRF ranks' },
 ] as const
 type SweepKey = (typeof SWEEP_TARGETS)[number]['key']
@@ -155,7 +158,10 @@ export default function AutomationPage() {
     const progress: SweepProgress = {
       exams: { total: 0, left: 0, state: 'waiting' },
       scholarships: { total: 0, left: 0, state: 'waiting' },
+      college_details: { total: 0, left: 0, state: 'waiting' },
       colleges: { total: 0, left: 0, state: 'waiting' },
+      syllabus: { total: 0, left: 0, state: 'waiting' },
+      exam_cutoffs: { total: 0, left: 0, state: 'waiting' },
       nirf: { total: 1, left: 1, state: 'waiting' },
     }
     const totals = { checked: 0, auto_applied: 0, pending: 0, skipped: 0 }
@@ -219,7 +225,7 @@ export default function AutomationPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Automation</h1>
           <p className="text-sm text-gray-500 mt-1 max-w-xl">
-            Exam dates, scholarship deadlines and amounts, and college NIRF ranks are read from official websites. A change is
+            Exam dates, syllabus and cutoffs, scholarships, and college courses, fees, placements and ranks are read from official websites. A change is
             saved only when the official page contains it word for word. Changes to already-verified data wait here for you.
           </p>
           {lastRun && (

@@ -6,7 +6,11 @@ import { approveProposal, rejectProposal } from '@/lib/automation/engine/proposa
 import { runAutomation } from '@/lib/automation/engine/runner'
 
 // Serverless hosts cap request time; "Run now" stops starting new records before this.
-export const maxDuration = 60
+// Updating one college reads ~15 pages of its site, so it gets longer (the host caps it at its plan limit).
+export const maxDuration = 300
+
+const SWEEP_TARGETS = ['exams', 'scholarships', 'college_details', 'colleges', 'syllabus', 'exam_cutoffs', 'nirf'] as const
+type SweepTarget = (typeof SWEEP_TARGETS)[number]
 
 export async function GET(request: NextRequest) {
   const user = await getAdminUser()
@@ -35,7 +39,8 @@ type Body =
   | { action: 'approve' | 'reject'; ids: string[] }
   | { action: 'run'; slug?: string; target?: 'exams' | 'scholarships' | 'nirf' }
   // One batch of "Update everything"; the page repeats it until remaining is 0
-  | { action: 'sweep'; target: 'exams' | 'scholarships' | 'colleges' | 'nirf'; startedAt: string; runId?: string }
+  | { action: 'sweep'; target: SweepTarget; startedAt: string; runId?: string }
+  | { action: 'college'; collegeId: string }
 
 export async function POST(request: NextRequest) {
   const user = await getAdminUser()
@@ -95,7 +100,7 @@ export async function POST(request: NextRequest) {
 
   if (body.action === 'sweep') {
     if (!process.env.GROQ_API_KEY) return NextResponse.json({ error: 'GROQ_API_KEY is not configured on the server' }, { status: 400 })
-    if (!['exams', 'scholarships', 'colleges', 'nirf'].includes(body.target) || Number.isNaN(Date.parse(body.startedAt))) {
+    if (!SWEEP_TARGETS.includes(body.target) || Number.isNaN(Date.parse(body.startedAt))) {
       return NextResponse.json({ error: 'target and startedAt required' }, { status: 400 })
     }
     try {
@@ -107,6 +112,25 @@ export async function POST(request: NextRequest) {
         runId: body.runId,
         notify: false,
         deadlineMs: Date.now() + 30_000, // one slow site can add ~15 s; stays under maxDuration
+      })
+      return NextResponse.json(result)
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : 'Run failed' }, { status: 500 })
+    }
+  }
+
+  // One college, on demand: courses, fees, placements, admission, then NAAC/founded
+  if (body.action === 'college') {
+    if (!process.env.GROQ_API_KEY) return NextResponse.json({ error: 'GROQ_API_KEY is not configured on the server' }, { status: 400 })
+    if (!/^[0-9a-f-]{36}$/i.test(body.collegeId ?? '')) return NextResponse.json({ error: 'collegeId required' }, { status: 400 })
+    try {
+      const result = await runAutomation(db, {
+        targets: ['college_details', 'colleges'],
+        mode: 'single',
+        collegeId: body.collegeId,
+        force: true,
+        trigger: 'manual',
+        notify: false,
       })
       return NextResponse.json(result)
     } catch (err) {

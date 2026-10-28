@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import ExamRoadmap from '@/components/exams/ExamRoadmap'
 import ExamPattern from '@/components/exams/ExamPattern'
+import OfficialSyllabus from '@/components/exams/OfficialSyllabus'
 
 export default async function ExamRoadmapPage({
   params,
@@ -16,7 +17,7 @@ export default async function ExamRoadmapPage({
 
   const { data: exam, error: examError } = await supabase
     .from('exams')
-    .select('id, name, slug, exam_level, conducting_body')
+    .select('id, name, slug, exam_level, conducting_body, syllabus_source_url, syllabus_verified_at, syllabus_changes')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -34,10 +35,13 @@ export default async function ExamRoadmapPage({
     notFound()
   }
 
-  const { data: syllabusRows } = await supabase
+  const { data: allSyllabus } = await supabase
     .from('exam_syllabus')
-    .select('subject, topic, weightage, stage')
+    .select('subject, topic, weightage, stage, source_type, sort_order, added_at')
     .eq('exam_id', (exam as any).id)
+  // Official units (read from the conducting body) vs the older focus-area estimates
+  const officialRows = (allSyllabus ?? []).filter((r: any) => r.source_type === 'official')
+  const syllabusRows = (allSyllabus ?? []).filter((r: any) => r.source_type !== 'official')
 
   // Multi-stage exams (UPSC-style: Prelims / Mains / Interview) have more
   // than one exam_pattern row for the same exam_id, ordered by stage_order.
@@ -61,7 +65,8 @@ export default async function ExamRoadmapPage({
 
   // A roadmap page is worth showing if we have either syllabus weightage
   // data or exam-pattern data.
-  if (!hasSyllabus && !hasPattern) {
+  const hasOfficial = officialRows.length > 0 || !!(exam as any).syllabus_source_url
+  if (!hasSyllabus && !hasPattern && !hasOfficial) {
     notFound()
   }
 
@@ -74,8 +79,8 @@ export default async function ExamRoadmapPage({
           </Link>
           <h1 className="text-3xl md:text-4xl font-bold mt-4">{(exam as any).name} — Study Roadmap</h1>
           <p className="text-indigo-100 mt-3 text-lg max-w-2xl">
-            Exam pattern, subject-wise weightage, and the topics that have consistently carried the most marks — a
-            guide for sequencing your revision, not a substitute for the full syllabus.
+            Exam pattern, the official syllabus with what changed this year, and the topics that have carried the
+            most marks in past papers.
           </p>
           <div className="flex flex-wrap gap-3 mt-6">
             {(exam as any).exam_level && (
@@ -94,6 +99,15 @@ export default async function ExamRoadmapPage({
 
       <div className="max-w-4xl mx-auto px-4 py-12">
         {hasPattern && <ExamPattern patterns={patternRows as any} examName={(exam as any).name} />}
+
+        {hasOfficial && (
+          <OfficialSyllabus
+            rows={officialRows as any}
+            sourceUrl={(exam as any).syllabus_source_url}
+            verifiedAt={(exam as any).syllabus_verified_at}
+            changes={(exam as any).syllabus_changes}
+          />
+        )}
 
         {hasSyllabus && (
           <ExamRoadmap

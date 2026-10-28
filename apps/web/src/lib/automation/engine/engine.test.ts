@@ -1,3 +1,5 @@
+import { quoteNamesTopic, syllabusSection } from './syllabus'
+import { quoteNamesCategory, cutoffLines } from './exam-cutoffs'
 import { describe, it, expect } from 'vitest'
 import { normalize, quoteOnPage, quoteSupportsDate, quoteSupportsNumber, isTentative } from './evidence'
 import { validateSchedule, validateScholarship } from './validate'
@@ -280,5 +282,29 @@ describe('programme names', () => {
   it('keeps real programmes', () => {
     for (const n of ['MBA-PGPX', 'One Year MBA', 'Executive MBA', 'B.Tech Computer Science and Engineering', 'M.Sc. Biotechnology', 'Ph.D.', 'B.Arch', 'Integrated M.Tech (Software Engineering)'])
       expect(NOT_A_PROGRAMME.test(n)).toBe(false)
+  })
+})
+
+describe('syllabus evidence', () => {
+  it('needs the unit title in its quote', () => {
+    expect(quoteNamesTopic('Laws of Motion', 'UNIT 3: LAWS OF MOTION Newton’s first law')).toBe(true)
+    expect(quoteNamesTopic('Rotational Motion', 'UNIT 3: LAWS OF MOTION')).toBe(false)
+  })
+  it('finds the syllabus inside a long bulletin, not its table of contents', () => {
+    const toc = 'Contents\nSyllabus ........ 40\nFees ........ 12\n'
+    const body = `${'x'.repeat(5000)}\nSYLLABUS\nUnit 1 Sets\nUnit 2 Relations\nUnit 3 Limits\nChapter 4 Vectors\n`
+    expect(syllabusSection(toc + body, 200)).toContain('Unit 1 Sets')
+  })
+})
+
+describe('exam cutoff evidence', () => {
+  it('needs the category in the quote', () => {
+    expect(quoteNamesCategory('UR', 'UR 93.1023262')).toBe(true)
+    expect(quoteNamesCategory('OBC-NCL', 'OBC-NCL 79.4313582')).toBe(true)
+    expect(quoteNamesCategory('SC', 'ST 47.9026465')).toBe(false)
+  })
+  it('counts cutoff table rows, not years', () => {
+    expect(cutoffLines('UR 93.10\nEWS 80.38\nSC 61.15\nNotice 2026')).toBe(3)
+    expect(cutoffLines('Results of NEET (UG) 2026 for SC/ST candidates')).toBe(0)
   })
 })

@@ -203,9 +203,12 @@ export default function ExamRoadmap({ syllabusRows, examName, stageOrder }: Exam
 
   return (
     <div className="mb-10">
-      <h2 className="text-2xl font-bold text-gray-900 mb-1">Subject-wise Weightage & Topics</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-1">Important Topics</h2>
       <p className="text-gray-500 mb-4">
-        Where the marks actually come from — study every topic, but sequence your effort by weightage
+        Topics that have carried many marks in past papers — use them to order your revision
+      </p>
+      <p className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded-full px-3 py-1 mb-4">
+        Unofficial estimate: the conducting body does not publish topic-wise weightage, so these percentages are approximate
       </p>
 
       {/* Own-words framing so students don't mistake "high-yield topics" for "the entire syllabus" */}

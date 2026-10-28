@@ -10,6 +10,8 @@ on:
     - cron: '0 2 1 * *'
     # 15th of the month 07:30 IST — 50 colleges' websites: programmes & fees, placement reports, admission, scholarships
     - cron: '0 2 15 * *'
+    # 22nd of the month 07:30 IST — official exam syllabus (with changes) and official exam cutoffs
+    - cron: '0 2 22 * *'
     # 5th of Aug, Sep, Oct 07:30 IST — official NIRF placement sheets and JoSAA cutoffs (published once a year)
     - cron: '0 2 5 8,9,10 *'
   workflow_dispatch:
@@ -63,6 +65,8 @@ jobs:
             ARGS="--only=colleges --limit=120"
           elif [ "${{ github.event.schedule }}" = "0 2 15 * *" ]; then
             ARGS="--only=college_details --limit=50"
+          elif [ "${{ github.event.schedule }}" = "0 2 22 * *" ]; then
+            ARGS="--only=syllabus,exam_cutoffs --limit=60"
           elif [ "${{ github.event.schedule }}" = "0 2 5 8,9,10 *" ]; then
             ARGS="--only=placements,cutoffs"
           else
@@ -77,6 +81,6 @@ jobs:
         run: |
           echo "## Data automation" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          grep -E "Summary|Exams to check|Scholarships to check|Colleges to check|College details|JoSAA|NIRF|errors|Daily Groq|Stopped" automation.log >> $GITHUB_STEP_SUMMARY || true
+          grep -E "Summary|Exams to check|Scholarships to check|Colleges to check|College details|Exam syllabi|Exam cutoffs|JoSAA|NIRF|errors|Daily Groq|Stopped" automation.log >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "Review queued changes in Admin → Automation." >> $GITHUB_STEP_SUMMARY
