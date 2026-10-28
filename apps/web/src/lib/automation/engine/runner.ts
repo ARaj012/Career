@@ -153,33 +153,7 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
       }
     }
 
-    // ---------------- Colleges (own website) ----------------
-    if (opts.targets.includes('colleges') && opts.mode !== 'single') {
-      const { data: rows, error } = await db
-        .from('colleges')
-        .select('id, name, website_url, naac_grade, established_year, annual_fees_min, annual_fees_max, verified_at, last_checked_at')
-        .eq('automation_enabled', true)
-        .not('website_url', 'is', null)
-        .order('last_checked_at', { ascending: true, nullsFirst: true })
-      if (error) throw new Error(`colleges query failed: ${error.message}`)
-      let list = due((rows ?? []) as (CollegeRow & { last_checked_at: string | null })[], opts)
-      if (opts.limit) list = list.slice(0, opts.limit)
-      console.log(`\n🏛️ Colleges to check: ${list.length}`)
-      remaining.colleges = dueAtStart.colleges = list.length
-      for (const c of list) {
-        if (timeUp()) { log.push('Stopped early: time budget reached'); break }
-        console.log(`  🔍 ${c.name}`)
-        try {
-          tally(await updateCollege(db, c, { runId, dryRun, force: !!opts.force }), c.name)
-        } catch (err) {
-          if (err instanceof AiQuotaError) throw err
-          errors.push({ item: c.name, error: (err as Error).message })
-        }
-        await stamp('colleges', c.id)
-        remaining.colleges--
-      }
-    }
-
+    // Runs before the NAAC/founded check: it is the bigger gap, and both share the daily AI limit
     // ------- College details: programmes & fees, placement reports, admission, scholarships -------
     if (opts.targets.includes('college_details') && opts.mode !== 'single') {
       const { data: rows, error } = await db
@@ -205,6 +179,33 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
         // Stamped even after a failure so one broken site cannot stall the queue
         if (!dryRun) await db.from('colleges').update({ details_checked_at: new Date().toISOString() }).eq('id', c.id)
         remaining.college_details--
+      }
+    }
+
+    // ---------------- Colleges (own website) ----------------
+    if (opts.targets.includes('colleges') && opts.mode !== 'single') {
+      const { data: rows, error } = await db
+        .from('colleges')
+        .select('id, name, website_url, naac_grade, established_year, annual_fees_min, annual_fees_max, verified_at, last_checked_at')
+        .eq('automation_enabled', true)
+        .not('website_url', 'is', null)
+        .order('last_checked_at', { ascending: true, nullsFirst: true })
+      if (error) throw new Error(`colleges query failed: ${error.message}`)
+      let list = due((rows ?? []) as (CollegeRow & { last_checked_at: string | null })[], opts)
+      if (opts.limit) list = list.slice(0, opts.limit)
+      console.log(`\n🏛️ Colleges to check: ${list.length}`)
+      remaining.colleges = dueAtStart.colleges = list.length
+      for (const c of list) {
+        if (timeUp()) { log.push('Stopped early: time budget reached'); break }
+        console.log(`  🔍 ${c.name}`)
+        try {
+          tally(await updateCollege(db, c, { runId, dryRun, force: !!opts.force }), c.name)
+        } catch (err) {
+          if (err instanceof AiQuotaError) throw err
+          errors.push({ item: c.name, error: (err as Error).message })
+        }
+        await stamp('colleges', c.id)
+        remaining.colleges--
       }
     }
 
