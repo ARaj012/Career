@@ -281,7 +281,10 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
     }
   }
 
-  console.log('\n📊 Summary:', stats)
+  // One line, so the GitHub job summary (which greps this log) shows all of it
+  const { log: _log, ...counts } = stats as typeof stats & { log?: unknown }
+  console.log('\n📊 Summary:', JSON.stringify(counts))
+  if (quotaStop) console.log('⛔ Stopped: daily Groq AI limit reached; the next run continues where this one stopped')
   if (errors.length) console.log(`⚠️ ${errors.length} fetch/parse errors (see automation_runs.errors)`)
   return { runId, status, stats, errors, log, remaining, dueAtStart, quotaStop }
 }

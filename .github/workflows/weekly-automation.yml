@@ -77,6 +77,6 @@ jobs:
         run: |
           echo "## Data automation" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          grep -E "Summary|Exams to check|Scholarships to check|Colleges to check|College details|JoSAA|NIRF|errors|Daily Groq" automation.log >> $GITHUB_STEP_SUMMARY || true
+          grep -E "Summary|Exams to check|Scholarships to check|Colleges to check|College details|JoSAA|NIRF|errors|Daily Groq|Stopped" automation.log >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "Review queued changes in Admin → Automation." >> $GITHUB_STEP_SUMMARY
