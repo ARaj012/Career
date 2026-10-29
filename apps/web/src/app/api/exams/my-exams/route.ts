@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { pickCycle, type ScheduleRow } from '@/components/exams/KeyDates'
+
+const EXAM_WITH_SCHEDULES = '*, exam_schedules ( year, session, registration_start, registration_end, exam_date_start, exam_date_end, result_date, data_status )'
+
+/** Current cycle's sessions first, so exam_schedules[0] is the one a student is preparing for. */
+function withCurrentCycleFirst<T extends { exam_schedules?: ScheduleRow[] | null }>(exam: T): T {
+  const all = exam.exam_schedules ?? []
+  const current = pickCycle(all).sessions
+  return { ...exam, exam_schedules: [...current, ...all.filter((s) => !current.includes(s))] }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -56,7 +66,7 @@ export async function GET(req: NextRequest) {
           if (trackedExam.exam_slug) {
             const { data: exam } = await supabase
               .from('exams')
-              .select('*')
+              .select(EXAM_WITH_SCHEDULES)
               .eq('slug', trackedExam.exam_slug)
               .maybeSingle()
             
@@ -64,7 +74,7 @@ export async function GET(req: NextRequest) {
               console.log('✅ Exam found by slug:', trackedExam.exam_slug)
               return {
                 ...trackedExam,
-                exam: exam
+                exam: withCurrentCycleFirst(exam)
               }
             }
           }
@@ -72,7 +82,7 @@ export async function GET(req: NextRequest) {
           // Fallback: try by ID
           const { data: exam } = await supabase
             .from('exams')
-            .select('*')
+            .select(EXAM_WITH_SCHEDULES)
             .eq('id', trackedExam.exam_id)
             .maybeSingle()
           
@@ -80,7 +90,7 @@ export async function GET(req: NextRequest) {
             console.log('✅ Exam found by ID:', trackedExam.exam_id)
             return {
               ...trackedExam,
-              exam: exam
+              exam: withCurrentCycleFirst(exam)
             }
           }
           

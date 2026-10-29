@@ -9,7 +9,8 @@ import { degreeType, isNotAProgramme, programmeName, quoteNamesCourse, quoteName
 import { matchInstitute } from './josaa'
 import { canonName, parseNirfTable } from './nirf'
 import { isOfficialUrl, locateQuote } from './sources'
-import { focusText, itemsToLines } from './http'
+import { focusText, htmlToText, itemsToLines } from './http'
+import { load } from 'cheerio'
 
 const TODAY = new Date('2026-10-27T00:00:00Z')
 
@@ -320,5 +321,14 @@ describe('exam cutoff evidence', () => {
   it('counts cutoff table rows, not years', () => {
     expect(cutoffLines('UR 93.10\nEWS 80.38\nSC 61.15\nNotice 2026')).toBe(3)
     expect(cutoffLines('Results of NEET (UG) 2026 for SC/ST candidates')).toBe(0)
+  })
+})
+
+describe('htmlToText', () => {
+  it('drops struck-out (superseded) dates', () => {
+    const $ = load('<table><tr><td>Opening Date</td><td><del>14th August 2026</del><br><del>27th August 2026</del><br>2nd September 2026</td></tr></table>')
+    const text = htmlToText($)
+    expect(text).toContain('2nd September 2026')
+    expect(text).not.toContain('14th August')
   })
 })

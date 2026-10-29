@@ -200,9 +200,11 @@ export default function MyExamsPage() {
               const conductingBody = exam?.conducting_body || 'N/A'
               
               // Handle different date field names
-              const examDate = exam?.exam_schedules?.[0]?.exam_date_start || exam?.exam_date
-              const regStart = exam?.exam_schedules?.[0]?.registration_start || exam?.registration_start_date
-              const regEnd = exam?.exam_schedules?.[0]?.registration_end || exam?.registration_end_date
+              // The official schedule (current cycle first); the old single-date columns only when there is none
+              const cycle = exam?.exam_schedules?.[0]
+              const examDate = cycle ? cycle.exam_date_start : exam?.exam_date
+              const regStart = cycle ? cycle.registration_start : exam?.registration_start_date
+              const regEnd = cycle ? cycle.registration_end : exam?.registration_end_date
               
               // Calculate days remaining
               const daysRemaining = examDate 

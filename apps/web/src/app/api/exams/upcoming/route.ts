@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { pickCycle } from '@/components/exams/KeyDates'
 
 export async function GET(req: NextRequest) {
   try {
@@ -27,8 +28,10 @@ export async function GET(req: NextRequest) {
             registration_start,
             registration_end,
             exam_date_start,
+            exam_date_end,
             result_date,
-            year
+            year,
+            session
           )
         )
       `)
@@ -45,7 +48,8 @@ export async function GET(req: NextRequest) {
     // Calculate days remaining for each exam
     const upcomingExams = (data || []).map((item: any) => {
       const exam = item.exams
-      const schedule = exam?.exam_schedules?.[0]
+      // The cycle being prepared for, not whichever row the database returns first
+      const schedule = pickCycle(exam?.exam_schedules ?? []).sessions[0]
       const examDate = schedule?.exam_date_start
       
       let daysRemaining = null

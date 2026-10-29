@@ -209,8 +209,10 @@ async function fetchWithRetry(url: string, attempts = 3): Promise<Response> {
   throw new FetchError(url, reason)
 }
 
-function htmlToText($: Doc): string {
+export function htmlToText($: Doc): string {
   $('script, style, noscript, svg, iframe, form, [aria-hidden="true"]').remove()
+  // Struck-out text is a superseded value (GATE 2027: "<del>14th August 2026</del> 2nd September 2026")
+  $('del, s, strike, [style*="line-through"]').remove()
   // Keep table rows on one line so "Event | Date" pairs stay together
   $('tr').each((_, tr) => {
     const cells = $(tr)

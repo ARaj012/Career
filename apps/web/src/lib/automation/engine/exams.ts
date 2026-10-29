@@ -123,6 +123,12 @@ Use null for any field the text does not state.`
   const normCache = new Map<string, string>()
 
   for (const cycle of ai.cycles) {
+    // A cycle is the year the exam is written: GATE 2027 opens in Sep 2026 but is held in Feb 2027.
+    // A confirmed exam date settles it, whatever year the AI called the cycle.
+    const examDate = cycle.exam_date_start
+    if (examDate?.value && /^\d{4}-\d{2}-\d{2}$/.test(examDate.value) && locateQuote(examDate.quote, gathered.pages, normCache) && quoteSupportsDate(examDate.value, examDate.quote!)) {
+      cycle.year = Number(examDate.value.slice(0, 4))
+    }
     if (cycle.year < Y || cycle.year > Y + 1) continue
     const session = normalizeSession(cycle.session, rows.filter((r) => r.year === cycle.year).map((r) => r.session))
     const label = `${exam.name} ${cycle.year}${session === 'Default' ? '' : ` · ${session}`}`
