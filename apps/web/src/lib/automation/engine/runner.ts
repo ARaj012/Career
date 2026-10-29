@@ -161,7 +161,7 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
     if (opts.targets.includes('college_details') && (opts.mode !== 'single' || opts.collegeId)) {
       let q = db
         .from('colleges')
-        .select('id, name, website_url, admission_process, admission_verified_at, annual_fees_min, annual_fees_max, fees_verified_at, institute_scholarships, last_checked_at:details_checked_at')
+        .select('id, name, website_url, admission_process, admission_verified_at, annual_fees_min, annual_fees_max, fees_verified_at, institute_scholarships, details_read_at, last_checked_at:details_checked_at')
         .not('website_url', 'is', null)
       q = opts.collegeId ? q.eq('id', opts.collegeId) : q.eq('automation_enabled', true)
       const { data: rows, error } = await q.order('details_checked_at', { ascending: true, nullsFirst: true })
@@ -216,7 +216,7 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
     for (const target of ['syllabus', 'exam_cutoffs'] as const) {
       if (!opts.targets.includes(target)) continue
       const column = target === 'syllabus' ? 'syllabus_checked_at' : 'cutoffs_checked_at'
-      let q = db.from('exams').select(`id, name, slug, official_url, source_urls, syllabus_source_url, last_checked_at:${column}`).not('official_url', 'is', null)
+      let q = db.from('exams').select(`id, name, slug, official_url, source_urls, syllabus_source_url, syllabus_read_at, cutoffs_read_at, last_checked_at:${column}`).not('official_url', 'is', null)
       q = opts.mode === 'single' && opts.slug ? q.eq('slug', opts.slug) : q.eq('automation_enabled', true)
       const { data: rows, error } = await q.order(column, { ascending: true, nullsFirst: true })
       if (error) throw new Error(`${target} query failed: ${error.message}`)

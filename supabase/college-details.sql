@@ -87,3 +87,8 @@ end $$;
 revoke all on function public.retire_replaced_unverified() from public, anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+-- Set only when the reader actually read the site (not when it stopped or failed), so a
+-- page cached by another check never makes an unread college look "unchanged"
+alter table public.colleges add column if not exists details_read_at timestamptz;
+notify pgrst, 'reload schema';

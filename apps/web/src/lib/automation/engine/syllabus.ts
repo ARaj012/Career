@@ -33,7 +33,7 @@ const Output = z.object({
     .default([]),
 })
 
-export type SyllabusExam = ExamRow & { syllabus_source_url?: string | null }
+export type SyllabusExam = ExamRow & { syllabus_source_url?: string | null; syllabus_read_at?: string | null }
 
 export type SyllabusResult = { slug: string; outcomes: never[]; skipped?: string; errors: string[]; dropped: string[]; log: string[] }
 
@@ -107,7 +107,8 @@ export async function updateSyllabus(
     if (found.listing && !opts.dryRun) await db.from('exams').update({ syllabus_source_url: found.listing.finalUrl, syllabus_checked_at: today.toISOString() }).eq('id', exam.id)
     return { ...res, skipped: found.listing ? `syllabus is split across documents; linked ${found.listing.finalUrl}` : 'no official syllabus found on the official site' }
   }
-  if (!found.changed && !opts.force) return { ...res, skipped: 'official pages unchanged since last run' }
+  // The exam-date check caches the same pages, so "unchanged" only counts once this reader has read them
+  if (!found.changed && exam.syllabus_read_at && !opts.force) return { ...res, skipped: 'official pages unchanged since last run' }
 
   // Only the newest edition (NTA keeps last year's syllabus notice up too), PDFs first
   const editionOf = (p: { finalUrl: string; text: string }) => Math.max(0, ...[...`${p.finalUrl} ${p.text.slice(0, 800)}`.matchAll(/\b(20\d\d)\b/g)].map((m) => Number(m[1])).filter((y) => y <= today.getFullYear() + 1))
@@ -136,11 +137,12 @@ JSON: {"edition":{"value":"…","quote":"…"},"topics":[{"stage":null,"subject"
   if (process.env.AUTOMATION_DEBUG) console.log(`    📄 ${pages.map((p) => `${p.finalUrl} (${p.text.length})`).join(', ')}
 ${context.slice(0, 1500)}`)
   const ai = await extractJson(task, context, Output)
+  // Cached only after a successful read, so a failed read is retried next time
+  if (!ai) return { ...res, skipped: 'AI could not read the syllabus' }
   if (!opts.dryRun) {
     await saveCache(db, found.all)
-    await db.from('exams').update({ syllabus_checked_at: today.toISOString() }).eq('id', exam.id)
+    await db.from('exams').update({ syllabus_read_at: today.toISOString() }).eq('id', exam.id)
   }
-  if (!ai) return { ...res, skipped: 'AI could not read the syllabus' }
 
   const normCache = new Map<string, string>()
   const verified: { stage: string | null; subject: string; topic: string; url: string }[] = []

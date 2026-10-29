@@ -5,7 +5,7 @@ import { normalize, quoteOnPage, quoteSupportsDate, quoteSupportsNumber, isTenta
 import { validateSchedule, validateScholarship } from './validate'
 import { normalizeSession } from './exams'
 import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
-import { NOT_A_PROGRAMME, quoteNamesCourse, quoteNamesYear } from './college-details'
+import { degreeType, isNotAProgramme, programmeName, quoteNamesCourse, quoteNamesYear } from './college-details'
 import { matchInstitute } from './josaa'
 import { canonName, parseNirfTable } from './nirf'
 import { isOfficialUrl, locateQuote } from './sources'
@@ -277,11 +277,25 @@ describe('JoSAA institute matching', () => {
 describe('programme names', () => {
   it('rejects application rounds and entrance tests', () => {
     for (const n of ['B.Tech Foreign 2026 (December session)', 'VITREE-2027 (Ph.D.)', 'VITEEE', 'MBA Admission Notification', 'Entrance Test for M.Sc'])
-      expect(NOT_A_PROGRAMME.test(n)).toBe(true)
+      expect(isNotAProgramme(n)).toBe(true)
   })
   it('keeps real programmes', () => {
-    for (const n of ['MBA-PGPX', 'One Year MBA', 'Executive MBA', 'B.Tech Computer Science and Engineering', 'M.Sc. Biotechnology', 'Ph.D.', 'B.Arch', 'Integrated M.Tech (Software Engineering)'])
-      expect(NOT_A_PROGRAMME.test(n)).toBe(false)
+    for (const n of ['MBA-PGPX', 'One Year MBA', 'Executive MBA', 'B.Tech Computer Science and Engineering', 'M.Sc. Biotechnology', 'Ph.D.', 'B.Arch', 'Integrated M.Tech (Software Engineering)', '5 Year BS-MS Dual Degree Programme'])
+      expect(isNotAProgramme(n)).toBe(false)
+  })
+  it('drops "Admission in" around a programme name', () => {
+    expect(programmeName('Admission in Master of Science Programme')).toBe('Master of Science Programme')
+    expect(programmeName('Integrated PhD Admission')).toBe('Integrated PhD')
+    expect(isNotAProgramme(programmeName('PhD Admission Spring 2027'))).toBe(true)
+  })
+  it('cleans names the colleges list programmes under', () => {
+    expect(programmeName('M.Tech Programmes')).toBe('M.Tech')
+    expect(programmeName('BTECH (UG)')).toBe('BTECH')
+    expect(programmeName('Doctoral Programme in Management ( PhD)')).toBe('Doctoral Programme in Management (PhD)')
+    expect(isNotAProgramme('FYUG Programmes in the Teaching Departments')).toBe(true)
+    expect(isNotAProgramme(programmeName('COURSE: BTech Lateral Entry CE All India Merit (SOE, Thrikkakkara)'))).toBe(true)
+    expect(degreeType('PhD (PG)', 'PG')).toBe('Doctoral')
+    expect(degreeType('MBA', 'PG')).toBe('PG')
   })
 })
 

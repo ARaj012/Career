@@ -62,7 +62,7 @@ export type ExamCutoffResult = { slug: string; outcomes: never[]; skipped?: stri
 
 export async function updateExamCutoffs(
   db: SupabaseClient,
-  exam: ExamRow,
+  exam: ExamRow & { cutoffs_read_at?: string | null },
   opts: { dryRun: boolean; force: boolean; today?: Date }
 ): Promise<ExamCutoffResult> {
   const today = opts.today ?? new Date()
@@ -86,7 +86,8 @@ export async function updateExamCutoffs(
   const isHome = (url: string) => new URL(url).pathname.replace(/\/(index\.\w+)?$/, '') === ''
   const pages = gathered.pages.filter((p) => !isHome(p.finalUrl) && isOfficialUrl(p.finalUrl, ownUrls) && CUTOFF_TEXT.test(p.text) && cutoffLines(p.text) >= 3)
   if (!pages.length) return { ...res, skipped: 'no official cutoff notice found on the official site' }
-  if (!gathered.changed && !opts.force) return { ...res, skipped: 'official pages unchanged since last run' }
+  // The exam-date check caches the same pages, so "unchanged" only counts once this reader has read them
+  if (!gathered.changed && exam.cutoffs_read_at && !opts.force) return { ...res, skipped: 'official pages unchanged since last run' }
 
   const Y = today.getFullYear()
   const per = Math.floor(12_000 / Math.min(pages.length, 4))
@@ -100,11 +101,12 @@ JSON: {"rows":[{"year":${Y},"stage":null,"category":"UR","cutoff_type":"…","me
 
   if (process.env.AUTOMATION_DEBUG) console.log(`    📄 ${pages.map((p) => p.finalUrl).join(', ')}`)
   const ai = await extractJson(task, context, Output)
+  // Cached only after a successful read, so a failed read is retried next time
+  if (!ai) return { ...res, skipped: 'AI could not read the cutoff notice' }
   if (!opts.dryRun) {
     await saveCache(db, gathered.pages)
-    await db.from('exams').update({ cutoffs_checked_at: today.toISOString() }).eq('id', exam.id)
+    await db.from('exams').update({ cutoffs_read_at: today.toISOString() }).eq('id', exam.id)
   }
-  if (!ai) return { ...res, skipped: 'AI could not read the cutoff notice' }
 
   const normCache = new Map<string, string>()
   const byYear = new Map<number, Record<string, unknown>[]>()

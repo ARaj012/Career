@@ -83,3 +83,9 @@ end $$;
 revoke all on function public.retire_replaced_unverified() from public, anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+-- Set only when a reader actually read the pages, so a page cached by the exam-date
+-- check never makes an unread syllabus / cutoff notice look "unchanged"
+alter table public.exams add column if not exists syllabus_read_at timestamptz;
+alter table public.exams add column if not exists cutoffs_read_at timestamptz;
+notify pgrst, 'reload schema';

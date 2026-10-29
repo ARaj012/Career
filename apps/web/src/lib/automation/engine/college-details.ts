@@ -46,7 +46,7 @@ const Output = z.object({
     )
     .default([]),
   admission_steps: z.array(z.string()).default([]),
-  scholarships: z.array(z.object({ name: z.string(), quote: z.string().nullish() })).default([]),
+  scholarships: z.array(z.object({ name: z.string().nullish(), quote: z.string().nullish() })).default([]),
 })
 type Out = z.infer<typeof Output>
 
@@ -165,6 +165,7 @@ export type CollegeDetailRow = {
   annual_fees_max: number | null
   fees_verified_at: string | null
   institute_scholarships: unknown
+  details_read_at?: string | null
 }
 
 const DEGREE = /\b(b\.?\s?tech|b\.?e|m\.?\s?tech|m\.?e|mba|pgdm|pgp|mbbs|md|ms|bds|mds|b\.?sc|m\.?sc|b\.?com|m\.?com|b\.?a|m\.?a|ll\.?b|ll\.?m|b\.?arch|m\.?arch|b\.?des|m\.?des|b\.?pharm|m\.?pharm|ph\.?\s?d|bba|bca|mca)\b/i
@@ -203,7 +204,8 @@ export async function updateCollegeDetails(
   const gathered = await discover(db, c.website_url)
   res.errors.push(...gathered.errors)
   if (!gathered.pages.length) return { ...res, skipped: 'could not fetch website' }
-  if (!gathered.changed && !opts.force) return { ...res, skipped: 'website unchanged' }
+  // Other checks cache the same pages, so "unchanged" only counts once this reader has read them
+  if (!gathered.changed && c.details_read_at && !opts.force) return { ...res, skipped: 'website unchanged' }
 
   const byTopic = {
     fees: topicPages(gathered.pages, 'fees'),
@@ -237,8 +239,12 @@ JSON: {"programmes":[{"course_name":"…","degree_type":"UG","duration_years":4,
     console.log('    [debug] pages per topic:', Object.fromEntries(Object.entries(byTopic).map(([k, v]) => [k, v.length])), 'context chars:', context.length)
     console.log('    [debug] AI:', JSON.stringify(ai).slice(0, 2500))
   }
-  if (!opts.dryRun) await saveCache(db, gathered.pages)
+  // Cached only after a successful read, so a failed read is retried next time
   if (!ai) return { ...res, skipped: 'AI could not read the website' }
+  if (!opts.dryRun) {
+    await saveCache(db, gathered.pages)
+    await db.from('colleges').update({ details_read_at: today.toISOString() }).eq('id', c.id)
+  }
 
   // A quote only counts if it is on a page of the matching topic
   const norm = new Map<string, string>()
@@ -271,7 +277,42 @@ type Res = { outcomes: ProposalOutcome[]; dropped: string[] }
 type OnSite = (q: string | null | undefined) => string | null
 type Opts = { runId: string | null; dryRun: boolean }
 
-export const NOT_A_PROGRAMME = /(\b(19|20)\d{2}\b|session|application|registration|entrance|\bexam|\btest\b|admission|notification|result|counsel|brochure|[A-Z]{3,}EE\b|\bREE\b)/i
+// Also groups of programmes ("PG Programmes in the Teaching Departments") and admission
+// channels ("BTech Lateral Entry CE All India Merit")
+const NOT_A_PROGRAMME_WORDS = /(\b(19|20)\d{2}\b|session|application|registration|entrance|\bexam|\btest\b|admission|notification|result|counsel|brochure|programmes in|\bdepartments\b|lateral entry|\bmerit\b|\bquota\b)/i
+// Case-sensitive: entrance-test acronyms (VITEEE, VITREE), not words ending in "ee" like "Degree"
+const ENTRANCE_ACRONYM = /[A-Z]{3,}EE\b|\bREE\b/
+
+/** Application rounds and entrance tests ("B.Tech Foreign 2026 (December session)", "VITREE-2027") are not programmes. */
+export function isNotAProgramme(name: string): boolean {
+  return NOT_A_PROGRAMME_WORDS.test(name) || ENTRANCE_ACRONYM.test(name)
+}
+
+/**
+ * "Admission in Master of Science Programme" → "Master of Science Programme",
+ * "Integrated PhD Admission" → "Integrated PhD", "M.Tech Programmes" → "M.Tech",
+ * "BTECH (UG)" → "BTECH", "COURSE: MBA" → "MBA".
+ */
+export function programmeName(raw: string): string {
+  return raw
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^(course|programme|program)\s*:\s*/i, '')
+    .replace(/^admissions?\s+(in|to|for|into)\s+(the\s+)?/i, '')
+    .replace(/\s+admissions?$/i, '')
+    .replace(/\s*\((UG|PG)\)$/i, '')
+    .replace(/\s+programmes$/i, '')
+    .replace(/\s*\(\s*/g, ' (')
+    .replace(/\s*\)/g, ')')
+    .trim()
+}
+
+/** The level from the name when it is unambiguous; otherwise the AI's reading. */
+export function degreeType(name: string, aiType: string | null | undefined): string | null {
+  if (/\b(ph\.?\s?d|doctoral|doctor of philosophy)\b/i.test(name)) return 'Doctoral'
+  if (/\b(dual degree|integrated|bs-ms)\b/i.test(name)) return 'Integrated'
+  return aiType ?? null
+}
 
 async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSite: OnSite, nameOnSite: (n: string) => string | null, res: Res, opts: Opts) {
   const { data: existing } = await db.from('college_courses').select('id, course_name, annual_fees_min, total_fees, total_seats').eq('college_id', c.id).eq('source_type', 'official')
@@ -279,11 +320,10 @@ async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSi
   const seen = new Set<string>()
 
   for (const p of ai.programmes.slice(0, 40)) {
-    const name = p.course_name.replace(/\s+/g, ' ').trim()
+    const name = programmeName(p.course_name)
     const key = normalize(name)
     if (!key || seen.has(key)) continue
-    // Application rounds and entrance tests ("B.Tech Foreign 2026 (December session)", "VITREE-2027") are not programmes
-    if (NOT_A_PROGRAMME.test(name)) { res.dropped.push(`${c.name} · "${name}": not a degree programme`); continue }
+    if (isNotAProgramme(name)) { res.dropped.push(`${c.name} · "${name}": not a degree programme`); continue }
     seen.add(key)
 
     const fact = (f: { value?: number | null; quote?: string | null } | null | undefined, label: string, needsName: boolean) => {
@@ -312,7 +352,8 @@ async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSi
     set('total_seats', seats?.value ?? null, seats?.quote ?? null, old?.total_seats)
     if (!old) {
       set('course_name', name, null, undefined)
-      if (p.degree_type) set('degree_type', p.degree_type, null, undefined)
+      const level = degreeType(name, p.degree_type)
+      if (level) set('degree_type', level, null, undefined)
       if (p.duration_years && p.duration_years > 0 && p.duration_years <= 7) set('duration_years', p.duration_years, null, undefined)
     }
     if (!Object.keys(fields).some((k) => k !== 'annual_fees_max')) continue
@@ -420,7 +461,7 @@ async function textFields(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onAd
 
   // Institute scholarships
   const schol = ai.scholarships
-    .map((s) => ({ name: s.name.trim().slice(0, 120), detail: (s.quote ?? '').replace(/\s+/g, ' ').trim().slice(0, 400), source_url: onScholarship(s.quote) }))
+    .map((s) => ({ name: (s.name ?? '').trim().slice(0, 120), detail: (s.quote ?? '').replace(/\s+/g, ' ').trim().slice(0, 400), source_url: onScholarship(s.quote) }))
     // The quote must describe the scheme (who gets what), not just announce results
     .filter((s) => s.name && s.detail.length >= 40 && s.source_url && !NEWS.test(s.detail) && normalize(s.detail).includes(normalize(s.name).split(' ')[0])
       && /(waiver|amount|₹|rs\.?|per (annum|year|month|semester)|%|tuition|students? (with|from|who)|family income|merit|awarded|eligible)/i.test(s.detail))
