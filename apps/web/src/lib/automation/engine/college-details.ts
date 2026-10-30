@@ -16,6 +16,9 @@ import { fetchPage, hostOf, type FetchedPage } from './http'
 import { buildContext, isOfficialUrl, locateQuote, saveCache } from './sources'
 import { submitProposal, type Change, type ProposalOutcome } from './proposals'
 
+// The AI sometimes writes null for "none found"; treat it as an empty list instead of discarding the whole reading
+const orEmpty = <T,>(v: T[] | null | undefined): T[] => v ?? []
+
 const Num = z.object({ value: z.coerce.number().nullish(), quote: z.string().nullish() }).nullish()
 const Output = z.object({
   programmes: z
@@ -30,7 +33,8 @@ const Output = z.object({
         seats: Num,
       })
     )
-    .default([]),
+    .nullish()
+    .transform(orEmpty),
   placements: z
     .array(
       z.object({
@@ -44,9 +48,10 @@ const Output = z.object({
         recruiters: z.object({ value: z.string().nullish(), quote: z.string().nullish() }).nullish(),
       })
     )
-    .default([]),
-  admission_steps: z.array(z.string()).default([]),
-  scholarships: z.array(z.object({ name: z.string().nullish(), quote: z.string().nullish() })).default([]),
+    .nullish()
+    .transform(orEmpty),
+  admission_steps: z.array(z.string()).nullish().transform(orEmpty),
+  scholarships: z.array(z.object({ name: z.string().nullish(), quote: z.string().nullish() })).nullish().transform(orEmpty),
 })
 type Out = z.infer<typeof Output>
 
@@ -109,6 +114,13 @@ async function sitemapUrls(home: string, max: number): Promise<string[]> {
 }
 
 /** Homepage → topic pages (links + sitemap) → their fee / placement / admission documents. */
+/** "https://www.hau.ac.in/x" ⇄ "https://hau.ac.in/x" */
+export function otherWww(url: string): string {
+  const u = new URL(url)
+  u.hostname = u.hostname.startsWith('www.') ? u.hostname.slice(4) : `www.${u.hostname}`
+  return u.toString()
+}
+
 export async function discover(db: SupabaseClient, home: string): Promise<{ pages: FetchedPage[]; changed: boolean; errors: string[] }> {
   const pages: FetchedPage[] = []
   const errors: string[] = []
@@ -127,8 +139,11 @@ export async function discover(db: SupabaseClient, home: string): Promise<{ page
       return null
     }
   }
-  const root = await get(home)
+  // Many college sites only work with or only without "www." (certificate issued for one
+  // name, or no DNS record for the other): try the other form of the same domain
+  const root = (await get(home)) ?? (/certificate|ALTNAME|domain not found/i.test(errors.at(-1) ?? '') ? await get(otherWww(home)) : null)
   if (!root) return { pages, changed: false, errors }
+  if (root.url !== home) errors.splice(-1, 1) // the first form failed but the other worked
 
   // Hop 1: up to 3 entry pages per topic from the homepage, then the sitemap
   const level1: { url: string; text: string }[] = []
@@ -204,6 +219,11 @@ export async function updateCollegeDetails(
   const gathered = await discover(db, c.website_url)
   res.errors.push(...gathered.errors)
   if (!gathered.pages.length) return { ...res, skipped: 'could not fetch website' }
+  // The site answered only on the other www form: keep that one, so the other checks reach it too
+  if (gathered.pages[0].url === otherWww(c.website_url)) {
+    if (!opts.dryRun) await db.from('colleges').update({ website_url: gathered.pages[0].url }).eq('id', c.id)
+    c = { ...c, website_url: gathered.pages[0].url }
+  }
   // Other checks cache the same pages, so "unchanged" only counts once this reader has read them
   if (!gathered.changed && c.details_read_at && !opts.force) return { ...res, skipped: 'website unchanged' }
 
@@ -302,6 +322,8 @@ export function programmeName(raw: string): string {
     .replace(/\s+admissions?$/i, '')
     .replace(/\s*\((UG|PG)\)$/i, '')
     .replace(/\s+programmes$/i, '')
+    // "B.Tech. Programme" → "B.Tech."; "Doctoral Programme" keeps its word, it names the programme
+    .replace(/^(.{1,12}?)\s+programme$/i, (whole, degree: string) => (DEGREE.test(degree) ? degree : whole))
     .replace(/\s*\(\s*/g, ' (')
     .replace(/\s*\)/g, ')')
     .trim()

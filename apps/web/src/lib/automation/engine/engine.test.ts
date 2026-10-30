@@ -5,7 +5,7 @@ import { normalize, quoteOnPage, quoteSupportsDate, quoteSupportsNumber, isTenta
 import { validateSchedule, validateScholarship } from './validate'
 import { normalizeSession } from './exams'
 import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
-import { degreeType, isNotAProgramme, programmeName, quoteNamesCourse, quoteNamesYear } from './college-details'
+import { degreeType, isNotAProgramme, otherWww, programmeName, quoteNamesCourse, quoteNamesYear } from './college-details'
 import { matchInstitute } from './josaa'
 import { canonName, parseNirfTable } from './nirf'
 import { isOfficialUrl, locateQuote } from './sources'
@@ -297,6 +297,15 @@ describe('programme names', () => {
     expect(isNotAProgramme(programmeName('COURSE: BTech Lateral Entry CE All India Merit (SOE, Thrikkakkara)'))).toBe(true)
     expect(degreeType('PhD (PG)', 'PG')).toBe('Doctoral')
     expect(degreeType('MBA', 'PG')).toBe('PG')
+  })
+  it('drops a trailing "Programme" only after a degree', () => {
+    expect(programmeName('B.Tech. Programme')).toBe('B.Tech.')
+    expect(programmeName('M.sc. Programme')).toBe('M.sc.')
+    expect(programmeName('Doctoral Programme')).toBe('Doctoral Programme')
+  })
+  it('swaps the www form of a college site', () => {
+    expect(otherWww('https://www.hau.ac.in/')).toBe('https://hau.ac.in/')
+    expect(otherWww('https://nitdgp.ac.in/')).toBe('https://www.nitdgp.ac.in/')
   })
 })
 
