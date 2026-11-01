@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Metadata } from 'next'
 import SaveCareerButton from '@/components/SaveCareerButton'
+import OfficialCareerFacts from '@/components/careers/OfficialCareerFacts'
 import {
   ArrowLeft, TrendingUp, IndianRupee, Briefcase, BookOpen,
   GraduationCap, Star, CheckCircle2, Building2, Target,
@@ -236,7 +237,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       type: 'article',
       locale: 'en_IN',
       url: `https://careerguide.com/careers/${slug}`,
-      title: `${career.title} Career Guide - ${salaryText}, ${career.growth_level} Growth`,
+      title: [`${career.title} Career Guide`, career.avg_salary_min || career.avg_salary_max ? salaryText : null, career.growth_level ? `${career.growth_level} Growth` : null].filter(Boolean).join(' - '),
       description,
       siteName: 'CareerGuide',
     },
@@ -260,7 +261,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
   // Try the slug as-is first
   let { data: careerRaw } = await supabase
     .from('careers')
-    .select('id, title, slug, description, category, avg_salary_min, avg_salary_max, salary_currency, growth_level, competition_level, work_life_balance, demand_score, is_trending, created_at')
+    .select('id, title, slug, description, category, avg_salary_min, avg_salary_max, salary_currency, growth_level, competition_level, work_life_balance, demand_score, is_trending, created_at, official_body, official_url, eligibility, how_to_enter, licence, official_pay, official_pay_min, facts_source_url, verified_at')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -269,7 +270,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
     const altSlug = slug.replace(/_/g, '-')
     const { data: altCareerRaw } = await supabase
       .from('careers')
-      .select('id, title, slug, description, category, avg_salary_min, avg_salary_max, salary_currency, growth_level, competition_level, work_life_balance, demand_score, is_trending, created_at')
+      .select('id, title, slug, description, category, avg_salary_min, avg_salary_max, salary_currency, growth_level, competition_level, work_life_balance, demand_score, is_trending, created_at, official_body, official_url, eligibility, how_to_enter, licence, official_pay, official_pay_min, facts_source_url, verified_at')
       .eq('slug', altSlug)
       .maybeSingle()
     if (altCareerRaw) careerRaw = altCareerRaw
@@ -330,7 +331,10 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
   const categoryColor = career.category ? (CATEGORY_COLORS[career.category] ?? 'bg-gray-100 text-gray-700') : 'bg-gray-100 text-gray-700'
   const careerSteps = CAREER_STEPS[career.category] ?? CAREER_STEPS['Technology']
   const topEmployers = TOP_EMPLOYERS[career.category] ?? TOP_EMPLOYERS['Technology']
-  const keyFacts = KEY_FACTS[career.category] ?? []
+  // Category templates (key facts, steps, employers, colleges, salary bands) are general guides
+  // written per category; careers read from an official body show their own facts instead
+  const generic = !career.official_body
+  const keyFacts = generic ? KEY_FACTS[career.category] ?? [] : []
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -367,29 +371,26 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
               <h1 className="text-3xl font-bold text-gray-900 mb-3">{career.title}</h1>
               {career.description && <p className="text-gray-600 leading-relaxed text-sm">{career.description}</p>}
 
-              {/* Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-100">
-                <div className="text-center">
-                  <IndianRupee className="w-5 h-5 text-green-500 mx-auto mb-1" />
-                  <div className="text-sm font-bold text-gray-800">{formatSalary(career.avg_salary_min, career.avg_salary_max)}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">Avg Salary</div>
-                </div>
-                <div className="text-center">
-                  <TrendingUp className={`w-5 h-5 mx-auto mb-1 ${growthConfig.text}`} />
-                  <div className="text-sm font-bold text-gray-800">{career.growth_level ?? 'N/A'}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">Growth</div>
-                </div>
-                <div className="text-center">
-                  <BarChart3 className="w-5 h-5 text-indigo-500 mx-auto mb-1" />
-                  <div className="text-sm font-bold text-gray-800">{career.demand_score ?? 'N/A'}/10</div>
-                  <div className="text-xs text-gray-400 mt-0.5">Demand</div>
-                </div>
-                <div className="text-center">
-                  <Scale className="w-5 h-5 text-purple-500 mx-auto mb-1" />
-                  <div className="text-sm font-bold text-gray-800">{career.competition_level ?? 'N/A'}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">Competition</div>
-                </div>
-              </div>
+              {/* Stats: only what is known (careers read from an official body have no salary/demand estimates) */}
+              {(() => {
+                const stats = [
+                  (career.avg_salary_min || career.avg_salary_max) && { icon: <IndianRupee className="w-5 h-5 text-green-500 mx-auto mb-1" />, value: formatSalary(career.avg_salary_min, career.avg_salary_max), label: 'Avg Salary' },
+                  career.growth_level && { icon: <TrendingUp className={`w-5 h-5 mx-auto mb-1 ${growthConfig.text}`} />, value: career.growth_level, label: 'Growth' },
+                  career.demand_score != null && { icon: <BarChart3 className="w-5 h-5 text-indigo-500 mx-auto mb-1" />, value: `${career.demand_score}/10`, label: 'Demand' },
+                  career.competition_level && { icon: <Scale className="w-5 h-5 text-purple-500 mx-auto mb-1" />, value: career.competition_level, label: 'Competition' },
+                ].filter(Boolean) as { icon: React.ReactNode; value: string; label: string }[]
+                return stats.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-100">
+                    {stats.map((s) => (
+                      <div key={s.label} className="text-center">
+                        {s.icon}
+                        <div className="text-sm font-bold text-gray-800">{s.value}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
 
               {/* Score Bars */}
               <div className="mt-5 space-y-3">
@@ -429,6 +430,18 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
               </div>
             </div>
 
+            <OfficialCareerFacts
+              title={career.title}
+              officialBody={career.official_body}
+              officialUrl={career.official_url}
+              eligibility={career.eligibility}
+              howToEnter={career.how_to_enter}
+              licence={career.licence}
+              officialPay={career.official_pay}
+              sourceUrl={career.facts_source_url}
+              verifiedAt={career.verified_at}
+            />
+
             {/* Key Facts */}
             {keyFacts.length > 0 && (
               <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 p-6">
@@ -447,7 +460,8 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
               </div>
             )}
 
-            {/* Career Path Steps */}
+            {/* Career Path Steps: a general guide for the category, hidden when the official route is known */}
+            {generic && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900 mb-5 flex items-center gap-2">
                 <ArrowRight className="w-5 h-5 text-green-500" />
@@ -464,6 +478,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                 ))}
               </div>
             </div>
+            )}
 
             {/* Skills */}
             {careerSkills.length > 0 && (
@@ -499,6 +514,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
             )}
 
             {/* Top Employers */}
+            {generic && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-blue-500" /> Top Employers
@@ -511,6 +527,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                 ))}
               </div>
             </div>
+            )}
 
             {/* Entrance Exams */}
             {careerExams.length > 0 && (
@@ -543,7 +560,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
             )}
 
             {/* ✅ FIXED: Best Colleges for THIS Career */}
-            {relatedColleges.length > 0 && (
+            {generic && relatedColleges.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-purple-500" />
@@ -586,6 +603,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
             )}
 
             {/* Salary by Experience */}
+            {generic && (career.avg_salary_min || career.avg_salary_max) && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <IndianRupee className="w-5 h-5 text-green-500" /> Salary by Experience
@@ -609,6 +627,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                 ))}
               </div>
             </div>
+            )}
           </div>
 
           {/* ── SIDEBAR ── */}
@@ -633,10 +652,16 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                     <span className="text-xs font-medium text-gray-800">{value}</span>
                   </div>
                 ))}
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2 text-xs text-gray-500"><IndianRupee className="w-3.5 h-3.5" />Salary</div>
-                  <span className="text-xs font-medium text-green-700">{formatSalary(career.avg_salary_min, career.avg_salary_max)}</span>
-                </div>
+                {(career.avg_salary_min || career.avg_salary_max || career.official_pay_min) && (
+                  <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-2 text-xs text-gray-500"><IndianRupee className="w-3.5 h-3.5" />{career.avg_salary_min || career.avg_salary_max ? 'Salary' : 'Official pay'}</div>
+                    <span className="text-xs font-medium text-green-700">
+                      {career.avg_salary_min || career.avg_salary_max
+                        ? formatSalary(career.avg_salary_min, career.avg_salary_max)
+                        : `₹${career.official_pay_min.toLocaleString('en-IN')}/month`}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -658,6 +683,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
             </div>
 
             {/* Is this right for you */}
+            {generic && (
             <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <BadgeCheck className="w-4 h-4 text-green-500" /> Is this right for you?
@@ -682,6 +708,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                 Take Career Quiz →
               </Link>
             </div>
+            )}
 
             {/* Similar Careers */}
             {similarCareers.length > 0 && (

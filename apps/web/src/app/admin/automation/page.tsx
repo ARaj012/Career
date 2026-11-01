@@ -42,6 +42,7 @@ const SWEEP_TARGETS = [
   { key: 'colleges', label: 'Colleges (NAAC, founded)' },
   { key: 'syllabus', label: 'Exam syllabus' },
   { key: 'exam_cutoffs', label: 'Exam cutoffs' },
+  { key: 'careers', label: 'Careers (eligibility, route, pay)' },
   { key: 'nirf', label: 'College NIRF ranks' },
 ] as const
 type SweepKey = (typeof SWEEP_TARGETS)[number]['key']
@@ -162,6 +163,7 @@ export default function AutomationPage() {
       colleges: { total: 0, left: 0, state: 'waiting' },
       syllabus: { total: 0, left: 0, state: 'waiting' },
       exam_cutoffs: { total: 0, left: 0, state: 'waiting' },
+      careers: { total: 0, left: 0, state: 'waiting' },
       nirf: { total: 1, left: 1, state: 'waiting' },
     }
     const totals = { checked: 0, auto_applied: 0, pending: 0, skipped: 0 }

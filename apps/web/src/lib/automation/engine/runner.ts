@@ -8,11 +8,12 @@ import { updateCollegeDetails, type CollegeDetailRow } from './college-details'
 import { updateJosaaCutoffs } from './josaa'
 import { updateSyllabus } from './syllabus'
 import { updateExamCutoffs } from './exam-cutoffs'
+import { updateCareer, type CareerRow } from './careers'
 import type { ProposalOutcome } from './proposals'
 import { AiQuotaError } from './llm'
 
 export type RunOptions = {
-  targets: ('exams' | 'scholarships' | 'colleges' | 'nirf' | 'placements' | 'college_details' | 'cutoffs' | 'syllabus' | 'exam_cutoffs')[]
+  targets: ('exams' | 'scholarships' | 'colleges' | 'nirf' | 'placements' | 'college_details' | 'cutoffs' | 'syllabus' | 'exam_cutoffs' | 'careers')[]
   mode: 'full' | 'hot' | 'single'
   slug?: string             // exam slug (mode=single)
   collegeId?: string        // one college (mode=single, college targets)
@@ -69,8 +70,8 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
   const errors: { item: string; error: string }[] = []
   const log: string[] = []
   const timeUp = () => opts.deadlineMs !== undefined && Date.now() > opts.deadlineMs
-  const remaining = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, syllabus: 0, exam_cutoffs: 0, nirf: 0 }
-  const dueAtStart = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, syllabus: 0, exam_cutoffs: 0 }
+  const remaining = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, syllabus: 0, exam_cutoffs: 0, careers: 0, nirf: 0 }
+  const dueAtStart = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, syllabus: 0, exam_cutoffs: 0, careers: 0 }
   let quotaStop: string | undefined
   const stamp = async (table: 'exams' | 'scholarships' | 'colleges', id: string, column = 'last_checked_at') => {
     if (opts.sweepStartedAt) await db.from(table).update({ [column]: new Date().toISOString() }).eq('id', id)
@@ -153,6 +154,35 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
         }
         await stamp('scholarships', s.id)
         remaining.scholarships--
+      }
+    }
+
+    // ------- Careers: eligibility, route in, licence, pay from the official body -------
+    if (opts.targets.includes('careers') && opts.mode !== 'single') {
+      const { data: rows, error } = await db
+        .from('careers')
+        .select('id, title, slug, official_body, official_url, source_urls, eligibility, how_to_enter, licence, official_pay, official_pay_min, official_pay_max, verified_at, facts_read_at, last_checked_at')
+        .eq('automation_enabled', true)
+        .not('official_url', 'is', null)
+        .order('last_checked_at', { ascending: true, nullsFirst: true })
+      if (error) throw new Error(`careers query failed: ${error.message}`)
+      let list = due((rows ?? []) as (CareerRow & { last_checked_at: string | null })[], opts)
+      if (opts.limit) list = list.slice(0, opts.limit)
+      console.log(`
+💼 Careers to check: ${list.length}`)
+      remaining.careers = dueAtStart.careers = list.length
+      for (const c of list) {
+        if (timeUp()) { log.push('Stopped early: time budget reached'); break }
+        console.log(`  🔍 ${c.title}`)
+        try {
+          tally(await updateCareer(db, c, { runId, dryRun, force: !!opts.force }), c.title)
+        } catch (err) {
+          if (err instanceof AiQuotaError) throw err
+          errors.push({ item: c.title, error: (err as Error).message })
+        }
+        // Stamped even after a failure so one broken site cannot stall the queue
+        if (!dryRun) await db.from('careers').update({ last_checked_at: new Date().toISOString() }).eq('id', c.id)
+        remaining.careers--
       }
     }
 

@@ -5,6 +5,7 @@ import { normalize, quoteOnPage, quoteSupportsDate, quoteSupportsNumber, isTenta
 import { validateSchedule, validateScholarship } from './validate'
 import { normalizeSession } from './exams'
 import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
+import { careerContext, usableSentence } from './careers'
 import { degreeType, isNotAProgramme, otherWww, programmeName, quoteNamesCourse, quoteNamesYear } from './college-details'
 import { matchInstitute } from './josaa'
 import { canonName, parseNirfTable } from './nirf'
@@ -339,5 +340,33 @@ describe('htmlToText', () => {
     const text = htmlToText($)
     expect(text).toContain('2nd September 2026')
     expect(text).not.toContain('14th August')
+  })
+})
+
+describe('career facts', () => {
+  const page = (url: string, text: string) => ({ url, finalUrl: url, status: 200, kind: 'html' as const, text, hash: url, links: [] })
+  it('drops menu lines repeated on every page of a site', () => {
+    const menu = 'NISM-Series-VIII: Equity Derivatives Certification Examination for market staff'
+    const ctx = careerContext([
+      page('https://a.in/1', `${menu}\nAll Research Analysts must be registered with SEBI and follow strict guidelines.`),
+      page('https://a.in/2', `${menu}\nSome other page text about something else entirely, long enough.`),
+    ], /Research\W*Analyst/i)
+    expect(ctx).toContain('must be registered with SEBI')
+    expect(ctx).not.toContain('Equity Derivatives')
+  })
+  it('keeps sentences, not menu items or notices', () => {
+    expect(usableSentence('A candidate should have passed Class 10 or equivalent from a recognized Board.')).toBe(true)
+    expect(usableSentence('Click here to download the form')).toBe(false)
+    expect(usableSentence('Admission')).toBe(false)
+  })
+})
+
+describe('career sentences from PDFs', () => {
+  it('rejects cut-off table cells, schedules and renewal rules', () => {
+    expect(usableSentence('Qualification from a recognized Board, or university')).toBe(false)
+    expect(usableSentence('Electrician) Qualification trades like Masonry or Electrician.')).toBe(false)
+    expect(usableSentence('Online Examination – Preliminary August, 2026')).toBe(false)
+    expect(usableSentence('In order to successfully complete the renewal examination (X-C), a candidate has to pass')).toBe(false)
+    expect(usableSentence("Eligibility Criteria: Bachelor's Degree or equivalent in any discipline")).toBe(true)
   })
 })

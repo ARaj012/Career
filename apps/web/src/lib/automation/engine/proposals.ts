@@ -15,7 +15,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export type Change = { old: unknown; new: unknown; evidence: string | null }
 
 export type ProposalInput = {
-  entity: 'exam_schedule' | 'scholarship' | 'college'
+  entity: 'exam_schedule' | 'scholarship' | 'college' | 'career'
   table: string
   recordId: string | null              // null = insert new row
   parentId?: string | null

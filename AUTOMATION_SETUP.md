@@ -33,7 +33,7 @@ with its evidence, and approvals are written to the audit log.
 
 1. Supabase SQL editor: run `supabase/automation-v2.sql`, then
    `supabase/data-corrections-2026-10.sql` (removes the mock data the old scrapers wrote),
-   `supabase/college-details.sql` and `supabase/exam-content.sql`.
+   `supabase/college-details.sql`, `supabase/exam-content.sql` and `supabase/career-facts.sql`.
 2. GitHub → Settings → Secrets and variables → Actions:
    - Secrets: `CAREER_GUIDANCE_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GROQ_API_KEY`
    - Variables (optional): `APP_URL` (shown in the bot's user-agent), `AUTOMATION_AUTO_APPLY`
@@ -98,4 +98,9 @@ check still blocks bad readings). Groq retires models over time, so check consol
   notice; an official year replaces that year's old rows.
 - Placements: NIRF publishes data up to the batch graduating the year before its edition
   (NIRF 2025 → 2023-24). Later seasons come only from each college's own placement report.
+- Careers: only careers with `official_body`, `official_url` and `automation_enabled = true`
+  are read (eligibility, route in, licence, official pay), each a sentence copied from the
+  body's site. Salary, growth and demand are never automated: no official body publishes them.
+  Many bodies' sites show text only with JavaScript (ICSI, SSC) or block readers (NTA, NCISM);
+  point `source_urls` at a page or PDF that holds the rules (prospectus, course eligibility).
 - Eligibility and exam pattern are not automated.
