@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase'
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
+import { safeRedirectPath } from '@/lib/safe-redirect'
 
 function LoginForm() {
   const [loading, setLoading] = useState(false)
@@ -12,7 +13,7 @@ function LoginForm() {
 
   const signInWithGoogle = async () => {
     setLoading(true)
-    const safeNext = next.startsWith('/') ? next : '/dashboard'
+    const safeNext = safeRedirectPath(next)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

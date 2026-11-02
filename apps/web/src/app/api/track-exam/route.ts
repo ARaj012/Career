@@ -31,8 +31,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    console.log('📦 Request body:', body)
-    const { examId, examSlug, trackingType } = body
+    const { examSlug, trackingType } = body
+
+    if (typeof examSlug !== 'string' || !/^[a-z0-9-]{1,120}$/.test(examSlug)) {
+      return NextResponse.json({ error: 'Invalid examSlug' }, { status: 400 })
+    }
+    if (!['interested', 'definitely_giving'].includes(trackingType)) {
+      return NextResponse.json({ error: 'Invalid trackingType' }, { status: 400 })
+    }
 
     // Use slug to find the exam - more reliable than ID
     console.log('🔍 Looking up exam by slug:', examSlug)
@@ -44,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     if (examError || !exam) {
       console.error('❌ Exam not found by slug:', examSlug, examError)
-      return NextResponse.json({ error: 'Exam not found', details: examError?.message }, { status: 404 })
+      return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
     }
 
     console.log('✅ Exam found by slug:', examSlug, 'with ID:', exam.id)
@@ -68,11 +74,9 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('❌ Error tracking exam:', error)
-      console.error('Error details:', JSON.stringify(error, null, 2))
-      return NextResponse.json({ error: 'Failed to track exam', details: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to track exam' }, { status: 500 })
     }
 
-    console.log('✅ Exam tracked successfully:', trackedExam)
 
     return NextResponse.json({ 
       success: true,
@@ -81,7 +85,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('❌ Error in track exam:', error)
-    return NextResponse.json({ error: 'Failed to track exam', details: String(error) }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to track exam' }, { status: 500 })
   }
 }
 

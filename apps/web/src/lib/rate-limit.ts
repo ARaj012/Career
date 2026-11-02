@@ -66,6 +66,24 @@ export function checkRateLimit(ip: string): {
   return { allowed: true, retryAfterSeconds: 0 }
 }
 
+// General-purpose limiter for other costly endpoints. Same in-memory caveat
+// as above. `bucket` keeps endpoints from sharing counts.
+const namedStores = new Map<string, Store>()
+
+export function rateLimit(
+  bucket: string,
+  key: string,
+  max: number,
+  windowMs: number
+): { allowed: boolean; retryAfterSeconds: number } {
+  let store = namedStores.get(bucket)
+  if (!store) {
+    store = new Map()
+    namedStores.set(bucket, store)
+  }
+  return checkWindow(store, key, max, windowMs)
+}
+
 // Extracts the best-effort client IP from standard proxy headers.
 // Works behind Vercel, most reverse proxies, and localhost dev.
 export function getClientIp(headers: Headers): string {

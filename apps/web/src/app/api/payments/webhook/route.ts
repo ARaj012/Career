@@ -1,54 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase'
-import crypto from 'crypto'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
+import { isBillingCycle, isPaidPlanId, periodEndFrom, verifyHmacSignature } from '@/lib/payments'
 
 export const runtime = 'nodejs'
 
-// Mock mode flag - set to true for testing without real Razorpay
-const MOCK_MODE = !process.env.RAZORPAY_WEBHOOK_SECRET
-
 export async function POST(req: NextRequest) {
   try {
-    // Mock mode for testing without real Razorpay
-    if (MOCK_MODE) {
-      console.log('🧪 MOCK MODE: Webhook received (simulated)')
-      return NextResponse.json({ success: true, message: 'Mock webhook processed' })
-    }
-
-    // Check if webhook secret is configured
-    if (!process.env.RAZORPAY_WEBHOOK_SECRET) {
-      return NextResponse.json(
-        { error: 'Webhook secret not configured. Please add RAZORPAY_WEBHOOK_SECRET to environment variables.' },
-        { status: 500 }
-      )
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET
+    if (!secret) {
+      // Nothing can be trusted without the secret, so nothing is processed
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 })
     }
 
     const body = await req.text()
-    const signature = req.headers.get('x-razorpay-signature') as string
+    const signature = req.headers.get('x-razorpay-signature')
 
-    // Verify webhook signature
-    // @ts-ignore - Razorpay webhook signature verification
-    const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET!)
-      .update(body)
-      .digest('hex')
-
-    const receivedSignature = expectedSignature + '|' + body
-
-    if (signature !== receivedSignature) {
+    // Razorpay signs the raw body with HMAC-SHA256 using the webhook secret
+    if (!verifyHmacSignature(body, signature, secret)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
     const event = JSON.parse(body)
 
-    // Handle payment success
-    if (event.event === 'payment.captured' || event.event === 'payment.authorized') {
-      const payment = event.payload.payment.entity
-      const notes = payment.notes
+    // Only captured payments mean the money arrived
+    if (event.event === 'payment.captured') {
+      const payment = event.payload?.payment?.entity
+      const notes = payment?.notes ?? {}
+      const planId = notes.planId
+      const billingCycle = notes.billingCycle
+      const userId = notes.userId
 
-      const supabase = createClient()
+      if (!payment?.order_id || typeof userId !== 'string' || !isPaidPlanId(planId) || !isBillingCycle(billingCycle)) {
+        return NextResponse.json({ success: true, ignored: true })
+      }
 
-      // Update payment history
+      const supabase = createAdminSupabaseClient()
+
+      // The order must be one we created for this user
+      const { data: order } = await supabase
+        .from('payment_history')
+        .select('id, user_id')
+        .eq('razorpay_order_id', payment.order_id)
+        .maybeSingle()
+      if (!order || order.user_id !== userId) {
+        return NextResponse.json({ success: true, ignored: true })
+      }
+
       await supabase
         .from('payment_history')
         .update({
@@ -56,22 +53,9 @@ export async function POST(req: NextRequest) {
           razorpay_payment_id: payment.id,
           invoice_url: payment.invoice_url,
         })
-        .eq('razorpay_order_id', payment.order_id)
+        .eq('id', order.id)
 
-      // Create or update user subscription
-      const planId = notes.planId
-      const billingCycle = notes.billingCycle
-      const userId = notes.userId
-
-      // Calculate period end based on billing cycle
-      const periodEnd = new Date()
-      if (billingCycle === 'yearly') {
-        periodEnd.setFullYear(periodEnd.getFullYear() + 1)
-      } else {
-        periodEnd.setMonth(periodEnd.getMonth() + 1)
-      }
-
-      // Upsert subscription
+      const start = new Date()
       await supabase
         .from('user_subscriptions')
         .upsert({
@@ -79,20 +63,18 @@ export async function POST(req: NextRequest) {
           plan_id: planId,
           status: 'active',
           billing_cycle: billingCycle,
-          current_period_start: new Date().toISOString(),
-          current_period_end: periodEnd.toISOString(),
+          current_period_start: start.toISOString(),
+          current_period_end: periodEndFrom(start, billingCycle).toISOString(),
           cancel_at_period_end: false,
-          razorpay_subscription_id: payment.subscription_id,
-          razorpay_customer_id: payment.customer_id,
-          updated_at: new Date().toISOString(),
+          razorpay_subscription_id: payment.subscription_id ?? null,
+          razorpay_customer_id: payment.customer_id ?? null,
+          updated_at: start.toISOString(),
         }, { onConflict: 'user_id' })
-
-      console.log(`Subscription updated for user ${userId} to plan ${planId}`)
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Webhook error:', error)
+    console.error('Webhook error:', error instanceof Error ? error.message : error)
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
   }
 }

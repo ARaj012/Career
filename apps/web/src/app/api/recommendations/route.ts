@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Cache recommendations for 1 hour
 export const revalidate = 3600
@@ -43,6 +44,14 @@ export async function POST(req: NextRequest) {
     
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const limit = rateLimit('recommendations', user.id, 20, 60_000)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a minute.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } }
+      )
     }
 
     const { subjects } = await req.json() as { subjects: SubjectInput[] }

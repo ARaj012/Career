@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const q = searchParams.get('q')?.trim() ?? ''
     const status = searchParams.get('status') ?? ''
-    const sortBy = searchParams.get('sort_by') ?? 'created_at'
+    const requestedSort = searchParams.get('sort_by') ?? 'created_at'
+    const sortBy = ['created_at', 'updated_at', 'email', 'full_name', 'last_login_at', 'is_active'].includes(requestedSort)
+      ? requestedSort
+      : 'created_at'
     const sortOrder = searchParams.get('sort_order') ?? 'desc'
 
     // Get user accounts from auth.users and sync with user_accounts
@@ -25,7 +28,8 @@ export async function GET(request: NextRequest) {
         full_name: authUser.user_metadata?.full_name || null,
         is_active: true,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' })
+        // Only fill in missing rows; overwriting would re-activate disabled accounts
+      }, { onConflict: 'user_id', ignoreDuplicates: true })
     }
 
     // Get user accounts

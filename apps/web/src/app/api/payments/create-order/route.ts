@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createAdminSupabaseClient } from '@/lib/supabase-admin'
+import { isBillingCycle, isPaidPlanId, mockPaymentsAllowed, razorpayConfigured } from '@/lib/payments'
+import { rateLimit } from '@/lib/rate-limit'
 
 // @ts-ignore - Razorpay types are not perfect
 const Razorpay = require('razorpay')
@@ -9,82 +12,68 @@ export const runtime = 'nodejs'
 let razorpay: any = null
 
 // Initialize Razorpay only if keys are available
-if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+if (razorpayConfigured()) {
   razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID!,
     key_secret: process.env.RAZORPAY_KEY_SECRET!,
   })
 }
 
-// Mock mode flag - set to true for testing without real Razorpay
-const MOCK_MODE = !razorpay
+// Mock plan prices (paise) - matching database plan IDs
+const MOCK_PLANS: Record<string, { amount: number; name: string }> = {
+  basic: { amount: 29900, name: 'Basic Plan' },
+  premium: { amount: 59900, name: 'Premium Plan' },
+  pro: { amount: 99900, name: 'Pro Plan' },
+  enterprise: { amount: 249900, name: 'Enterprise Plan' },
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const body = await req.json().catch(() => ({}))
     const { planId, billingCycle } = body
 
-    if (!planId || typeof planId !== 'string') {
+    if (!isPaidPlanId(planId)) {
       return NextResponse.json({ error: 'Invalid planId' }, { status: 400 })
     }
 
-    if (!billingCycle || !['monthly', 'yearly'].includes(billingCycle)) {
+    if (!isBillingCycle(billingCycle)) {
       return NextResponse.json({ error: 'Invalid billingCycle (must be monthly or yearly)' }, { status: 400 })
     }
 
-    // Mock mode for testing without real Razorpay
-    if (MOCK_MODE) {
-      console.log('🧪 MOCK MODE: Creating order for plan:', planId, 'billing:', billingCycle)
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
 
-      // Mock plan details - matching database plan IDs
-      const plans: Record<string, any> = {
-        free: { amount: 0, name: 'Free Plan' },
-        basic: { amount: 29900, name: 'Basic Plan' },
-        premium: { amount: 59900, name: 'Premium Plan' },
-        pro: { amount: 99900, name: 'Pro Plan' },
-        enterprise: { amount: 249900, name: 'Enterprise Plan' }
-      }
+    const limit = rateLimit('payments', user.id, 10, 60_000)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many payment attempts. Please wait a minute.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } }
+      )
+    }
 
-      const plan = plans[planId] || plans.premium
-      const mockOrderId = `order_mock_${Date.now()}`
+    // payment_history is written by the server only
+    const admin = createAdminSupabaseClient()
 
-      // Store mock order in database
-      const supabase = await createServerSupabaseClient()
-      const { data: { user } } = await supabase.auth.getUser()
+    // Mock mode for testing without real Razorpay (never in production)
+    if (mockPaymentsAllowed()) {
+      const plan = MOCK_PLANS[planId]
+      const mockOrderId = `order_mock_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`
 
-      // For mock mode, require authentication in all environments
-      if (!user) {
-        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-      }
-
-      // Try to store mock order in database (but don't fail if it doesn't work)
-      let orderStored = false
-      try {
-        const { error: orderError } = await supabase
-          .from('payment_history')
-          .insert({
-            user_id: user.id,
-            razorpay_order_id: mockOrderId,
-            amount: plan.amount / 100, // Convert to rupees
-            currency: 'INR',
-            status: 'pending',
-            payment_method: 'mock',
-            metadata: {
-              plan_id: planId,
-              billing_cycle: billingCycle
-            }
-          })
-
-        if (orderError) {
-          console.error('Mock order creation error:', orderError)
-          console.log('Continuing with mock payment despite database error')
-        } else {
-          console.log('Mock order created successfully in database')
-          orderStored = true
-        }
-      } catch (dbError) {
-        console.error('Database operation failed:', dbError)
-        console.log('Continuing with mock payment despite database failure')
+      const { error: orderError } = await admin.from('payment_history').insert({
+        user_id: user.id,
+        razorpay_order_id: mockOrderId,
+        amount: plan.amount / 100, // Convert to rupees
+        currency: 'INR',
+        status: 'pending',
+        payment_method: 'mock',
+        metadata: { plan_id: planId, billing_cycle: billingCycle },
+      })
+      if (orderError) {
+        console.error('Mock order creation error:', orderError.message)
+        return NextResponse.json({ error: 'Failed to create payment order' }, { status: 500 })
       }
 
       return NextResponse.json({
@@ -92,23 +81,14 @@ export async function POST(req: NextRequest) {
         amount: plan.amount,
         currency: 'INR',
         keyId: 'rzp_mock_test_key',
-        notes: {
-          planId: planId,
-          billingCycle: billingCycle
-        }
+        notes: { planId, billingCycle },
       })
     }
 
-    // Check if Razorpay is configured
     if (!razorpay) {
-      return NextResponse.json(
-        { error: 'Payment system not configured. Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to environment variables.' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Payments are not available right now.' }, { status: 503 })
     }
 
-    // Get plan details
-    const supabase = await createServerSupabaseClient()
     const { data: plan } = await supabase
       .from('subscription_plans')
       .select('*')
@@ -119,45 +99,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
     }
 
-    // Get user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
     // Calculate amount based on billing cycle
-    const amount = billingCycle === 'yearly' 
-      ? plan.price_yearly * 100 // Razorpay expects amount in paise
-      : plan.price_monthly * 100
+    const amount = Math.round(
+      (billingCycle === 'yearly' ? plan.price_yearly : plan.price_monthly) * 100 // Razorpay expects paise
+    )
 
-    // Create Razorpay order
     const options = {
-      amount: amount,
-      currency: plan.currency,
-      receipt: `sub_${user.id}_${planId}_${Date.now()}`,
+      amount,
+      currency: plan.currency || 'INR',
+      receipt: `sub_${Date.now()}`,
       notes: {
         userId: user.id,
-        planId: planId,
-        billingCycle: billingCycle,
-        userEmail: user.email,
+        planId,
+        billingCycle,
       },
     }
 
     // @ts-ignore - Razorpay types have strict requirements
     const order = await razorpay.orders.create(options as any)
 
-    // Store order details in payment_history
-    await supabase.from('payment_history').insert({
+    await admin.from('payment_history').insert({
       user_id: user.id,
       amount: amount / 100, // Convert back to rupees
       currency: plan.currency || 'INR',
       status: 'pending',
       payment_method: 'razorpay',
       razorpay_order_id: order.id,
-      metadata: {
-        planId,
-        billingCycle,
-      },
+      metadata: { plan_id: planId, billing_cycle: billingCycle },
     })
 
     return NextResponse.json({
@@ -167,10 +135,7 @@ export async function POST(req: NextRequest) {
       keyId: process.env.RAZORPAY_KEY_ID,
     })
   } catch (error) {
-    console.error('Payment order creation error:', error)
-    return NextResponse.json(
-      { error: 'Failed to create payment order' },
-      { status: 500 }
-    )
+    console.error('Payment order creation error:', error instanceof Error ? error.message : error)
+    return NextResponse.json({ error: 'Failed to create payment order' }, { status: 500 })
   }
 }

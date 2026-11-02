@@ -50,11 +50,10 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('❌ Error fetching tracked exams:', error)
-      return NextResponse.json({ error: 'Failed to fetch tracked exams', details: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to fetch tracked exams' }, { status: 500 })
     }
 
     console.log('✅ Tracked exams fetched:', trackedExams?.length || 0)
-    console.log('📦 Tracked exams data:', JSON.stringify(trackedExams, null, 2))
 
     // For each tracked exam, get exam details using the stored slug
     const trackedExamsWithDetails = await Promise.all(
@@ -130,11 +129,10 @@ export async function GET(req: NextRequest) {
       })
     )
 
-    console.log('📦 Final tracked exams with details:', JSON.stringify(trackedExamsWithDetails, null, 2))
 
     return NextResponse.json({ trackedExams: trackedExamsWithDetails || [] })
   } catch (error) {
     console.error('❌ Error in my exams:', error)
-    return NextResponse.json({ error: 'Failed to fetch tracked exams', details: String(error) }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch tracked exams' }, { status: 500 })
   }
 }
