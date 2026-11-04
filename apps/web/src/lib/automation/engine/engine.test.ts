@@ -6,7 +6,7 @@ import { validateSchedule, validateScholarship } from './validate'
 import { normalizeSession } from './exams'
 import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
 import { careerContext, usableSentence } from './careers'
-import { degreeType, isNotAProgramme, otherWww, programmeName, quoteNamesCourse, quoteNamesYear } from './college-details'
+import { degreeType, isNotAProgramme, otherWww, placementTable, programmeName, quoteNamesCourse, quoteNamesYear } from './college-details'
 import { matchInstitute } from './josaa'
 import { canonName, parseNirfTable } from './nirf'
 import { isOfficialUrl, locateQuote } from './sources'
@@ -368,5 +368,32 @@ describe('career sentences from PDFs', () => {
     expect(usableSentence('Online Examination – Preliminary August, 2026')).toBe(false)
     expect(usableSentence('In order to successfully complete the renewal examination (X-C), a candidate has to pass')).toBe(false)
     expect(usableSentence("Eligibility Criteria: Bachelor's Degree or equivalent in any discipline")).toBe(true)
+  })
+})
+
+describe('placement tables', () => {
+  const page = [
+    'Placement Statistics:',
+    '2020 | 2021 | 2022 | 2023 | 2024',
+    'Highest CTC (INR Lakhs per annum) | 41.3 | 36.3 | 42.5 | 52 | 83',
+    'Average CTC (INR Lakhs per annum) | 23.2 | 24.6 | 26.4 | 30 | 30',
+    'Total offers | - | 61 | 64 | 60 | 69',
+  ].join('\n')
+
+  it('reads each year column in rupees', () => {
+    const f = placementTable(page)
+    expect(f.find((x) => x.year === 2024 && x.metric === 'highest')?.value).toBe(8_300_000)
+    expect(f.find((x) => x.year === 2021 && x.metric === 'average')?.value).toBe(2_460_000)
+    expect(f).toHaveLength(10)
+  })
+
+  it('takes season headers as the year they end, after a label cell', () => {
+    const f = placementTable('Year | 2022-23 | 2023-24\nMedian Package (LPA) | 12 | 14.5')
+    expect(f.map((x) => [x.year, x.value])).toEqual([[2023, 1_200_000], [2024, 1_450_000]])
+  })
+
+  it('skips rows with no unit, or with a different number of columns', () => {
+    expect(placementTable('2023 | 2024\nAverage CTC | 30 | 32')).toEqual([])
+    expect(placementTable('2023 | 2024\nAverage CTC (LPA) | 30')).toEqual([])
   })
 })

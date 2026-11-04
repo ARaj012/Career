@@ -206,6 +206,43 @@ export function quoteNamesYear(year: number, quote: string): boolean {
   return quote.includes(y) || new RegExp(`${prev}\\s*[-–/]\\s*(${y.slice(2)}|${y})`).test(quote)
 }
 
+// "2023-24" ends in 2024; a bare "2024" is that year
+const seasonYear = (cell: string): number | null => {
+  const m = /^(20\d\d)(?:\s*[-–/]\s*(\d\d|20\d\d))?$/.exec(cell)
+  return m ? Number(m[1]) + (m[2] ? 1 : 0) : null
+}
+const METRIC: [RegExp, 'highest' | 'average' | 'median'][] = [[/\b(highest|maximum)\b/i, 'highest'], [/\b(average|mean)\b/i, 'average'], [/\bmedian\b/i, 'median']]
+export type TableFigure = { year: number; metric: 'highest' | 'average' | 'median'; value: number; header: string; row: string }
+
+/**
+ * Placement tables, as htmlToText flattens them: a header of years ("2020 | 2021 | 2022")
+ * over rows such as "Average CTC (INR Lakhs per annum) | 23.2 | 24.6 | 26.4". One figure per
+ * year column, in rupees. Rows whose label states no unit are skipped: "30" alone could be lakhs or rupees.
+ */
+export function placementTable(text: string): TableFigure[] {
+  const out: TableFigure[] = []
+  let years: number[] | null = null
+  let header = ''
+  for (const line of text.split('\n').map((l) => l.trim())) {
+    const cells = line.split('|').map((c) => c.trim())
+    if (cells.length < 2) { years = null; continue }
+    const ys = cells.map(seasonYear)
+    if (ys.every((y) => y !== null)) { years = ys as number[]; header = line; continue }
+    if (cells.length > 2 && ys.slice(1).every((y) => y !== null)) { years = ys.slice(1) as number[]; header = line; continue } // "Year | 2020 | 2021"
+    if (!years) continue
+    const [label, ...vals] = cells
+    const metric = METRIC.find(([re]) => re.test(label))?.[1]
+    if (!metric || vals.length !== years.length) continue
+    const unit = /\b(lakhs?|lacs?|lpa)\b/i.test(label) ? 100_000 : /\b(crores?|cr)\b/i.test(label) ? 10_000_000 : /(\binr\b|\brs\b|₹)/i.test(label) ? 1 : null
+    if (unit === null) continue
+    vals.forEach((v, i) => {
+      const n = Number(v.replace(/,/g, ''))
+      if (/\d/.test(v) && Number.isFinite(n) && n > 0) out.push({ year: years![i], metric, value: Math.round(n * unit), header, row: line })
+    })
+  }
+  return out
+}
+
 export async function updateCollegeDetails(
   db: SupabaseClient,
   c: CollegeDetailRow,
@@ -288,7 +325,8 @@ JSON: {"programmes":[{"course_name":"…","degree_type":"UG","duration_years":4,
   }
 
   await programmes(db, c, ai, onTopic(byTopic.fees), nameOnSite, res, opts)
-  await placementReports(db, c, ai, onTopic(byTopic.placements), seasonOf, res, opts, Y)
+  const placementPages = byTopic.placements.filter((p) => isOfficialUrl(p.finalUrl, own))
+  await placementReports(db, c, ai, onTopic(byTopic.placements), placementPages, seasonOf, res, opts, Y)
   await textFields(db, c, ai, onTopic(byTopic.admission), onTopic(byTopic.scholarships), res, opts, today)
   return res
 }
@@ -398,17 +436,43 @@ async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSi
   }
 }
 
-async function placementReports(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSite: OnSite, seasonOf: (url: string) => number | null, res: Res, opts: Opts, Y: number) {
+async function placementReports(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSite: OnSite, pages: FetchedPage[], seasonOf: (url: string) => number | null, res: Res, opts: Opts, Y: number) {
   const { data: existing } = await db.from('college_placements').select('id, year, program_level, average_package, median_package, highest_package, students_placed, total_eligible_students, top_recruiters').eq('college_id', c.id).eq('source_type', 'official_report')
-  const taken = new Set<string>()
+  const levelOf = (programme: string | null | undefined) => (programme?.trim() ? programme.trim().slice(0, 60) : 'All programs')
+
+  // In a year-column table the AI can only quote a whole row, whose year and unit sit in the header,
+  // so the figures are read from the table itself; the AI's quote of a row names the table and its programme
+  const figures = pages.flatMap((pg) => placementTable(pg.text).map((f) => ({ ...f, url: pg.finalUrl })))
+  const fromTable = new Map<string, { value: number; quote: string; url: string }>()
+  const tableEntries: Out['placements'] = []
   for (const p of ai.placements) {
+    const quotes = [p.average, p.median, p.highest].map((f) => (f?.quote ? normalize(f.quote) : '')).filter(Boolean)
+    const hit = figures.find((f) => quotes.includes(normalize(f.row)))
+    if (!hit) continue
+    const level = levelOf(p.programme)
+    for (const f of figures.filter((x) => x.url === hit.url && x.header === hit.header)) {
+      fromTable.set(`${f.year}|${level}|${f.metric}`, { value: f.value, quote: `${f.header}\n${f.row}`, url: f.url })
+      if (!tableEntries.some((e) => e.year === f.year && levelOf(e.programme) === level)) {
+        tableEntries.push({ year: f.year, programme: p.programme, average: null, median: null, highest: null, placed: null, eligible: null, recruiters: null })
+      }
+    }
+  }
+
+  const taken = new Set<string>()
+  for (const p of [...tableEntries, ...ai.placements]) {
     if (p.year < Y - 5 || p.year > Y) continue
-    const level = p.programme?.trim() ? p.programme.trim().slice(0, 60) : 'All programs'
+    const level = levelOf(p.programme)
     const key = `${p.year}|${level}`
     if (taken.has(key)) continue
     taken.add(key)
 
     const fact = (f: { value?: number | null; quote?: string | null } | null | undefined, label: string, isMoney: boolean) => {
+      const t = fromTable.get(`${p.year}|${level}|${label}`)
+      if (t) {
+        if (t.value >= 100_000 && t.value <= 200_000_000) return t
+        res.dropped.push(`${c.name} ${p.year} ${label}: implausible table figure ${t.value}`)
+        return null
+      }
       if (f?.value == null) return null
       const url = onSite(f.quote)
       const plausible = isMoney ? f.value >= 100_000 && f.value <= 200_000_000 : f.value > 0 && f.value < 50_000
