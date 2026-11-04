@@ -478,7 +478,7 @@ async function placementReports(db: SupabaseClient, c: CollegeDetailRow, ai: Out
       const plausible = isMoney ? f.value >= 100_000 && f.value <= 200_000_000 : f.value > 0 && f.value < 50_000
       const dated = url && (quoteNamesYear(p.year, f.quote!) || seasonOf(url) === p.year)
       if (!url || !plausible || !quoteSupportsNumber(f.value, f.quote!) || !dated) {
-        res.dropped.push(`${c.name} ${p.year} ${label}: evidence failed`)
+        res.dropped.push(`${c.name} ${p.year}${level === 'All programs' ? '' : ` ${level}`} ${label}: evidence failed`)
         return null
       }
       return { value: f.value, quote: f.quote!, url }
