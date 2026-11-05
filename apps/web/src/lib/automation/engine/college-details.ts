@@ -206,6 +206,16 @@ export function quoteNamesYear(year: number, quote: string): boolean {
   return quote.includes(y) || new RegExp(`${prev}\\s*[-–/]\\s*(${y.slice(2)}|${y})`).test(quote)
 }
 
+const METRIC_WORDS: Record<string, RegExp> = {
+  average: /\b(average|avg|mean)\b/i,
+  median: /\bmedian\b/i,
+  highest: /\b(highest|maximum|max|top|best)\b/i,
+}
+/** "Package: 4.5 LPA" is not a highest package: the quote must say which figure it is. */
+export function quoteNamesMetric(label: string, quote: string): boolean {
+  return METRIC_WORDS[label]?.test(quote) ?? true
+}
+
 // "2023-24" ends in 2024; a bare "2024" is that year
 const seasonYear = (cell: string): number | null => {
   const m = /^(20\d\d)(?:\s*[-–/]\s*(\d\d|20\d\d))?$/.exec(cell)
@@ -477,7 +487,7 @@ async function placementReports(db: SupabaseClient, c: CollegeDetailRow, ai: Out
       const url = onSite(f.quote)
       const plausible = isMoney ? f.value >= 100_000 && f.value <= 200_000_000 : f.value > 0 && f.value < 50_000
       const dated = url && (quoteNamesYear(p.year, f.quote!) || seasonOf(url) === p.year)
-      if (!url || !plausible || !quoteSupportsNumber(f.value, f.quote!) || !dated) {
+      if (!url || !plausible || !quoteSupportsNumber(f.value, f.quote!) || !dated || !quoteNamesMetric(label, f.quote!)) {
         res.dropped.push(`${c.name} ${p.year}${level === 'All programs' ? '' : ` ${level}`} ${label}: evidence failed`)
         return null
       }

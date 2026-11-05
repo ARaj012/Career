@@ -6,7 +6,7 @@ import { validateSchedule, validateScholarship } from './validate'
 import { normalizeSession } from './exams'
 import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
 import { careerContext, usableSentence } from './careers'
-import { degreeType, isNotAProgramme, otherWww, placementTable, programmeName, quoteNamesCourse, quoteNamesYear } from './college-details'
+import { degreeType, isNotAProgramme, otherWww, placementTable, programmeName, quoteNamesMetric, quoteNamesCourse, quoteNamesYear } from './college-details'
 import { matchInstitute } from './josaa'
 import { canonName, parseNirfTable } from './nirf'
 import { isOfficialUrl, locateQuote } from './sources'
@@ -395,5 +395,15 @@ describe('placement tables', () => {
   it('skips rows with no unit, or with a different number of columns', () => {
     expect(placementTable('2023 | 2024\nAverage CTC | 30 | 32')).toEqual([])
     expect(placementTable('2023 | 2024\nAverage CTC (LPA) | 30')).toEqual([])
+  })
+})
+
+describe('placement figure names', () => {
+  it('needs the quote to say which figure it is', () => {
+    expect(quoteNamesMetric('highest', '2025-26 10 placed Package: 4.5 LPA')).toBe(false)
+    expect(quoteNamesMetric('highest', 'Highest CTC 2025: 45 LPA')).toBe(true)
+    expect(quoteNamesMetric('average', 'The average annual salary this year stands at INR 33 lakhs')).toBe(true)
+    expect(quoteNamesMetric('median', 'Average CTC 2025: 12 LPA')).toBe(false)
+    expect(quoteNamesMetric('placed', '120 students placed in 2025')).toBe(true)
   })
 })
