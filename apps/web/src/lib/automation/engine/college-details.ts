@@ -381,7 +381,11 @@ export function programmeName(raw: string): string {
 export function degreeType(name: string, aiType: string | null | undefined): string | null {
   if (/\b(ph\.?\s?d|doctoral|doctor of philosophy)\b/i.test(name)) return 'Doctoral'
   if (/\b(dual degree|integrated|bs-ms)\b/i.test(name)) return 'Integrated'
-  return aiType ?? null
+  // The college page groups courses under these labels
+  const level = aiType?.trim()
+  if (level && /^(ug|undergraduate)$/i.test(level)) return 'Undergraduate'
+  if (level && /^(pg|postgraduate)$/i.test(level)) return 'Postgraduate'
+  return level || null
 }
 
 async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSite: OnSite, nameOnSite: (n: string) => string | null, res: Res, opts: Opts) {

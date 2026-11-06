@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { findSheets, parsePlacementSections, parseStudentStrength, wordsToNumber, type DirEntry } from './nirf-data'
+import { academicYear, findSheets, parsePlacementSections, parseStudentStrength, wordsToNumber, type DirEntry } from './nirf-data'
 
 // Lines as they come out of real NIRF 2025/2023 sheets (IIT Madras, IIM Ahmedabad, Miranda House)
 const IITM = `Total Actual Student Strength (Program(s) Offered by your Institution)
@@ -83,5 +83,13 @@ describe('findSheets', () => {
     expect(pick('Banaras Hindu University Institute of Medical Sciences', 'Varanasi')).toEqual(['Medical'])
     expect(pick('Institute of Technology, Nirma University', 'Ahmedabad')).toEqual(['Engineering'])
     expect(pick('Aligarh Muslim University Faculty of Law', 'Aligarh')).toEqual(['Law'])
+  })
+})
+
+describe('enrolment years', () => {
+  it('labels the academic year a NIRF edition reports', () => {
+    // India Rankings 2025 reports 2023-24, stored as the year it ends
+    expect(academicYear(2024)).toBe('2023-24')
+    expect(academicYear(2000)).toBe('1999-00')
   })
 })

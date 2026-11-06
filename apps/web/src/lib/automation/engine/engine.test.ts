@@ -297,7 +297,7 @@ describe('programme names', () => {
     expect(isNotAProgramme('FYUG Programmes in the Teaching Departments')).toBe(true)
     expect(isNotAProgramme(programmeName('COURSE: BTech Lateral Entry CE All India Merit (SOE, Thrikkakkara)'))).toBe(true)
     expect(degreeType('PhD (PG)', 'PG')).toBe('Doctoral')
-    expect(degreeType('MBA', 'PG')).toBe('PG')
+    expect(degreeType('MBA', 'PG')).toBe('Postgraduate')
   })
   it('drops a trailing "Programme" only after a degree', () => {
     expect(programmeName('B.Tech. Programme')).toBe('B.Tech.')
@@ -405,5 +405,19 @@ describe('placement figure names', () => {
     expect(quoteNamesMetric('average', 'The average annual salary this year stands at INR 33 lakhs')).toBe(true)
     expect(quoteNamesMetric('median', 'Average CTC 2025: 12 LPA')).toBe(false)
     expect(quoteNamesMetric('placed', '120 students placed in 2025')).toBe(true)
+  })
+})
+
+describe('college labels', () => {
+  it('uses the levels the college page groups by', () => {
+    expect(degreeType('B.Tech Computer Science', 'UG')).toBe('Undergraduate')
+    expect(degreeType('MBA', 'PG')).toBe('Postgraduate')
+    expect(degreeType('PhD in Physics', 'PG')).toBe('Doctoral')
+    expect(degreeType('Diploma in Nursing', 'Diploma')).toBe('Diploma')
+  })
+
+  it('matches common short names to NIRF names', () => {
+    expect(canonName('BITS Pilani')).toBe(canonName('Birla Institute of Technology & Science -Pilani'))
+    expect(canonName('National Institute of Technology Trichy')).toBe(canonName('National Institute of Technology Tiruchirappalli'))
   })
 })

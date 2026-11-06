@@ -202,11 +202,12 @@ export default async function CollegeDetailPage({
 
   const placements = (placementsRaw ?? []) as PlacementRow[];
 
-  // year-wise student enrollment (last 8 years) — powers the students-vs-years chart
+  // year-wise student enrollment as the institution reported it to NIRF — powers the students-vs-years chart
   const { data: enrollmentRaw } = await supabase
     .from("college_enrollment_history")
-    .select("year, total_students")
+    .select("year, total_students, academic_year, source_url")
     .eq("college_id", college.id)
+    .eq("source_type", "nirf")
     .order("year", { ascending: false })
     .limit(8);
 
@@ -241,6 +242,7 @@ export default async function CollegeDetailPage({
   const degreeOrder = [
     "Undergraduate",
     "Postgraduate",
+    "Integrated",
     "Doctoral",
     "Diploma",
     "Other",

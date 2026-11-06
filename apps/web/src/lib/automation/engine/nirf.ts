@@ -30,6 +30,8 @@ const ABBR: [RegExp, string][] = [
   [/\bnlsiu\b/g, 'national law school of india university'],
   [/\bbhu\b/g, 'banaras hindu university'],
   [/\bjnu\b/g, 'jawaharlal nehru university'],
+  [/\bbits\b/g, 'birla institute of technology and science'],
+  [/\btrichy\b/g, 'tiruchirappalli'],
 ]
 
 export function canonName(name: string): string {
@@ -144,7 +146,25 @@ export async function updateNirf(
       })
       if (loose.length === 1) { hit = { cat, e: loose[0], exact: false }; break }
     }
-    if (!hit) continue
+    if (!hit) {
+      // A rank with no year was typed by hand: if NIRF does not list the institute, it is not a NIRF rank
+      if (col.nirf_rank && !col.nirf_year) {
+        outcomes.push(
+          await submitProposal(db, opts.runId, {
+            entity: 'college',
+            table: 'colleges',
+            recordId: col.id,
+            label: `${col.name} — not in the NIRF ${year} rankings`,
+            fields: { nirf_rank: { old: col.nirf_rank, new: null, evidence: null } },
+            sourceUrl: `https://www.nirfindia.org/Rankings/${year}/OverallRanking.html`,
+            official: true,
+            overwritesVerified: false,
+            forceReview: `No exact NIRF ${year} rank found under this name; check the lists before removing #${col.nirf_rank}`,
+          }, opts.dryRun)
+        )
+      }
+      continue
+    }
     matched++
     if (col.nirf_rank === hit.e.rank && col.nirf_year === year && col.nirf_category === hit.cat) continue
 

@@ -129,6 +129,9 @@ export function parsePlacementSections(text: string): NirfPlacementRow[] {
   return rows
 }
 
+/** 2024 → "2023-24" */
+export const academicYear = (endYear: number) => `${endYear - 1}-${String(endYear).slice(2)}`
+
 /** Total students across programs from "Total Actual Student Strength". */
 export function parseStudentStrength(text: string): number | null {
   const start = text.indexOf('Total Actual Student Strength')
@@ -236,6 +239,16 @@ export function findSheets(col: { name: string; city: string | null; nirf_catego
 
 // ---------------------------------------------------------------- update
 
+async function allRows<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>): Promise<T[]> {
+  const out: T[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await page(from, from + 999)
+    if (error) throw new Error(error.message)
+    out.push(...((data ?? []) as T[]))
+    if (!data || data.length < 1000) return out
+  }
+}
+
 export async function updateNirfPlacements(
   db: SupabaseClient,
   opts: { runId: string | null; dryRun: boolean; limit?: number; today?: Date; log?: (s: string) => void }
@@ -259,8 +272,36 @@ export async function updateNirfPlacements(
   if (!directory.length) return { colleges: 0, rows: 0, outcomes, errors: ['NIRF ranking pages not reachable or format changed'], issues }
 
   const { data: colleges } = await db.from('colleges').select('id, name, city, nirf_category, total_students').order('name')
-  const { data: existing } = await db.from('college_placements').select('id, college_id, year, program_level, graduating:total_eligible_students, students_placed, median_package, placement_rate, higher_studies').eq('source_type', 'nirf')
-  const have = new Map((existing ?? []).map((r) => [`${r.college_id}|${r.year}|${r.program_level}`, r]))
+  // Both tables hold more rows than one request returns (1000), so read them page by page
+  const existing = await allRows<{ id: string; college_id: string; year: number; program_level: string }>((from, to) =>
+    db.from('college_placements').select('id, college_id, year, program_level, graduating:total_eligible_students, students_placed, median_package, placement_rate, higher_studies').eq('source_type', 'nirf').order('id').range(from, to))
+  const have = new Map(existing.map((r) => [`${r.college_id}|${r.year}|${r.program_level}`, r]))
+  const enrolled = await allRows<{ id: string; college_id: string; year: number; total_students: number; source_type: string }>((from, to) =>
+    db.from('college_enrollment_history').select('id, college_id, year, total_students, source_type').order('id').range(from, to))
+  const enrolment = new Map(enrolled.map((r) => [`${r.college_id}|${r.year}`, r]))
+
+  // Each edition reports the academic year before it: India Rankings 2025 → students in 2023-24
+  const enrolmentFor = async (col: { id: string; name: string }, entry: DirEntry, exact: boolean, students: number): Promise<ProposalOutcome[]> => {
+    const year = entry.edition - 1
+    const old = enrolment.get(`${col.id}|${year}`)
+    if (old && old.source_type === 'nirf' && old.total_students === students) return []
+    return [
+      await submitProposal(db, opts.runId, {
+        entity: 'college',
+        table: 'college_enrollment_history',
+        recordId: old?.id ?? null,
+        parentId: col.id,
+        label: `${col.name} · students enrolled ${academicYear(year)} (NIRF ${entry.edition})`,
+        fields: { total_students: { old: old?.total_students ?? null, new: students, evidence: 'Total Actual Student Strength (all programs, all years)' } },
+        insertKey: old ? undefined : { college_id: col.id, year },
+        extra: { source_type: 'nirf', source_url: entry.pdf, academic_year: academicYear(year) },
+        sourceUrl: entry.pdf,
+        official: true,
+        overwritesVerified: false,
+        forceReview: exact ? undefined : `Name matched loosely: "${col.name}" ≈ "${entry.name}" (${entry.city}); check it is the same institution`,
+      }, opts.dryRun),
+    ]
+  }
 
   let collegeCount = 0
   let rowCount = 0
@@ -281,7 +322,9 @@ export async function updateNirfPlacements(
         continue
       }
       if (!/Data Submitted by Institution/i.test(text)) { errors.push(`${col.name} ${entry.edition}: not a NIRF data sheet`); continue }
-      if (!strength) { const n = parseStudentStrength(text); if (n) strength = { n, url: entry.pdf } }
+      const students = parseStudentStrength(text)
+      if (students && !strength) strength = { n: students, url: entry.pdf }
+      if (students) outcomes.push(...(await enrolmentFor(col, entry, exact, students)))
 
       for (const r of parsePlacementSections(text)) {
         const key = `${col.id}|${r.year}|${r.level}`
