@@ -33,6 +33,7 @@ export type RunOptions = {
 type Stats = Record<ProposalOutcome | 'checked' | 'skipped' | 'dropped', number>
 
 const RECHECK_HOURS = 20
+const RETRY_UNREAD_HOURS = 6
 
 /** Records still due in this run: not checked since the sweep began (or in the last RECHECK_HOURS). */
 function due<T extends { last_checked_at: string | null }>(list: T[], opts: RunOptions): T[] {
@@ -196,7 +197,14 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
       q = opts.collegeId ? q.eq('id', opts.collegeId) : q.eq('automation_enabled', true)
       const { data: rows, error } = await q.order('details_checked_at', { ascending: true, nullsFirst: true })
       if (error) throw new Error(`college details query failed: ${error.message}`)
-      let list = due((rows ?? []) as (CollegeDetailRow & { last_checked_at: string | null })[], opts)
+      const all = (rows ?? []) as (CollegeDetailRow & { last_checked_at: string | null })[]
+      let list = due(all, opts)
+      // A college never read yet (site down, network dropped, AI busy) is tried again sooner than one already read
+      if (opts.mode !== 'single' && !opts.sweepStartedAt && !opts.force) {
+        const retryBefore = Date.now() - RETRY_UNREAD_HOURS * 3600_000
+        const again = all.filter((r) => !r.details_read_at && r.last_checked_at && new Date(r.last_checked_at).getTime() < retryBefore && !list.includes(r))
+        list = [...list, ...again]
+      }
       if (opts.limit) list = list.slice(0, opts.limit)
       console.log(`\n🏫 College details to read: ${list.length}`)
       remaining.college_details = dueAtStart.college_details = list.length
