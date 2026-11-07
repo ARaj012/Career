@@ -6,7 +6,7 @@ import { validateSchedule, validateScholarship } from './validate'
 import { normalizeSession } from './exams'
 import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
 import { careerContext, usableSentence } from './careers'
-import { degreeType, isNotAProgramme, otherWww, placementTable, programmeName, quoteNamesMetric, quoteNamesCourse, quoteNamesYear } from './college-details'
+import { degreeType, isNotAProgramme, narrowAdmissionPage, NOT_A_STEP, otherWww, placementTable, programmeName, quoteNamesMetric, quoteNamesCourse, quoteNamesYear } from './college-details'
 import { matchInstitute } from './josaa'
 import { canonName, parseNirfTable } from './nirf'
 import { isOfficialUrl, locateQuote } from './sources'
@@ -414,6 +414,33 @@ describe('college labels', () => {
     expect(degreeType('MBA', 'PG')).toBe('Postgraduate')
     expect(degreeType('PhD in Physics', 'PG')).toBe('Doctoral')
     expect(degreeType('Diploma in Nursing', 'Diploma')).toBe('Diploma')
+  })
+
+  it('reads the admission process only from general admission pages', () => {
+    for (const url of [
+      'https://iith.ac.in/phdadmissions/',
+      'https://www.iitk.ac.in/kss/data/KSS_PhD_Walk_in_interview_Advertisement-27-11-25.pdf',
+      'https://ouat.ac.in/wp-content/uploads/2026/11/2nd-spot-counselling-and-adm.pdf',
+      'https://iimidr.ac.in/programmes/academic-programmes/post-graduate-programme-in-management-for-executives-pgpmx/admission/',
+      'https://people.iitism.ac.in/~download/files/IIT%20(ISM)%20Foreign%20students%20Admission%20Guidelines%20from%202022%20onwards.pdf',
+      'https://ihmkolkata.org/bihar-bed-spot-admission-2024/',
+      'https://assets.iiitdwd.ac.in/docs/Physical_reporting_2026.pdf',
+      'https://bmsce.ac.in/website_notifications/26-27_BMSCE-MBA_PRE_ADMISSION_APPL_FORM.pdf',
+      'https://www.mnlumumbai.edu.in/pdf/Admission2026/Notification-%202nd%20Entrance%20Test%20LLM%20Executive%202026-27.pdf',
+    ]) expect(narrowAdmissionPage(url)).toBe(true)
+    for (const url of [
+      'https://iiitl.ac.in/index.php/admission-in-b-tech-through-jossa-csab-2022/', // old slug, current page
+      'https://acad.iitb.ac.in/admissions/bachelors',
+      'https://mnit.ac.in/students/admissions',
+      'https://www.jnu.ac.in/sites/default/files/admission/e-Prospectus-UG-COP-2026-27.pdf',
+      'https://www.iimkashipur.ac.in/academics/mba/mba-admission',
+    ]) expect(narrowAdmissionPage(url)).toBe(false)
+  })
+
+  it('does not take candidate lists or notice headings as admission steps', () => {
+    expect(NOT_A_STEP.test('List of provisionally admitted candidates on State Quota Seats after Second round of counselling')).toBe(true)
+    expect(NOT_A_STEP.test('Important notice regarding Counseling and reporting')).toBe(true)
+    expect(NOT_A_STEP.test('Admission to the BS-MS programme is through the IISER Aptitude Test.')).toBe(false)
   })
 
   it('matches common short names to NIRF names', () => {

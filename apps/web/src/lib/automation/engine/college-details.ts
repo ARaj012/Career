@@ -88,6 +88,19 @@ export const topicOf = (p: FetchedPage): Topic[] => {
 }
 const topicPages = (pages: FetchedPage[], t: Topic) => pages.filter((p) => topicOf(p).includes(t))
 
+// A page about one narrow intake (PhD, postdoc, executive, foreign nationals, LLM) or one
+// event (spot round, reporting, walk-in, candidate lists) is not how the institution admits
+// students, so its sentences never become the college's admission process.
+const NARROW_ADMISSION = /(ph\.?\s?d|doctoral|post.?doc|research.?admission|walk.?in|executive|pgpmx|foreign|international.?students?|\bnri\b|\bdasa\b|spot|reporting|shortlist|eligible.?candidates|provisional(ly)?.?(admitted|allot)|list.?of|selected.?candidates|pre.?admission|\bll\.?m\b|\bb\.?\s?ed\b|vacant.?seats|\bround\b)/i
+/** True for an admission page that covers one narrow intake or one event. */
+// (An old year in the URL is not enough: sites keep a 2022 page slug and update the page.)
+export function narrowAdmissionPage(url: string, linkText = ''): boolean {
+  let key = `${url} ${linkText}`
+  try { key = `${decodeURIComponent(url)} ${linkText}` } catch { /* keep the raw URL */ }
+  return NARROW_ADMISSION.test(key)
+}
+const admissionPages = (pages: FetchedPage[]) => topicPages(pages, 'admission').filter((p) => !narrowAdmissionPage(p.finalUrl, label.get(p.url) ?? ''))
+
 /** Same-site links on a page whose text or URL matches, best first. */
 function linksMatching(p: FetchedPage, re: RegExp, max: number): { url: string; text: string }[] {
   const host = hostOf(p.finalUrl)
@@ -277,7 +290,7 @@ export async function updateCollegeDetails(
   const byTopic = {
     fees: topicPages(gathered.pages, 'fees'),
     placements: topicPages(gathered.pages, 'placements'),
-    admission: topicPages(gathered.pages, 'admission'),
+    admission: admissionPages(gathered.pages),
     scholarships: topicPages(gathered.pages, 'scholarships'),
   }
   if (!Object.values(byTopic).some((p) => p.length)) return { ...res, skipped: 'no fee, placement, admission or scholarship pages found on the website' }
@@ -322,7 +335,7 @@ JSON: {"programmes":[{"course_name":"…","degree_type":"UG","duration_years":4,
   }
 
   // A programme named word for word on a fee or admission page is a fact even without a fee
-  const nameOn = [...byTopic.fees, ...byTopic.admission].map((p) => ({ url: p.finalUrl, text: ` ${normalize(p.text)} ` }))
+  const nameOn = [...byTopic.fees, ...topicPages(gathered.pages, 'admission')].map((p) => ({ url: p.finalUrl, text: ` ${normalize(p.text)} ` }))
   const nameOnSite = (name: string) => {
     const n = normalize(name)
     return n.replace(/\s/g, '').length >= 4 ? (nameOn.find((p) => p.text.includes(` ${n} `))?.url ?? null) : null
@@ -539,6 +552,8 @@ async function placementReports(db: SupabaseClient, c: CollegeDetailRow, ai: Out
 
 // Announcements ("Applications are invited…", "Registration and Orientation…") are not a process
 const NEWS = /^(applications? (are|is) invited|registration and orientation|results? (of|for|declared)|declaration of|last date|notice|circular|corrigendum|extension)/i
+// Candidate lists and notice headings on an admissions page are not a process either
+export const NOT_A_STEP = /(^(important )?notice|^list of|walk.?in|shortlisted|provisionally (eligible|admitted|allotted)|holders of doctoral|post.?doctoral)/i
 const PROCESS = /(through|via|based on|on the basis of|rank|score|merit|counsel|eligib|entrance|qualif|interview|selection|must|should|minimum|criteria|josaa|csab|ccmt|neet|jee|gate|cat\b|clat|cuet)/i
 
 async function textFields(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onAdmission: OnSite, onScholarship: OnSite, res: Res, opts: Opts, today: Date) {
@@ -547,7 +562,7 @@ async function textFields(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onAd
   let src: string | null = null
 
   // Admission process: sentences copied word for word from the admissions pages that say how admission works
-  const steps = ai.admission_steps.map((s) => s.replace(/\s+/g, ' ').trim()).filter((s) => s.length >= 25 && !NEWS.test(s) && PROCESS.test(s))
+  const steps = ai.admission_steps.map((s) => s.replace(/\s+/g, ' ').trim()).filter((s) => s.length >= 25 && !NEWS.test(s) && !NOT_A_STEP.test(s) && PROCESS.test(s))
   const kept = steps.filter((s) => { const u = onAdmission(s); if (u) src ??= u; return !!u }).slice(0, 6)
   if (steps.length > kept.length) res.dropped.push(`${c.name} admission: ${steps.length - kept.length} sentence(s) not found on the site`)
   if (kept.length >= 2) {
