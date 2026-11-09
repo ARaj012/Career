@@ -11,7 +11,7 @@ import { extractJson } from './llm'
 import { amountsIn, normalize } from './evidence'
 import { fetchPage, focusText, relevantLinks } from './http'
 import { gatherPages, isOfficialUrl, locateQuote, saveCache } from './sources'
-import { examNamePattern, type ExamRow } from './exams'
+import { examFocus, type ExamRow } from './exams'
 
 const CUTOFF = /(cut[\s-]?off|qualifying|press release|result|percentile|merit list|minimum marks)/i
 const CUTOFF_TEXT = /(cut[\s-]?off|qualifying (marks|percentile|score)|minimum qualifying|qualified for)/i
@@ -70,7 +70,7 @@ export async function updateExamCutoffs(
   const ownUrls = [exam.official_url, ...(exam.source_urls ?? [])].filter(Boolean) as string[]
   if (!ownUrls.length) return { ...res, skipped: 'no official_url' }
 
-  const focus = examNamePattern(exam.name)
+  const focus = await examFocus(db, exam)
   const gathered = await gatherPages(db, ownUrls, 4, CUTOFF, focus)
   res.errors.push(...gathered.errors)
   // Result pages link the press release / cutoff PDF

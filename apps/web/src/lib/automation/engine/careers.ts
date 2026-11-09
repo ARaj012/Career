@@ -16,6 +16,17 @@ import { examNamePattern } from './exams'
 import type { FetchedPage } from './http'
 import { submitProposal, type Change, type ProposalOutcome } from './proposals'
 
+/** Text of a stored career fact: a sentence, or a list of {text} items. */
+const factText = (v: unknown): string[] =>
+  typeof v === 'string' ? [v] : Array.isArray(v) ? v.map((x) => (typeof x === 'string' ? x : String((x as { text?: unknown })?.text ?? ''))) : []
+
+/** True when every new sentence is already in the old value (same facts, fewer or merged lines). */
+export function addsNothing(oldV: unknown, newV: unknown): boolean {
+  const old = normalize(factText(oldV).join(' '))
+  const added = factText(newV).map(normalize).filter(Boolean)
+  return !!old && added.length > 0 && added.every((t) => old.includes(t))
+}
+
 const LINKS = /(eligib|qualif|admission|how to (join|apply|become)|course|programme|licen[cs]e|registration|pay|salary|stipend|recruit|entry|certification|career|overview)/i
 const KEYWORDS = /(eligib|qualif|age|years|degree|class|10\+2|graduat|pass|marks|percent|licen[cs]e|regist|certif|exam|test|training|course|pay|salary|stipend|₹|rs\.?|per month|allowance|medical|fitness|selection|interview|apply|admission)/i
 
@@ -152,9 +163,15 @@ ${context.slice(0, 2000)}`)
   const set = (k: string, oldV: unknown, newV: unknown, evidence: string | null) => {
     if (!same(oldV, newV)) fields[k] = { old: oldV ?? null, new: newV, evidence }
   }
-  if (eligibility.length) set('eligibility', c.eligibility, eligibility, eligibility[0].text)
-  if (steps.length) set('how_to_enter', c.how_to_enter, steps, steps[0].text)
-  if (licence) set('licence', c.licence, licence.text, licence.text)
+  // The AI quotes a different selection of the same page each run: a verified value
+  // already holding every new sentence is confirmed, not replaced by fewer of them
+  const setText = (k: string, oldV: unknown, newV: unknown, evidence: string | null) => {
+    if (c.verified_at && addsNothing(oldV, newV)) return
+    set(k, oldV, newV, evidence)
+  }
+  if (eligibility.length) setText('eligibility', c.eligibility, eligibility, eligibility[0].text)
+  if (steps.length) setText('how_to_enter', c.how_to_enter, steps, steps[0].text)
+  if (licence) setText('licence', c.licence, licence.text, licence.text)
   if (pay) {
     set('official_pay', c.official_pay, pay.text, pay.text)
     set('official_pay_min', c.official_pay_min, pay.min, pay.text)

@@ -3,9 +3,10 @@ import { quoteNamesCategory, cutoffLines } from './exam-cutoffs'
 import { describe, it, expect } from 'vitest'
 import { normalize, quoteOnPage, quoteSupportsDate, quoteSupportsNumber, isTentative } from './evidence'
 import { validateSchedule, validateScholarship } from './validate'
-import { normalizeSession } from './exams'
+import { examNamePattern, normalizeSession, soleHost } from './exams'
+import { relevantLinks } from './http'
 import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
-import { careerContext, usableSentence } from './careers'
+import { addsNothing, careerContext, usableSentence } from './careers'
 import { degreeType, isNotAProgramme, narrowAdmissionPage, NOT_A_STEP, otherWww, placementTable, programmeName, quoteNamesMetric, quoteNamesCourse, quoteNamesYear } from './college-details'
 import { matchInstitute } from './josaa'
 import { canonName, parseNirfTable } from './nirf'
@@ -446,5 +447,47 @@ describe('college labels', () => {
   it('matches common short names to NIRF names', () => {
     expect(canonName('BITS Pilani')).toBe(canonName('Birla Institute of Technology & Science -Pilani'))
     expect(canonName('National Institute of Technology Trichy')).toBe(canonName('National Institute of Technology Tiruchirappalli'))
+  })
+})
+
+describe('finding an exam\'s own links', () => {
+  const links = [
+    { text: 'Score Card for CUET (UG) 2026', url: 'https://cuet.nta.nic.in/score-card-for-cuetug-2026/' },
+    { text: 'Syllabus', url: 'https://cuet.nta.nic.in/cuetug-2026-syllabus/' },
+    { text: 'Syllabus', url: 'https://cuet.nta.nic.in/syllabus/' },
+    { text: 'Syllabus for NEET (UG)-2026', url: 'https://cuet.nta.nic.in/neet-syllabus.pdf' },
+  ]
+  const page = { url: 'https://cuet.nta.nic.in/', finalUrl: 'https://cuet.nta.nic.in/', status: 200, kind: 'html' as const, text: '', hash: '', links }
+  const SYL = /syllabus/i
+
+  it('takes a link whose address names the exam', () => {
+    expect(relevantLinks(page, 2, SYL, examNamePattern('CUET UG'))[0]).toBe('https://cuet.nta.nic.in/cuetug-2026-syllabus/')
+  })
+
+  it('on the exam\'s own site, a plain "Syllabus" link counts', () => {
+    const shared = relevantLinks(page, 4, SYL, examNamePattern('CUET UG'))
+    const own = relevantLinks(page, 4, SYL, { ...examNamePattern('CUET UG'), ownHost: 'cuet.nta.nic.in' })
+    expect(shared).not.toContain('https://cuet.nta.nic.in/syllabus/')
+    expect(own).toContain('https://cuet.nta.nic.in/syllabus/')
+  })
+
+  it('treats a site as the exam\'s own only when no other exam uses it', () => {
+    const all = ['https://cuet.nta.nic.in', 'https://upsc.gov.in', 'https://upsc.gov.in', 'https://nta.ac.in/']
+    expect(soleHost('https://cuet.nta.nic.in', all)).toBe('cuet.nta.nic.in')
+    expect(soleHost('https://upsc.gov.in', all)).toBeUndefined()
+    expect(soleHost(null, all)).toBeUndefined()
+  })
+})
+
+describe('career facts already on file', () => {
+  const old = [{ text: 'Minimum Age shall be 21 years (completed) as on 01.08.2025.' }, { text: 'Maximum age shall not be more than 30 years as on 01.08.2025.' }]
+  it('confirms a value when the new read only has fewer or merged sentences', () => {
+    expect(addsNothing(old, [{ text: 'Minimum Age shall be 21 years (completed) as on 01.08.2025.' }])).toBe(true)
+    expect(addsNothing(old, [{ text: 'Age Minimum Age shall be 21 years (completed) as on 01.08.2025. Maximum age shall not be more than 30 years as on 01.08.2025.' }])).toBe(false)
+    expect(addsNothing('All Research Analysts must be registered with SEBI and follow strict guidelines.', 'All Research Analysts must be registered with SEBI')).toBe(true)
+  })
+  it('still proposes a sentence that is new', () => {
+    expect(addsNothing(old, [{ text: 'Candidates must hold a graduate degree.' }])).toBe(false)
+    expect(addsNothing(null, [{ text: 'Candidates must hold a graduate degree.' }])).toBe(false)
   })
 })

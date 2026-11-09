@@ -312,8 +312,9 @@ ${target === 'syllabus' ? '📖 Exam syllabi' : '📏 Exam cutoffs'} to read: ${
       for (const i of r.issues.slice(0, 50)) log.push(`median left empty: ${i}`)
     }
   } catch (err) {
-    errors.push({ item: 'run', error: (err as Error).message })
+    // Reaching the daily AI limit is an expected stop (the next run continues), not a failed run
     if (err instanceof AiQuotaError) quotaStop = err.message
+    else errors.push({ item: 'run', error: (err as Error).message })
   }
 
   // Old hand-typed / third-party values are deleted once an official value replaces them
@@ -322,6 +323,7 @@ ${target === 'syllabus' ? '📖 Exam syllabi' : '📏 Exam cutoffs'} to read: ${
     if (retireErr) errors.push({ item: 'retire', error: retireErr.message })
     else if (retired) log.push(`replaced old values: ${JSON.stringify(retired)}`)
   }
+  if (quotaStop) log.push(`Stopped at the daily AI limit: ${quotaStop}`)
 
   const status = errors.some((e) => e.item === 'run') ? 'failed' : errors.length ? 'partial' : 'success'
   if (runId) {
@@ -340,7 +342,8 @@ ${target === 'syllabus' ? '📖 Exam syllabi' : '📏 Exam cutoffs'} to read: ${
     const runStatus = allErrors.some((e) => e.item === 'run') ? 'failed' : allErrors.length ? 'partial' : 'success'
     const { error: saveErr } = await db
       .from('automation_runs')
-      .update({ finished_at: new Date().toISOString(), status: runStatus, stats: total, errors: allErrors.slice(0, 200) })
+      // Whole-run errors first, so the 200-entry cap never hides why a run stopped
+      .update({ finished_at: new Date().toISOString(), status: runStatus, stats: total, errors: [...allErrors.filter((e) => e.item === 'run'), ...allErrors.filter((e) => e.item !== 'run')].slice(0, 200) })
       .eq('id', runId)
     if (saveErr) console.error('  ❌ could not save the run summary:', saveErr.message)
 

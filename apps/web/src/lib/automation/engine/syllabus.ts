@@ -14,7 +14,7 @@ import { extractJson } from './llm'
 import { normalize } from './evidence'
 import { fetchPage, relevantLinks } from './http'
 import { gatherPages, isOfficialUrl, locateQuote, saveCache } from './sources'
-import { examNamePattern, type ExamRow } from './exams'
+import { examFocus, type ExamRow } from './exams'
 
 const SYLLABUS = /(syllabus|curriculum|information bulletin|prospectus|scheme of exam)/i
 const UNIT_WORD = /\b(unit|chapter|module|section|paper|part|topic)\b/gi
@@ -65,7 +65,7 @@ export function syllabusSection(text: string, size: number): string {
 
 /** Official pages with the syllabus: the exam's own pages, their syllabus links, and one hop further. */
 async function syllabusPages(db: SupabaseClient, exam: SyllabusExam, ownUrls: string[]) {
-  const focus = examNamePattern(exam.name)
+  const focus = await examFocus(db, exam)
   // A syllabus link saved earlier (or pasted by an admin) goes first: some
   // bodies block automated readers on their exam portals but not on the PDF host
   const start = [exam.syllabus_source_url, ...ownUrls].filter(Boolean) as string[]

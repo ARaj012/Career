@@ -353,8 +353,17 @@ export async function fetchPage(url: string): Promise<FetchedPage> {
   }
 }
 
-/** Names that identify one record's links on a shared notice board (e.g. nta.ac.in). */
-export type LinkFocus = { strong: RegExp; weak?: RegExp }
+/**
+ * Names that identify one record's links on a shared notice board (e.g. nta.ac.in).
+ * `ownHost`: a site that belongs to this record alone (cuet.nta.nic.in), where a plain
+ * "Syllabus" link is about this record even though it does not name it.
+ */
+export type LinkFocus = { strong: RegExp; weak?: RegExp; ownHost?: string }
+
+/** The path of a link, so "/cuetug-2026-syllabus/" can name the exam as link text does. */
+function linkPath(url: string): string {
+  try { return decodeURIComponent(new URL(url).pathname) } catch { return '' }
+}
 
 /**
  * Links on a page that are likely to contain dates / notices, best first.
@@ -366,13 +375,16 @@ export function relevantLinks(page: FetchedPage, max = 4, hint: RegExp = LINK_HI
   const years = [String(year), String(year + 1)]
   const host = new URL(page.finalUrl).host.replace(/^www\./, '')
   const names = (t: string) => !!focus && (focus.strong.test(t) || !!focus.weak?.test(t))
-  const focused = page.links.some((l) => names(l.text))
+  // On the record's own site every link is about it; elsewhere, once a link names it, others are pushed down
+  const ownSite = !!focus?.ownHost && host === focus.ownHost
+  const focused = !ownSite && page.links.some((l) => names(l.text))
   return page.links
     .map((l) => {
       let score = 0
       const blob = `${l.text} ${l.url}`
       if (focus?.strong.test(l.text)) score += 5
       else if (focus?.weak?.test(l.text)) score += 3
+      else if (focus?.strong.test(linkPath(l.url))) score += 4
       else if (focused) score -= 4
       if (hint.test(blob)) score += 3
       if (l.text.includes(String(year + 1))) score += 3 // the upcoming cycle's notice beats last cycle's

@@ -10,7 +10,7 @@ import { isTentative, quoteSupportsDate } from './evidence'
 import { validateSchedule, type ScheduleDates } from './validate'
 import { buildContext, gatherPages, isOfficialUrl, locateQuote, saveCache } from './sources'
 import { submitProposal, type Change, type ProposalOutcome } from './proposals'
-import type { LinkFocus } from './http'
+import { hostOf, type LinkFocus } from './http'
 
 const FIELDS = ['registration_start', 'registration_end', 'exam_date_start', 'exam_date_end', 'result_date'] as const
 type Field = (typeof FIELDS)[number]
@@ -79,7 +79,21 @@ export function examNamePattern(name: string): LinkFocus {
   return { strong, weak: acronym ? new RegExp(`\\b${esc(acronym)}\\b`) : undefined }
 }
 
-export type ExamResult = { slug: string; outcomes: ProposalOutcome[]; skipped?: string; errors: string[]; dropped: string[] }
+/** The exam's official host when no other exam uses it (cuet.nta.nic.in, not nta.ac.in or upsc.gov.in). */
+export function soleHost(officialUrl: string | null | undefined, allOfficialUrls: (string | null)[]): string | undefined {
+  const h = officialUrl ? hostOf(officialUrl) : ''
+  if (!h) return undefined
+  return allOfficialUrls.filter((u) => u && hostOf(u) === h).length === 1 ? h : undefined
+}
+
+let officialUrls: Promise<(string | null)[]> | null = null
+/** examNamePattern, plus the exam's own site when it has one to itself. */
+export async function examFocus(db: SupabaseClient, exam: { name: string; official_url: string | null }): Promise<LinkFocus> {
+  officialUrls ??= Promise.resolve(db.from('exams').select('official_url')).then(({ data }) => (data ?? []).map((r) => r.official_url as string | null))
+  return { ...examNamePattern(exam.name), ownHost: soleHost(exam.official_url, await officialUrls) }
+}
+
+export type ExamResult ={ slug: string; outcomes: ProposalOutcome[]; skipped?: string; errors: string[]; dropped: string[] }
 
 export async function updateExam(
   db: SupabaseClient,
@@ -91,7 +105,7 @@ export async function updateExam(
   const ownUrls = [exam.official_url, ...(exam.source_urls ?? [])].filter(Boolean) as string[]
   if (!ownUrls.length) return { ...result, skipped: 'no official_url' }
 
-  const gathered = await gatherPages(db, ownUrls, 3, undefined, examNamePattern(exam.name))
+  const gathered = await gatherPages(db, ownUrls, 3, undefined, await examFocus(db, exam))
   result.errors.push(...gathered.errors)
   if (!gathered.pages.length) return { ...result, skipped: 'could not fetch any official page' }
   if (!gathered.changed && !opts.force) {
