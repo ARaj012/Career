@@ -12,6 +12,8 @@ import CutoffTrendsChart from "@/components/college/CutoffTrendsChart";
 import CutoffExplorer, { type OfficialCutoff } from "@/components/college/CutoffExplorer";
 import CollegeFaqs from "@/components/college/CollegeFaqs";
 import CollegeReviews from "@/components/college/CollegeReviews";
+import EstimateNote from "@/components/EstimateNote";
+import { getEstimates } from "@/lib/estimates";
 
 import {
   MapPin,
@@ -151,6 +153,8 @@ export default async function CollegeDetailPage({
   if (!collegeRaw) notFound();
 
   const college = collegeRaw as any;
+  // Details the official sources do not publish: labelled estimates
+  const est = await getEstimates(supabase, "college", college.id);
 
   const { data: coursesRaw } = await supabase
     .from("college_courses")
@@ -340,15 +344,19 @@ export default async function CollegeDetailPage({
 
             {/* Rank Badges */}
             <div className="flex sm:flex-col gap-3 flex-shrink-0">
-              {college.nirf_rank && (
-                <div className="text-center bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 min-w-[80px]">
+              {(college.nirf_rank || college.nirf_band) && (
+                <div
+                  className="text-center bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 min-w-[80px] max-w-[160px]"
+                  title={college.nirf_note ?? undefined}
+                >
                   <Trophy className="w-4 h-4 text-indigo-500 mx-auto mb-1" />
-                  <div className="text-2xl font-bold text-indigo-700">
-                    #{college.nirf_rank}
+                  <div className={`${college.nirf_rank ? "text-2xl" : "text-lg"} font-bold text-indigo-700`}>
+                    {college.nirf_rank ? `#${college.nirf_rank}` : college.nirf_band}
                   </div>
                   <div className="text-xs text-indigo-400 font-medium">
-                    NIRF Rank
+                    NIRF{college.nirf_year ? ` ${college.nirf_year}` : ""}{college.nirf_category && college.nirf_category !== "Overall" ? ` · ${college.nirf_category}` : ""}
                   </div>
+                  {college.nirf_note && <div className="text-[11px] text-indigo-400 mt-1 leading-tight">{college.nirf_note}</div>}
                 </div>
               )}
               {college.qs_rank && (
@@ -685,6 +693,8 @@ export default async function CollegeDetailPage({
                     </div>
                   ))}
                 </div>
+              ) : est.college_cutoffs ? (
+                <EstimateNote estimate={est.college_cutoffs} />
               ) : (
                 <p className="text-sm text-gray-400 text-center py-4">
                   Cutoff data coming soon
@@ -700,6 +710,15 @@ export default async function CollegeDetailPage({
 
             {/* Placements: official NIRF figures first, third-party numbers only when labelled */}
             <PlacementSummary rows={placements} />
+            {placements.length === 0 && est.placements && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Placements</h3>
+                <EstimateNote estimate={est.placements} />
+              </div>
+            )}
+            {college.annual_fees_min == null && college.annual_fees_max == null && est.fees && (
+              <EstimateNote estimate={est.fees} title="Annual fees" />
+            )}
 
             {/* Fees Summary */}
             <div className="bg-green-50 rounded-2xl border border-green-100 p-5">

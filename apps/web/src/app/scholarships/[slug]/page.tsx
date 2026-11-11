@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import EstimateNote from '@/components/EstimateNote'
+import { getEstimates } from '@/lib/estimates'
 import { Metadata } from 'next'
 import { GraduationCap, MapPin, ExternalLink, FileText, User, CheckCircle2, ListOrdered } from 'lucide-react'
 
@@ -115,6 +117,8 @@ export default async function ScholarshipDetailPage({
   if (!scholarship) {
     notFound()
   }
+  // Details the provider does not publish: labelled estimates
+  const est = await getEstimates(supabase, 'scholarship', scholarship.id)
 
   const formatAmount = (scholarship: Scholarship) => {
     if (scholarship.amount_type === 'full_tuition') return 'Full Tuition'
@@ -208,13 +212,20 @@ export default async function ScholarshipDetailPage({
             </div>
             <div className="bg-purple-50 rounded-xl p-4">
               <p className="text-xs text-gray-500">Application Deadline</p>
-              <p className="font-bold text-purple-700 text-lg mt-1">{formatDate(scholarship.application_deadline)}</p>
+              <p className="font-bold text-purple-700 text-lg mt-1">
+                {scholarship.application_deadline || !est.deadline ? formatDate(scholarship.application_deadline) : 'See expected window below'}
+              </p>
             </div>
             <div className="bg-orange-50 rounded-xl p-4">
               <p className="text-xs text-gray-500">Education Level</p>
               <p className="font-bold text-orange-700 text-lg mt-1 capitalize">{scholarship.level.replace('_', ' ')}</p>
             </div>
           </div>
+          {!scholarship.application_deadline && est.deadline && (
+            <div className="mt-4">
+              <EstimateNote estimate={est.deadline} title="Expected application window" />
+            </div>
+          )}
         </div>
 
         {/* Eligibility */}

@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Metadata } from 'next'
 import SaveCareerButton from '@/components/SaveCareerButton'
 import OfficialCareerFacts from '@/components/careers/OfficialCareerFacts'
+import EstimateNote from '@/components/EstimateNote'
+import { getEstimates, type Estimate } from '@/lib/estimates'
 import {
   ArrowLeft, TrendingUp, IndianRupee, Briefcase, BookOpen,
   GraduationCap, Star, CheckCircle2, Building2, Target,
@@ -278,6 +280,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
 
   if (!careerRaw) notFound()
   const career = careerRaw as any
+  const est = await getEstimates(supabase, 'career', career.id)
 
   // Skills
   const { data: skillsRaw } = await supabase
@@ -441,6 +444,22 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
               sourceUrl={career.facts_source_url}
               verifiedAt={career.verified_at}
             />
+
+            {/* What the official bodies do not publish here: labelled estimates */}
+            {(() => {
+              const noFacts = !(career.eligibility?.length || career.how_to_enter?.length)
+              const notes = [
+                noFacts && est.eligibility && { e: est.eligibility, t: 'Typical eligibility' },
+                noFacts && est.how_to_enter && { e: est.how_to_enter, t: 'Usual route into this career' },
+                !(career.avg_salary_min || career.avg_salary_max) && est.salary && { e: est.salary, t: 'Expected salary in India' },
+              ].filter(Boolean) as { e: Estimate; t: string }[]
+              return notes.length ? (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-3">
+                  <h2 className="text-lg font-semibold text-gray-900">How to Get In &amp; What It Pays</h2>
+                  {notes.map(({ e, t }) => <EstimateNote key={t} estimate={e} title={t} />)}
+                </div>
+              ) : null
+            })()}
 
             {/* Key Facts */}
             {keyFacts.length > 0 && (

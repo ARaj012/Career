@@ -1,3 +1,6 @@
+import EstimateNote from '@/components/EstimateNote'
+import type { Estimate } from '@/lib/estimates'
+
 export type ScheduleRow = {
   year: number | null
   session: string | null
@@ -54,7 +57,7 @@ function StatusLine({ s }: { s: ScheduleRow }) {
   return <p className="text-xs text-amber-700 mt-3">Not yet confirmed from the official website; dates may change.</p>
 }
 
-export default function KeyDates({ schedules, officialUrl }: { schedules: ScheduleRow[]; officialUrl: string | null }) {
+export default function KeyDates({ schedules, officialUrl, estimate }: { schedules: ScheduleRow[]; officialUrl: string | null; estimate?: Estimate }) {
   const today = new Date().toISOString().slice(0, 10)
   const cycle = pickCycle(schedules, today)
   const { year, isPast } = cycle
@@ -84,7 +87,13 @@ export default function KeyDates({ schedules, officialUrl }: { schedules: Schedu
             </a>
           )}
         </p>
-      ) : (
+      ) : null}
+      {(sessions.length === 0 || isPast) && estimate && (
+        <div className={sessions.length ? 'mb-4' : 'mt-4'}>
+          <EstimateNote estimate={estimate} title={estimate.kind === 'discontinued' ? undefined : `Expected schedule${year && isPast ? ` for ${year + 1}` : ''}`} />
+        </div>
+      )}
+      {sessions.length === 0 ? null : (
         <div className="space-y-4">
           {sessions.map((s) => {
             const done = dates(s).length > 0 && dates(s).every((d) => d.slice(0, 10) < today)

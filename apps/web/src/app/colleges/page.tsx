@@ -19,6 +19,8 @@ interface College {
   city: string
   country: string
   nirf_rank: number | null
+  nirf_band?: string | null
+  nirf_note?: string | null
   qs_rank: number | null
   naac_grade: string | null
   established_year: number | null
@@ -413,9 +415,9 @@ export default function CollegesPage() {
                       >
                         {selectedForCompare.has(college.id) ? <Check className="w-4 h-4" /> : <GitCompare className="w-4 h-4" />}
                       </button>
-                      {college.nirf_rank ? (
-                        <div className="flex-shrink-0 text-center bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5">
-                          <div className="text-base font-bold text-indigo-700 leading-none">#{college.nirf_rank}</div>
+                      {college.nirf_rank || college.nirf_band ? (
+                        <div className="flex-shrink-0 text-center bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5" title={college.nirf_note ?? undefined}>
+                          <div className="text-base font-bold text-indigo-700 leading-none">{college.nirf_rank ? `#${college.nirf_rank}` : college.nirf_band}</div>
                           <div className="text-xs text-indigo-400 mt-0.5">NIRF</div>
                         </div>
                       ) : college.qs_rank ? (

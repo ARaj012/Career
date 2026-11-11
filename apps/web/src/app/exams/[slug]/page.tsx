@@ -5,6 +5,8 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Metadata } from 'next'
 import TrackExamButton from '@/components/TrackExamButton'
 import KeyDates, { type ScheduleRow } from '@/components/exams/KeyDates'
+import EstimateNote from '@/components/EstimateNote'
+import { getEstimates } from '@/lib/estimates'
 import { ExamQualifyingCutoffs, ExamCollegeCutoffs, BRANCHES, RANK_CATEGORIES } from '@/components/exams/ExamCutoffs'
 
 const STRATEGY_STEPS = [
@@ -218,6 +220,9 @@ export default async function ExamDetailPage({
     .select('*', { count: 'exact', head: true })
     .eq('exam_id', exam.id)
 
+  // Details the official website does not publish: labelled estimates / discontinued notes
+  const est = await getEstimates(supabase, 'exam', exam.id)
+
   const hasSelectionStats = latestSchedule?.total_applicants && latestSchedule?.total_selected
   const selectionRate = hasSelectionStats
     ? ((latestSchedule.total_selected / latestSchedule.total_applicants) * 100).toFixed(2)
@@ -279,8 +284,14 @@ export default async function ExamDetailPage({
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        {est.status?.kind === 'discontinued' && (
+          <div className="mb-6 sm:mb-8">
+            <EstimateNote estimate={est.status} />
+          </div>
+        )}
+
         {/* Key dates */}
-        <KeyDates schedules={schedules as ScheduleRow[]} officialUrl={exam.official_url} />
+        <KeyDates schedules={schedules as ScheduleRow[]} officialUrl={exam.official_url} estimate={est.status?.kind === 'discontinued' ? undefined : est.dates} />
 
         {/* Eligibility */}
         {eligibility && (
@@ -385,6 +396,13 @@ export default async function ExamDetailPage({
           </div>
         )}
 
+        {!syllabusCount && est.syllabus && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">Syllabus Overview</h2>
+            <EstimateNote estimate={est.syllabus} />
+          </div>
+        )}
+
         {/* Toppers */}
         <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-10">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
@@ -425,7 +443,14 @@ export default async function ExamDetailPage({
           )}
         </div>
 
-        {nationalCutoffs.length > 0 && <ExamQualifyingCutoffs rows={nationalCutoffs} examName={exam.name} />}
+        {nationalCutoffs.length > 0 ? (
+          <ExamQualifyingCutoffs rows={nationalCutoffs} examName={exam.name} />
+        ) : est.cutoffs ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">Expected Cutoffs</h2>
+            <EstimateNote estimate={est.cutoffs} />
+          </div>
+        ) : null}
 
         {latestRankYear && (
           <ExamCollegeCutoffs rows={(rankRows ?? []) as any} slug={exam.slug} branch={branch} category={rankCategory} examName={exam.name} />

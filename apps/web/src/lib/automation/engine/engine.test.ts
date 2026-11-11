@@ -9,7 +9,7 @@ import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
 import { addsNothing, careerContext, usableSentence } from './careers'
 import { degreeType, isNotAProgramme, narrowAdmissionPage, NOT_A_STEP, otherWww, placementTable, programmeName, quoteNamesMetric, quoteNamesCourse, quoteNamesYear } from './college-details'
 import { matchInstitute } from './josaa'
-import { canonName, parseNirfTable } from './nirf'
+import { canonName, dedupe, looseNameMatch, parseNirfTable } from './nirf'
 import { isOfficialUrl, locateQuote } from './sources'
 import { focusText, htmlToText, itemsToLines } from './http'
 import { load } from 'cheerio'
@@ -162,6 +162,24 @@ describe('NIRF', () => {
   })
   it('returns nothing (not garbage) when the format changes', () => {
     expect(parseNirfTable('<table><tr><td>1</td><td>x</td></tr></table>')).toEqual([])
+  })
+  it('does not give a faculty or institute its parent university\'s rank', () => {
+    expect(looseNameMatch('Banaras Hindu University Faculty of Law', 'Banaras Hindu University', 'Varanasi')).toBe(false)
+    expect(looseNameMatch('Institute of Technology, Nirma University', 'Nirma University', 'Ahmedabad')).toBe(false)
+    expect(looseNameMatch('Institute of Engineering and Management, Kolkata', 'Institute of Engineering & Management', 'Kolkata')).toBe(true)
+    expect(looseNameMatch('IIITDM Jabalpur', 'Pandit Dwarka Prasad Mishra IIITDM Jabalpur', 'Jabalpur')).toBe(true)
+  })
+  it('counts an institute repeated across tables once', () => {
+    const r = { name: 'Bangalore University', city: 'Bengaluru', state: 'Karnataka', rank: 65, score: null }
+    expect(dedupe([r, { ...r }, { ...r }])).toHaveLength(1)
+  })
+  it('reads a band page (no rank column) with the band it was asked for', () => {
+    const html = `<table><thead><tr><th>Institute ID</th><th>Name</th><th>City</th><th>State</th></tr></thead>
+      <tbody><tr><td>IR-E-C-1</td><td>R.V. College of Engineering<div>More Details</div></td><td>Bengaluru</td><td>Karnataka</td></tr></tbody></table>`
+    expect(parseNirfTable(html, '101-150')).toEqual([
+      { name: 'R.V. College of Engineering', city: 'Bengaluru', state: 'Karnataka', rank: null, band: '101-150', score: null },
+    ])
+    expect(parseNirfTable(html)).toEqual([]) // without a band, a table with no rank column is not read
   })
 })
 
