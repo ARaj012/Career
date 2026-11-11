@@ -187,8 +187,12 @@ export default function ExamRoadmap({ syllabusRows, examName, stageOrder }: Exam
     }
     // Prefer the caller-supplied order (from exam_pattern.stage_order, which IS
     // reliably sorted) — fall back to first-seen order only when it's not given.
+    // Rows whose stage isn't in that list (including rows with no stage) are
+    // kept after it, so they never silently disappear.
     const order =
-      stageOrder && stageOrder.length > 0 ? stageOrder.filter((s) => map[s]) : firstSeenOrder
+      stageOrder && stageOrder.length > 0
+        ? [...stageOrder.filter((s) => map[s]), ...firstSeenOrder.filter((k) => !stageOrder.includes(k))]
+        : firstSeenOrder
     return { map, order }
   }, [syllabusRows, stageOrder])
 
