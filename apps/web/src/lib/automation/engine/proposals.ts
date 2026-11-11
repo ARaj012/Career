@@ -45,13 +45,37 @@ function decide(p: ProposalInput): { auto: boolean; reason: string | null } {
   return { auto: true, reason: null }
 }
 
+/** The row that already has this key (e.g. same exam, year and session), if any. */
+async function existingRow(db: SupabaseClient, table: string, key: Record<string, unknown>): Promise<string | null> {
+  const entries = Object.entries(key)
+  if (!entries.length) return null
+  let q = db.from(table).select('id')
+  for (const [k, v] of entries) q = v === null || v === undefined ? q.is(k, null) : q.eq(k, v as string | number | boolean)
+  const { data } = await q.limit(2)
+  return data?.length === 1 ? (data[0].id as string) : null
+}
+
+export class RowExistsError extends Error {}
+
+/**
+ * Writes a change. A proposed new row whose key is already taken (another reading or an
+ * admin added that exam/year/session in the meantime) updates that row when an admin
+ * approves (`onExisting: 'update'`); automatic applying stops instead, so the change waits
+ * for review rather than silently overwriting a row that may have been checked by hand.
+ */
 export async function applyChange(
   db: SupabaseClient,
   table: string,
   recordId: string | null,
   values: Record<string, unknown>,
-  insertKey: Record<string, unknown> = {}
+  insertKey: Record<string, unknown> = {},
+  opts: { onExisting?: 'update' | 'stop' } = {}
 ): Promise<string | null> {
+  if (!recordId) {
+    const existing = await existingRow(db, table, insertKey)
+    if (existing && opts.onExisting === 'update') recordId = existing
+    else if (existing) throw new RowExistsError(`${table}: a row for this ${Object.keys(insertKey).join('/')} already exists; approve to update it with these official values`)
+  }
   if (recordId) {
     const { error } = await db.from(table).update(values).eq('id', recordId)
     if (error) throw new Error(`${table} update failed: ${error.message}`)
@@ -119,9 +143,10 @@ export async function submitProposal(
       await db.from('automation_proposals').insert({ ...row, record_id: id, reviewed_at: new Date().toISOString(), reviewed_by: 'automation' })
       return 'auto_applied'
     } catch (err) {
-      console.error(`    ❌ ${p.label}:`, (err as Error).message)
-      await db.from('automation_proposals').insert({ ...row, status: 'pending', reason: `Auto-apply failed: ${(err as Error).message}` })
-      return 'failed'
+      const exists = err instanceof RowExistsError
+      if (!exists) console.error(`    ❌ ${p.label}:`, (err as Error).message)
+      await db.from('automation_proposals').insert({ ...row, status: 'pending', reason: exists ? `Needs review: ${(err as Error).message}` : `Auto-apply failed: ${(err as Error).message}` })
+      return exists ? 'pending' : 'failed'
     }
   }
 
@@ -140,7 +165,8 @@ export async function approveProposal(db: SupabaseClient, id: string, reviewer: 
   if (p.status !== 'pending') throw new Error(`Proposal is already ${p.status}`)
   const fields = (p.changes?.fields ?? {}) as Record<string, Change>
   const values = Object.fromEntries(Object.entries(fields).map(([k, c]) => [k, c.new]))
-  const recordId = await applyChange(db, p.table_name, p.record_id, { ...values, ...(p.changes?.extra ?? {}) }, p.changes?.insertKey ?? {})
+  // An admin approving a new row whose exam/year/session (etc.) already exists updates that row
+  const recordId = await applyChange(db, p.table_name, p.record_id, { ...values, ...(p.changes?.extra ?? {}) }, p.changes?.insertKey ?? {}, { onExisting: 'update' })
   await db
     .from('automation_proposals')
     .update({ status: 'applied', record_id: recordId, reviewed_at: new Date().toISOString(), reviewed_by: reviewer })
