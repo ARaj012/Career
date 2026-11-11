@@ -22,12 +22,14 @@ export default function OfficialCareerFacts({
   title, officialBody, officialUrl, eligibility, howToEnter, licence, officialPay, sourceUrl, verifiedAt,
 }: OfficialCareerFactsProps) {
   const elig = eligibility ?? []
+  // "an Indian Statistical Service Officer", "a Mathematician"
+  const article = /^[aeiou]/i.test(title) ? 'an' : 'a'
   const steps = howToEnter ?? []
   if (!elig.length && !steps.length && !licence && !officialPay) {
     if (!officialBody || !officialUrl) return null
     return (
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">How to become a {title}</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">How to become {article} {title}</h2>
         <p className="text-sm text-gray-600">
           Entry rules are set by{' '}
           <a href={officialUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">{officialBody}</a>.
@@ -40,7 +42,7 @@ export default function OfficialCareerFacts({
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
       <div className="flex flex-wrap items-start justify-between gap-2 mb-1">
-        <h2 className="text-lg font-semibold text-gray-900">How to become a {title}</h2>
+        <h2 className="text-lg font-semibold text-gray-900">How to become {article} {title}</h2>
         {sourceUrl && (
           <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline">
             <BadgeCheck className="w-3.5 h-3.5" /> Official{officialBody ? ` · ${officialBody}` : ''} <ExternalLink className="w-3 h-3" />

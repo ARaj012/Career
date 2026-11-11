@@ -146,6 +146,8 @@ EXAMS = [
   ("NMAT", "dates", "estimate", "Registration ~August–October 2026 · Testing window ~November–December 2026 (up to three attempts).", D, None, None),
   ("Christ University Entrance Test", "cutoffs", "estimate", "Christ does not publish cutoffs. Selection combines the entrance test, a skills assessment (e.g. group discussion or micro-presentation) and a personal interview.", C, None, None),
 
+  ("CMI Entrance Exam", "dates", "estimate", "Applications ~early March to early April 2027 · Entrance exam ~early May 2027 (a Saturday afternoon) · Results ~June 2027 · Session starts ~August 2027.", D, None, None),
+
   # ---------- Expected cutoffs ----------
   ("AEEE", "cutoffs", "estimate", "Admission is by rank, not a fixed cutoff. B.Tech CSE at the Coimbatore and Bengaluru campuses usually closes within roughly the top 2,000–5,000 ranks; core branches and other campuses close much higher (up to ~20,000–40,000).", C, None, None),
   ("AMU Entrance", "cutoffs", "estimate", "AMU publishes merit lists, not fixed cutoffs. Half of the seats in most courses are reserved for AMU's internal students, so external candidates need a high merit position (often the top ~5–10% of applicants for popular courses).", C, None, None),

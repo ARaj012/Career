@@ -193,6 +193,17 @@ CAREERS = [
   pay("yoga-instructor", "About ₹2–4 lakh a year starting (₹15,000–35,000 a month); senior certified trainers ₹6–12 lakh; private classes ₹500–2,000 a session.", 200000, 1200000),
 ]
 
+CAREERS += [
+  # ---------------- Mathematics careers (added November 2026) ----------------
+  pay("mathematician", "While training: research fellowships of ₹37,000 a month (JRF) rising to ₹42,000 (SRF) — the rates ISI and CMI pay. After a PhD: postdoctoral positions roughly ₹60,000–80,000 a month; Assistant Professor at IITs, IISERs and universities on Pay Level 10–12 (basic ₹57,700–1,01,500), about ₹1–2 lakh a month gross. Industry research and quantitative roles for mathematicians commonly ₹15–40 lakh a year.", 444000, 4000000),
+  pay("statistician", "Junior Statistical Officer (through SSC CGL): Pay Level 6 (basic ₹35,400), about ₹55,000–65,000 a month gross. Private-sector statisticians and analysts about ₹5–12 lakh a year at entry and ₹15–30 lakh with experience; ISI M.Stat graduates often start around ₹15–30 lakh.", 500000, 3000000),
+  pay("indian-statistical-service-officer", "Junior Time Scale officers start on Pay Level 10 (basic ₹56,100) plus DA and HRA — about ₹1–1.2 lakh a month gross — rising through Senior Time Scale and above with promotions.", 1200000, 1450000, G),
+  route("quantitative-analyst", "Eligibility: Class 12 with Mathematics; no fixed degree, but most quants study mathematics, statistics, computer science or engineering.\nRoute: B.Stat/B.Math at ISI (ISI Admission Test), B.S. at CMI (CMI entrance) or a B.Tech at an IIT (JEE Advanced), often followed by M.Stat, M.Math or a master's in financial engineering → strong probability, statistics and C++/Python → campus or off-campus quant interviews (probability puzzles, coding, finance basics) at trading firms, hedge funds and banks."),
+  pay("quantitative-analyst", "Freshers at leading quant and high-frequency trading firms in India: roughly ₹25–60 lakh a year in total pay; quant roles at banks roughly ₹12–25 lakh. Experienced quants commonly ₹50 lakh to over ₹1 crore a year, much of it as bonus.", 1200000, 6000000),
+  pay("cryptographer", "Government research posts (e.g. DRDO scientists): Pay Level 10 (basic ₹56,100), about ₹1 lakh a month gross. Industry cryptography and security engineers roughly ₹10–25 lakh a year at entry and ₹30–60 lakh with experience.", 1000000, 6000000),
+  pay("operations-research-analyst", "Roughly ₹6–12 lakh a year at entry; graduates of ISI's M.Tech (QROR) and IIT industrial-engineering programmes often ₹12–20 lakh. About ₹20–40 lakh a year with experience in analytics, supply chain or consulting.", 600000, 4000000),
+]
+
 # policy-analyst appears twice above; keep the first
 _seen = set()
 CAREERS = [r for r in CAREERS if not ((r[0], r[1]) in _seen or _seen.add((r[0], r[1])))]
