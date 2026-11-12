@@ -8,8 +8,22 @@
 import Groq from 'groq-sdk'
 import type { z } from 'zod'
 
-// Read per call, not at import: the CLI loads .env.local after its imports run
-const model = () => process.env.AUTOMATION_MODEL || 'openai/gpt-oss-120b'
+// Read per call, not at import: the CLI loads .env.local after its imports run.
+// Each Groq model has its own free daily limit, so when one runs out the reader moves to
+// the next (AUTOMATION_MODELS, comma-separated; AUTOMATION_MODEL picks the first).
+const DEFAULT_MODELS = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b']
+function models(): string[] {
+  const list = (process.env.AUTOMATION_MODELS || DEFAULT_MODELS.join(',')).split(',').map((m) => m.trim()).filter(Boolean)
+  const first = process.env.AUTOMATION_MODEL?.trim()
+  return first ? [first, ...list.filter((m) => m !== first)] : list
+}
+// Models that hit their daily limit (or are not available) in this server process, with when
+const exhausted = new Map<string, number>()
+const DAY = 24 * 3600_000
+function model(): string | null {
+  for (const [m, at] of exhausted) if (Date.now() - at > DAY / 2) exhausted.delete(m)
+  return models().find((m) => !exhausted.has(m)) ?? null
+}
 let client: Groq | null = null
 
 function groq(): Groq {
@@ -38,9 +52,11 @@ export async function extractJson<T>(task: string, pageText: string, schema: z.Z
   ]
 
   for (let attempt = 0; attempt < 4; attempt++) {
+    const current = model()
+    if (!current) throw new AiQuotaError(`Daily Groq AI limit reached on every model (${models().join(', ')}). Click "Update everything" again after it resets; the run resumes where it stopped.`)
     try {
       const res = await groq().chat.completions.create({
-        model: model(),
+        model: current,
         temperature: 0,
         response_format: { type: 'json_object' },
         messages,
@@ -56,12 +72,22 @@ export async function extractJson<T>(task: string, pageText: string, schema: z.Z
       if (status === 429 || status >= 500) {
         const retryAfter = Number(err?.headers?.['retry-after'] ?? 0)
         if (status === 429 && (retryAfter > 120 || /per day|TPD|RPD/i.test(err?.message ?? ''))) {
-          const groqSays = (err?.message ?? '').replace(/\s+/g, ' ').slice(0, 300)
-          throw new AiQuotaError(`Daily Groq AI limit reached for ${model()}. Click "Update everything" again after it resets (or set AUTOMATION_MODEL to another Groq model, which has its own daily limit); finished records will not be checked twice. Groq: ${groqSays}`)
+          // This model is done for the day: carry on with the next one
+          exhausted.set(current, Date.now())
+          console.log(`  🔁 Daily limit reached on ${current}; switching to ${model() ?? 'none left'}`)
+          attempt--
+          continue
         }
         const wait = Math.max(retryAfter * 1000, 5000 * (attempt + 1))
         console.log(`  ⏳ AI rate-limited, waiting ${Math.round(wait / 1000)}s`)
         await new Promise((r) => setTimeout(r, wait))
+        continue
+      }
+      // A model Groq no longer offers (404 / model_not_found): skip it
+      if (status === 404 || /model.*(not found|decommission|does not exist)/i.test(err?.message ?? '')) {
+        exhausted.set(current, Date.now())
+        console.log(`  🔁 ${current} is not available; switching to ${model() ?? 'none left'}`)
+        attempt--
         continue
       }
       if (caught instanceof SyntaxError) {

@@ -10,11 +10,12 @@ import { updateSyllabus } from './syllabus'
 import { updateExamCutoffs } from './exam-cutoffs'
 import { updateCareer, type CareerRow } from './careers'
 import { updateCollegeCutoffs, type CollegeCutoffRow } from './college-cutoffs'
+import { updateExamRules } from './exam-rules'
 import type { ProposalOutcome } from './proposals'
 import { AiQuotaError } from './llm'
 
 export type RunOptions = {
-  targets: ('exams' | 'scholarships' | 'colleges' | 'nirf' | 'placements' | 'college_details' | 'cutoffs' | 'college_cutoffs' | 'syllabus' | 'exam_cutoffs' | 'careers')[]
+  targets: ('exams' | 'scholarships' | 'colleges' | 'nirf' | 'placements' | 'college_details' | 'cutoffs' | 'college_cutoffs' | 'syllabus' | 'exam_cutoffs' | 'exam_rules' | 'careers')[]
   mode: 'full' | 'hot' | 'single'
   slug?: string             // exam slug (mode=single)
   collegeId?: string        // one college (mode=single, college targets)
@@ -74,8 +75,8 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
   const errors: { item: string; error: string }[] = []
   const log: string[] = []
   const timeUp = () => opts.deadlineMs !== undefined && Date.now() > opts.deadlineMs
-  const remaining = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, college_cutoffs: 0, syllabus: 0, exam_cutoffs: 0, careers: 0, nirf: 0, cutoffs: 0, placements: 0 }
-  const dueAtStart = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, college_cutoffs: 0, syllabus: 0, exam_cutoffs: 0, careers: 0, cutoffs: 0, placements: 0 }
+  const remaining = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, college_cutoffs: 0, syllabus: 0, exam_cutoffs: 0, exam_rules: 0, careers: 0, nirf: 0, cutoffs: 0, placements: 0 }
+  const dueAtStart = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, college_cutoffs: 0, syllabus: 0, exam_cutoffs: 0, exam_rules: 0, careers: 0, cutoffs: 0, placements: 0 }
   let cursor: number | undefined
   let quotaStop: string | undefined
   const stamp = async (table: 'exams' | 'scholarships' | 'colleges', id: string, column = 'last_checked_at') => {
@@ -168,10 +169,26 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
         .from('careers')
         .select('id, title, slug, official_body, official_url, source_urls, eligibility, how_to_enter, licence, official_pay, official_pay_min, official_pay_max, verified_at, facts_read_at, last_checked_at')
         .eq('automation_enabled', true)
-        .not('official_url', 'is', null)
         .order('last_checked_at', { ascending: true, nullsFirst: true })
       if (error) throw new Error(`careers query failed: ${error.message}`)
-      let list = due((rows ?? []) as (CareerRow & { last_checked_at: string | null })[], opts)
+      // A career with no website of its own is read from the official sites of the exams that lead
+      // into it (UPSC for civil services, NMC/NTA for medicine…); with neither, there is nothing to read.
+      const { data: links } = await db.from('career_exams').select('career_id, exams ( official_url, source_urls, conducting_body )')
+      const viaExams = new Map<string, { urls: string[]; body: string | null }>()
+      for (const l of (links ?? []) as unknown as { career_id: string; exams: { official_url: string | null; source_urls: string[] | null; conducting_body: string | null } | null }[]) {
+        if (!l.exams?.official_url) continue
+        const v = viaExams.get(l.career_id) ?? { urls: [], body: l.exams.conducting_body }
+        v.urls.push(l.exams.official_url, ...(l.exams.source_urls ?? []).slice(0, 1))
+        viaExams.set(l.career_id, v)
+      }
+      const withSources = ((rows ?? []) as (CareerRow & { last_checked_at: string | null })[]).flatMap((c) => {
+        if (c.official_url) return [c]
+        const v = viaExams.get(c.id)
+        if (!v) return []
+        const urls = [...new Set(v.urls)].slice(0, 3)
+        return [{ ...c, official_url: urls[0], source_urls: urls.slice(1), official_body: c.official_body ?? v.body }]
+      })
+      let list = due(withSources, opts)
       if (opts.limit) list = list.slice(0, opts.limit)
       console.log(`
 💼 Careers to check: ${list.length}`)
@@ -283,17 +300,17 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
     }
 
     // ------- Official syllabus and official exam cutoffs (one AI read each per exam) -------
-    for (const target of ['syllabus', 'exam_cutoffs'] as const) {
+    for (const target of ['syllabus', 'exam_cutoffs', 'exam_rules'] as const) {
       if (!opts.targets.includes(target)) continue
-      const column = target === 'syllabus' ? 'syllabus_checked_at' : 'cutoffs_checked_at'
-      let q = db.from('exams').select(`id, name, slug, official_url, source_urls, syllabus_source_url, syllabus_read_at, cutoffs_read_at, last_checked_at:${column}`).not('official_url', 'is', null)
+      const column = target === 'syllabus' ? 'syllabus_checked_at' : target === 'exam_cutoffs' ? 'cutoffs_checked_at' : 'rules_checked_at'
+      let q = db.from('exams').select(`id, name, slug, official_url, source_urls, syllabus_source_url, syllabus_read_at, cutoffs_read_at, rules_read_at, last_checked_at:${column}`).not('official_url', 'is', null)
       q = opts.mode === 'single' && opts.slug ? q.eq('slug', opts.slug) : q.eq('automation_enabled', true)
       const { data: rows, error } = await q.order(column, { ascending: true, nullsFirst: true })
       if (error) throw new Error(`${target} query failed: ${error.message}`)
       let list = due((rows ?? []) as unknown as (ExamRow & { last_checked_at: string | null })[], opts)
       if (opts.limit) list = list.slice(0, opts.limit)
       console.log(`
-${target === 'syllabus' ? '📖 Exam syllabi' : '📏 Exam cutoffs'} to read: ${list.length}`)
+${target === 'syllabus' ? '📖 Exam syllabi' : target === 'exam_cutoffs' ? '📏 Exam cutoffs' : '🧾 Exam patterns & eligibility'} to read: ${list.length}`)
       remaining[target] = dueAtStart[target] = list.length
       for (const exam of list) {
         if (timeUp()) { log.push('Stopped early: time budget reached'); break }
@@ -301,7 +318,9 @@ ${target === 'syllabus' ? '📖 Exam syllabi' : '📏 Exam cutoffs'} to read: ${
         try {
           const r = target === 'syllabus'
             ? await updateSyllabus(db, exam, { dryRun, force: !!opts.force })
-            : await updateExamCutoffs(db, exam, { dryRun, force: !!opts.force })
+            : target === 'exam_cutoffs'
+              ? await updateExamCutoffs(db, exam, { dryRun, force: !!opts.force })
+              : await updateExamRules(db, exam, { runId, dryRun, force: !!opts.force })
           tally(r, exam.slug)
           log.push(...r.log)
           for (const line of r.log) console.log(`    ${line}`)

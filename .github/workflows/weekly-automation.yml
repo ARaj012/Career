@@ -12,7 +12,7 @@ on:
     - cron: '0 2 8 * *'
     # 15th of the month 07:30 IST — 50 colleges' websites: programmes & fees, placement reports, admission, scholarships
     - cron: '0 2 15 * *'
-    # 22nd of the month 07:30 IST — official exam syllabus (with changes), exam cutoffs, career facts
+    # 22nd of the month 07:30 IST — official exam syllabus (with changes), exam cutoffs, pattern & eligibility, career facts
     - cron: '0 2 22 * *'
     # 5th of Aug, Sep, Oct 07:30 IST — official NIRF placement sheets and JoSAA cutoffs (published once a year)
     - cron: '0 2 5 8,9,10 *'
@@ -70,7 +70,7 @@ jobs:
           elif [ "${{ github.event.schedule }}" = "0 2 15 * *" ]; then
             ARGS="--only=college_details --limit=50"
           elif [ "${{ github.event.schedule }}" = "0 2 22 * *" ]; then
-            ARGS="--only=syllabus,exam_cutoffs,careers --limit=60"
+            ARGS="--only=syllabus,exam_cutoffs,exam_rules,careers --limit=60"
           elif [ "${{ github.event.schedule }}" = "0 2 5 8,9,10 *" ]; then
             ARGS="--only=placements,cutoffs"
           else

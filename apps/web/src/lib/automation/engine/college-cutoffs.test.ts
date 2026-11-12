@@ -27,3 +27,13 @@ describe('college cutoff reader', () => {
     expect(matchExam('JEE Main', exams)).toBeNull()
   })
 })
+
+describe('batch year of an admission document', () => {
+  it('reads the admitted batch from the title or file name', async () => {
+    const { batchYear } = await import('./college-cutoffs')
+    expect(batchYear('https://www.iimrohtak.ac.in/panel/assets/images/admission-policy/pgpadmissionpolicy2025-27.pdf')).toBe(2025)
+    expect(batchYear('PGP Admissions Policy 2026-2028')).toBe(2026)
+    expect(batchYear('Policy 2025-27 and 2026-28')).toBeNull()
+    expect(batchYear('Notice dated 12-05-2026')).toBeNull()
+  })
+})

@@ -88,7 +88,15 @@ export function matchExam(label: string, exams: ExamRef[]): ExamRef | null {
   return hits.sort((a, b) => b.name.length - a.name.length)[0] ?? null
 }
 
-const metricOf = (m: string | null | undefined): 'rank' | 'score' => (/rank/i.test(m ?? '') || !m ? 'rank' : 'score')
+/** "Admission Policy 2025-27" / "pgpadmissionpolicy2025-27.pdf" → 2025, when the document names one batch only. */
+export function batchYear(text: string): number | null {
+  const starts = new Set([...safeDecode(text).matchAll(/(?<!\d)(20\d\d)\s*[-–]\s*(20)?(\d\d)(?!\d)/g)]
+    .filter((m) => Number(m[3]) - Number(m[1].slice(2)) >= 1 && Number(m[3]) - Number(m[1].slice(2)) <= 5)
+    .map((m) => Number(m[1])))
+  return starts.size === 1 ? [...starts][0] : null
+}
+
+const metricOf =(m: string | null | undefined): 'rank' | 'score' => (/rank/i.test(m ?? '') || !m ? 'rank' : 'score')
 
 // Step 1 on the college's site: where admissions live. Step 2: the cutoff documents those pages list.
 const ADMISSION_LINK = /(admission|admissions|how.?to.?apply|selection|programmes?|programs?|courses?|\bpgp\b|\bmba\b|\bpgdm\b|\bb\.?\s?tech\b|\bmbbs\b|\bllb\b|counsel|cut[\s-]?off)/i
@@ -207,7 +215,8 @@ export async function updateCollegeCutoffs(
 
   const examList = (known.length ? known : exams).map((e) => e.name)
   const task = `College: "${college.name}"${college.city ? `, ${college.city}` : ''}. Today is ${today.toISOString().slice(0, 10)}.
-Report the OFFICIAL ADMISSION CUTOFFS of THIS college stated in the text for the years ${Y - 4} to ${Y}: for each programme and category, the last (closing) rank or score that got a seat.
+Report the OFFICIAL ADMISSION CUTOFFS of THIS college stated in the text for the years ${Y - 4} to ${Y}: for each programme and category, either the last (closing) rank or score that got a seat, or the minimum score / percentile the college requires to be shortlisted or admitted (overall, or per section — put the section in "programme", e.g. "PGP · VARC sectional").
+year = the year the batch is admitted (2026 for a "2026-28" batch or the 2026 admission policy).
 ${known.length ? `This college admits through: ${examList.join('; ')}.` : 'Name the entrance exam exactly as the text does.'}
 For each value: exam (name of the entrance exam), year (admission year), programme (as written, e.g. "B.E. Computer Science"; null if not split by programme), category exactly as written (e.g. "GM", "OPEN", "UR", "OBC-NCL", "SC", "ST", "EWS", "2AG"), quota (e.g. "All India", "Home State", "Karnataka"; null if none), round (e.g. "Round 3", "Final"; null if not stated), metric = "rank", "score", "percentile" or "marks", opening = opening rank/score if stated, closing = the closing rank/score exactly as written.
 quote = the text containing the category AND the number, copied exactly (for a table, the whole table row, including the college name or code if the row has one).
@@ -229,7 +238,9 @@ JSON: {"rows":[{"exam":"…","year":${Y},"programme":"…","category":"GM","quot
     if (r.year < Y - 4 || r.year > Y) continue
     const exam = matchExam(r.exam, known.length ? known : exams)
     if (!exam) { res.dropped.push(`${label}: exam not recognised`); continue }
-    const url = locateQuote(r.quote, usable, normCache)
+    // Policies repeat the same table year after year: look first in the document for this row's year
+    const ofYear = (p: FetchedPage) => batchYear(`${p.finalUrl} ${p.text.slice(0, 1500)}`) === r.year || p.finalUrl.includes(String(r.year))
+    const url = locateQuote(r.quote, [...usable.filter(ofYear), ...usable.filter((p) => !ofYear(p))], normCache)
     if (!url) { res.dropped.push(`${label}: quote not on an official page`); continue }
     if (!amountsIn(r.quote!).includes(r.closing)) { res.dropped.push(`${label}: quote does not contain ${r.closing}`); continue }
     if (!quoteNamesCategory(r.category, r.quote!) && !normalize(r.quote!).includes(normalize(r.category))) { res.dropped.push(`${label}: quote does not name the category`); continue }
@@ -238,7 +249,9 @@ JSON: {"rows":[{"exam":"…","year":${Y},"programme":"…","category":"GM","quot
     const page = usable.find((p) => p.finalUrl === url)!
     const heading = `${page.finalUrl} ${page.text.slice(0, 1500)}`
     const headingYears = new Set([...heading.matchAll(/\b(20\d\d)\b/g)].map((m) => Number(m[1])).filter((y) => y >= Y - 5 && y <= Y + 1))
-    if (!r.quote!.includes(String(r.year)) && !(headingYears.size === 1 && headingYears.has(r.year))) { res.dropped.push(`${label}: year not stated next to the value`); continue }
+    if (!r.quote!.includes(String(r.year)) && !(headingYears.size === 1 && headingYears.has(r.year)) && batchYear(heading) !== r.year) {
+      res.dropped.push(`${label}: year not stated next to the value`); continue
+    }
     if (/percentile/i.test(r.metric ?? '') && (r.closing < 0 || r.closing > 100)) { res.dropped.push(`${label}: percentile out of range`); continue }
 
     const rank = metricOf(r.metric) === 'rank'

@@ -35,19 +35,33 @@ const TABS = [
   { key: 'rejected', label: 'Rejected' },
 ] as const
 
+// Steps that need no AI run first, so a used-up daily AI limit never blocks them
 const SWEEP_TARGETS = [
-  { key: 'exams', label: 'Exam dates' },
-  { key: 'scholarships', label: 'Scholarships' },
-  { key: 'college_details', label: 'College courses, fees, placements, admission' },
-  { key: 'colleges', label: 'Colleges (NAAC, founded)' },
-  { key: 'syllabus', label: 'Exam syllabus' },
-  { key: 'exam_cutoffs', label: 'Exam cutoffs' },
-  { key: 'college_cutoffs', label: 'College cutoffs (NEET, CUET, CAT, CLAT, state CETs…)' },
+  { key: 'nirf', label: 'College NIRF ranks' },
   { key: 'cutoffs', label: 'College cutoffs, JEE (JoSAA, one year per step)' },
   { key: 'placements', label: 'College placements & enrolment (NIRF data sheets)' },
+  { key: 'exams', label: 'Exam dates' },
+  { key: 'exam_rules', label: 'Exam pattern & eligibility' },
+  { key: 'syllabus', label: 'Exam syllabus' },
+  { key: 'exam_cutoffs', label: 'Exam cutoffs' },
+  { key: 'college_details', label: 'College courses, fees, placements, admission' },
+  { key: 'colleges', label: 'Colleges (NAAC, founded)' },
+  { key: 'college_cutoffs', label: 'College cutoffs (NEET, CUET, CAT, CLAT, state CETs…)' },
   { key: 'careers', label: 'Careers (eligibility, route, pay)' },
-  { key: 'nirf', label: 'College NIRF ranks' },
+  { key: 'scholarships', label: 'Scholarships' },
 ] as const
+// A stopped "Update everything" (AI limit, closed tab, Stop) resumes from here within 2 days
+const RESUME_KEY = 'automation-sweep'
+type Resume = { startedAt: string; runId?: string; done: string[]; at: number }
+function readResume(): Resume | null {
+  try {
+    const r = JSON.parse(localStorage.getItem(RESUME_KEY) ?? 'null') as Resume | null
+    return r && Date.now() - r.at < 2 * 86_400_000 ? r : null
+  } catch { return null }
+}
+function saveResume(r: Resume | null) {
+  try { if (r) localStorage.setItem(RESUME_KEY, JSON.stringify(r)); else localStorage.removeItem(RESUME_KEY) } catch { /* storage blocked */ }
+}
 type SweepKey = (typeof SWEEP_TARGETS)[number]['key']
 type SweepProgress = Record<SweepKey, { total: number; left: number; state: 'waiting' | 'running' | 'done' | 'stopped' }>
 
@@ -67,6 +81,14 @@ const FIELD_LABELS: Record<string, string> = {
   established_year: 'Established',
   annual_fees_min: 'Annual fees (min)',
   annual_fees_max: 'Annual fees (max)',
+  duration_minutes: 'Duration (minutes)',
+  total_questions: 'Number of questions',
+  total_marks: 'Total marks',
+  marks_per_correct: 'Marks per correct answer',
+  negative_marking: 'Marks deducted per wrong answer',
+  min_percentage: 'Minimum % in qualifying exam',
+  age_min: 'Minimum age',
+  age_max: 'Maximum age',
 }
 
 function show(v: unknown, field = ''): string {
@@ -75,7 +97,10 @@ function show(v: unknown, field = ''): string {
   if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) {
     return new Date(v.length === 10 ? `${v}T00:00:00` : v).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   }
-  if (typeof v === 'number' && v >= 1000) return `₹${v.toLocaleString('en-IN')}`
+  if (typeof v === 'number' && v >= 1000) {
+    // Money fields get a rupee sign; counts such as total marks (1,750) do not
+    return /fee|amount|pay|package|salary|stipend/.test(field) ? `₹${v.toLocaleString('en-IN')}` : v.toLocaleString('en-IN')
+  }
   return String(v)
 }
 
@@ -98,6 +123,9 @@ export default function AutomationPage() {
   const [message, setMessage] = useState('')
   const [slug, setSlug] = useState('')
   const [sweep, setSweep] = useState<SweepProgress | null>(null)
+  const [resumable, setResumable] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setResumable(!!readResume()) }, [])
   const stopRef = useRef(false)
 
   const load = useCallback(async () => {
@@ -158,22 +186,16 @@ export default function AutomationPage() {
   // serverless hosts too. Closing the tab simply stops it; the next click resumes
   // with a fresh sweep and unchanged pages cost nothing.
   const updateEverything = async () => {
-    const startedAt = new Date().toISOString()
-    const progress: SweepProgress = {
-      exams: { total: 0, left: 0, state: 'waiting' },
-      scholarships: { total: 0, left: 0, state: 'waiting' },
-      college_details: { total: 0, left: 0, state: 'waiting' },
-      colleges: { total: 0, left: 0, state: 'waiting' },
-      syllabus: { total: 0, left: 0, state: 'waiting' },
-      exam_cutoffs: { total: 0, left: 0, state: 'waiting' },
-      college_cutoffs: { total: 0, left: 0, state: 'waiting' },
-      cutoffs: { total: 0, left: 0, state: 'waiting' },
-      placements: { total: 0, left: 0, state: 'waiting' },
-      careers: { total: 0, left: 0, state: 'waiting' },
-      nirf: { total: 1, left: 1, state: 'waiting' },
-    }
+    // Resume a stopped sweep: records already checked since it began are skipped, finished steps too
+    const resume = readResume()
+    const startedAt = resume?.startedAt ?? new Date().toISOString()
+    const doneKeys = new Set(resume?.done ?? [])
+    const progress = Object.fromEntries(
+      SWEEP_TARGETS.map(({ key }) => [key, { total: key === 'nirf' ? 1 : 0, left: key === 'nirf' ? 1 : 0, state: doneKeys.has(key) ? 'done' : 'waiting' }])
+    ) as SweepProgress
     const totals = { checked: 0, auto_applied: 0, pending: 0, skipped: 0 }
-    let runId: string | undefined
+    let runId: string | undefined = resume?.runId
+    saveResume({ startedAt, runId, done: [...doneKeys], at: Date.now() })
     stopRef.current = false
     setBusy(true)
     setError('')
@@ -181,6 +203,7 @@ export default function AutomationPage() {
     setSweep({ ...progress })
 
     for (const { key } of SWEEP_TARGETS) {
+      if (doneKeys.has(key)) continue
       progress[key].state = 'running'
       setSweep({ ...progress })
       let first = true
@@ -213,11 +236,16 @@ export default function AutomationPage() {
       progress[key].state = stopRef.current ? 'stopped' : 'done'
       setSweep({ ...progress })
       if (stopRef.current) break
+      doneKeys.add(key)
+      saveResume({ startedAt, runId, done: [...doneKeys], at: Date.now() })
     }
 
+    // Finished: the next click starts a fresh sweep
+    if (!stopRef.current) saveResume(null)
+    setResumable(stopRef.current)
     setBusy(false)
     setMessage(
-      `${stopRef.current ? 'Stopped. ' : 'Done. '}Checked ${totals.checked} records: ${totals.auto_applied} updated automatically, ` +
+      `${stopRef.current ? 'Stopped — click "Resume update" to carry on from here. ' : 'Done. '}Checked ${totals.checked} records: ${totals.auto_applied} updated automatically, ` +
         `${totals.pending} need your review, ${totals.skipped} unchanged or unreadable.`
     )
     load()
@@ -261,7 +289,7 @@ export default function AutomationPage() {
               disabled={busy}
               className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
-              <Zap className="w-4 h-4" /> Update everything
+              <Zap className="w-4 h-4" /> {resumable ? 'Resume update' : 'Update everything'}
             </button>
           )}
           <div className="flex items-center gap-2">

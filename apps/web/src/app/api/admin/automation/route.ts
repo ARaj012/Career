@@ -9,7 +9,7 @@ import { runAutomation } from '@/lib/automation/engine/runner'
 // Updating one college reads ~15 pages of its site, so it gets longer (the host caps it at its plan limit).
 export const maxDuration = 300
 
-const SWEEP_TARGETS = ['exams', 'scholarships', 'college_details', 'colleges', 'syllabus', 'exam_cutoffs', 'college_cutoffs', 'cutoffs', 'placements', 'careers', 'nirf'] as const
+const SWEEP_TARGETS = ['exams', 'scholarships', 'college_details', 'colleges', 'syllabus', 'exam_cutoffs', 'exam_rules', 'college_cutoffs', 'cutoffs', 'placements', 'careers', 'nirf'] as const
 type SweepTarget = (typeof SWEEP_TARGETS)[number]
 
 export async function GET(request: NextRequest) {
