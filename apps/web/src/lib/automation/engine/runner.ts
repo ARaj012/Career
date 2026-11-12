@@ -9,11 +9,12 @@ import { updateJosaaCutoffs } from './josaa'
 import { updateSyllabus } from './syllabus'
 import { updateExamCutoffs } from './exam-cutoffs'
 import { updateCareer, type CareerRow } from './careers'
+import { updateCollegeCutoffs, type CollegeCutoffRow } from './college-cutoffs'
 import type { ProposalOutcome } from './proposals'
 import { AiQuotaError } from './llm'
 
 export type RunOptions = {
-  targets: ('exams' | 'scholarships' | 'colleges' | 'nirf' | 'placements' | 'college_details' | 'cutoffs' | 'syllabus' | 'exam_cutoffs' | 'careers')[]
+  targets: ('exams' | 'scholarships' | 'colleges' | 'nirf' | 'placements' | 'college_details' | 'cutoffs' | 'college_cutoffs' | 'syllabus' | 'exam_cutoffs' | 'careers')[]
   mode: 'full' | 'hot' | 'single'
   slug?: string             // exam slug (mode=single)
   collegeId?: string        // one college (mode=single, college targets)
@@ -28,6 +29,8 @@ export type RunOptions = {
   sweepStartedAt?: string
   runId?: string            // continue (add to) an existing automation_runs row
   notify?: boolean          // default true
+  // Sweep position for the step-wise targets (JoSAA year, NIRF placement offset); returned as `cursor`
+  cursor?: number
 }
 
 type Stats = Record<ProposalOutcome | 'checked' | 'skipped' | 'dropped', number>
@@ -71,8 +74,9 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
   const errors: { item: string; error: string }[] = []
   const log: string[] = []
   const timeUp = () => opts.deadlineMs !== undefined && Date.now() > opts.deadlineMs
-  const remaining = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, syllabus: 0, exam_cutoffs: 0, careers: 0, nirf: 0 }
-  const dueAtStart = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, syllabus: 0, exam_cutoffs: 0, careers: 0 }
+  const remaining = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, college_cutoffs: 0, syllabus: 0, exam_cutoffs: 0, careers: 0, nirf: 0, cutoffs: 0, placements: 0 }
+  const dueAtStart = { exams: 0, scholarships: 0, colleges: 0, college_details: 0, college_cutoffs: 0, syllabus: 0, exam_cutoffs: 0, careers: 0, cutoffs: 0, placements: 0 }
+  let cursor: number | undefined
   let quotaStop: string | undefined
   const stamp = async (table: 'exams' | 'scholarships' | 'colleges', id: string, column = 'last_checked_at') => {
     if (opts.sweepStartedAt) await db.from(table).update({ [column]: new Date().toISOString() }).eq('id', id)
@@ -250,6 +254,34 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
       }
     }
 
+    // ------- Official college cutoffs (every exam except JEE, which comes from JoSAA) -------
+    if (opts.targets.includes('college_cutoffs') && (opts.mode !== 'single' || opts.collegeId)) {
+      let q = db.from('colleges').select('id, name, city, website_url, cutoffs_read_at, last_checked_at:cutoffs_checked_at').not('website_url', 'is', null)
+      q = opts.collegeId ? q.eq('id', opts.collegeId) : q.eq('automation_enabled', true)
+      const { data: rows, error } = await q.order('cutoffs_checked_at', { ascending: true, nullsFirst: true })
+      if (error) throw new Error(`college cutoffs query failed: ${error.message}`)
+      let list = due((rows ?? []) as (CollegeCutoffRow & { last_checked_at: string | null })[], opts)
+      if (opts.limit) list = list.slice(0, opts.limit)
+      console.log(`\nCollege cutoffs to read: ${list.length}`)
+      remaining.college_cutoffs = dueAtStart.college_cutoffs = list.length
+      for (const c of list) {
+        if (timeUp()) { log.push('Stopped early: time budget reached'); break }
+        console.log(`  checking ${c.name}`)
+        try {
+          const r = await updateCollegeCutoffs(db, c, { dryRun, force: !!opts.force })
+          tally(r, c.name)
+          log.push(...r.log)
+          for (const line of r.log) console.log(`    ${line}`)
+        } catch (err) {
+          if (err instanceof AiQuotaError) throw err
+          errors.push({ item: c.name, error: (err as Error).message })
+        }
+        // Stamped even after a failure so one broken site cannot stall the queue
+        if (!dryRun) await db.from('colleges').update({ cutoffs_checked_at: new Date().toISOString() }).eq('id', c.id)
+        remaining.college_cutoffs--
+      }
+    }
+
     // ------- Official syllabus and official exam cutoffs (one AI read each per exam) -------
     for (const target of ['syllabus', 'exam_cutoffs'] as const) {
       if (!opts.targets.includes(target)) continue
@@ -296,16 +328,25 @@ ${target === 'syllabus' ? '📖 Exam syllabi' : '📏 Exam cutoffs'} to read: ${
     // ------------- Official JEE cutoffs from JoSAA (final round, last 6 years) -------------
     if (opts.targets.includes('cutoffs') && opts.mode === 'full' && !timeUp()) {
       console.log('\n🎯 JoSAA opening/closing ranks')
-      const r = await updateJosaaCutoffs(db, { dryRun })
-      log.push(`JoSAA ${r.years.join(', ')}: ${r.rows} cutoff rows for ${r.colleges} colleges`)
+      // A sweep does one admission year per request (cursor = position in the year plan)
+      const step = opts.sweepStartedAt ? opts.cursor ?? 0 : undefined
+      const r = await updateJosaaCutoffs(db, { dryRun, step })
+      log.push(`JoSAA ${r.years.join(', ') || '(no year)'}: ${r.rows} cutoff rows for ${r.colleges} colleges`)
       for (const e of r.errors) errors.push({ item: 'cutoffs', error: e })
+      dueAtStart.cutoffs = r.planLength
+      if (step !== undefined) { cursor = step + 1; remaining.cutoffs = Math.max(0, r.planLength - cursor) }
     }
 
     // ------------- Official placements from NIRF data sheets -------------
     // Deterministic (no AI), so it is not limited by the Groq quota
     if (opts.targets.includes('placements') && opts.mode === 'full' && !timeUp()) {
       console.log('\n💼 NIRF placement data (median salary, placed, higher studies)')
-      const r = await updateNirfPlacements(db, { runId, dryRun, limit: opts.limit })
+      // A sweep does 15 colleges per request (cursor = offset into the alphabetical list)
+      const offset = opts.sweepStartedAt ? opts.cursor ?? 0 : 0
+      const batch = opts.sweepStartedAt ? 15 : opts.limit
+      const r = await updateNirfPlacements(db, { runId, dryRun, limit: batch, offset })
+      dueAtStart.placements = r.total
+      if (opts.sweepStartedAt) { cursor = offset + (batch ?? 0); remaining.placements = Math.max(0, r.total - cursor) }
       log.push(`NIRF placements: ${r.colleges} colleges with official sheets, ${r.rows} rows changed`)
       for (const o of r.outcomes) stats[o]++
       for (const e of r.errors) errors.push({ item: 'placements', error: e })
@@ -362,5 +403,5 @@ ${target === 'syllabus' ? '📖 Exam syllabi' : '📏 Exam cutoffs'} to read: ${
   console.log('\n📊 Summary:', JSON.stringify(stats))
   if (quotaStop) console.log('⛔ Stopped: daily Groq AI limit reached; the next run continues where this one stopped')
   if (errors.length) console.log(`⚠️ ${errors.length} fetch/parse errors (see automation_runs.errors)`)
-  return { runId, status, stats, errors, log, remaining, dueAtStart, quotaStop }
+  return { runId, status, stats, errors, log, remaining, dueAtStart, quotaStop, cursor }
 }

@@ -158,8 +158,9 @@ export function matchInstitute(col: { name: string; city: string | null }, insti
 
 export async function updateJosaaCutoffs(
   db: SupabaseClient,
-  opts: { dryRun: boolean; years?: number; log?: (s: string) => void }
-): Promise<{ years: number[]; colleges: number; rows: number; matches: Record<string, string>; unmatched: string[]; errors: string[] }> {
+  // step: process only that entry of the year plan (0 = the running year), so a sweep can do one year per request
+  opts: { dryRun: boolean; years?: number; step?: number; log?: (s: string) => void }
+): Promise<{ years: number[]; colleges: number; rows: number; matches: Record<string, string>; unmatched: string[]; errors: string[]; planLength: number }> {
   const say = opts.log ?? console.log
   const errors: string[] = []
   const { data: exams } = await db.from('exams').select('id, slug').in('slug', ['jee-main', 'jee-advanced'])
@@ -178,7 +179,8 @@ export async function updateJosaaCutoffs(
   const matched = new Set<string>()
   const matches: Record<string, string> = {}
   const unmatched = new Set<string>()
-  for (const y of plan) {
+  const todo = opts.step === undefined ? plan : plan.slice(opts.step, opts.step + 1)
+  for (const y of todo) {
     const year = y === 'current' ? archived[0] + 1 : y
     let data: { rows: OrcrRow[]; round: string }
     try {
@@ -229,5 +231,5 @@ export async function updateJosaaCutoffs(
       }
     }
   }
-  return { years, colleges: matched.size, rows: total, matches, unmatched: [...unmatched].sort(), errors }
+  return { years, colleges: matched.size, rows: total, matches, unmatched: [...unmatched].sort(), errors, planLength: plan.length }
 }

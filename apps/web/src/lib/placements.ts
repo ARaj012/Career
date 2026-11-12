@@ -17,6 +17,14 @@ export type PlacementRow = {
 
 export const isOfficial = (r: PlacementRow) => r.source_type === 'nirf' || r.source_type === 'official_report'
 
+/**
+ * Course-wise figures from an institute's own placement report are stored with
+ * program_level "Course: <programme>"; they sit beside, not inside, the NIRF
+ * program-level series.
+ */
+export const COURSE_PREFIX = 'Course: '
+export const isCourseRow = (r: PlacementRow) => r.program_level.startsWith(COURSE_PREFIX)
+
 /** "2024" → "2023-24": NIRF figures are per graduating batch. */
 export const batchLabel = (year: number) => `${year - 1}-${String(year).slice(2)}`
 
@@ -32,7 +40,7 @@ export function formatPackage(n: number | null | undefined): string | null {
  * engineering college leads with its B.Tech (UG 4-year) and an IIM with its PG.
  */
 export function officialLevels(rows: PlacementRow[]): string[] {
-  const official = rows.filter(isOfficial)
+  const official = rows.filter((r) => isOfficial(r) && !isCourseRow(r))
   const size = new Map<string, number>()
   for (const r of official) {
     const latest = Math.max(...official.filter((x) => x.program_level === r.program_level).map((x) => x.year))

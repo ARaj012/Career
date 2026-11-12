@@ -42,6 +42,9 @@ const SWEEP_TARGETS = [
   { key: 'colleges', label: 'Colleges (NAAC, founded)' },
   { key: 'syllabus', label: 'Exam syllabus' },
   { key: 'exam_cutoffs', label: 'Exam cutoffs' },
+  { key: 'college_cutoffs', label: 'College cutoffs (NEET, CUET, CAT, CLAT, state CETs…)' },
+  { key: 'cutoffs', label: 'College cutoffs, JEE (JoSAA, one year per step)' },
+  { key: 'placements', label: 'College placements & enrolment (NIRF data sheets)' },
   { key: 'careers', label: 'Careers (eligibility, route, pay)' },
   { key: 'nirf', label: 'College NIRF ranks' },
 ] as const
@@ -163,6 +166,9 @@ export default function AutomationPage() {
       colleges: { total: 0, left: 0, state: 'waiting' },
       syllabus: { total: 0, left: 0, state: 'waiting' },
       exam_cutoffs: { total: 0, left: 0, state: 'waiting' },
+      college_cutoffs: { total: 0, left: 0, state: 'waiting' },
+      cutoffs: { total: 0, left: 0, state: 'waiting' },
+      placements: { total: 0, left: 0, state: 'waiting' },
       careers: { total: 0, left: 0, state: 'waiting' },
       nirf: { total: 1, left: 1, state: 'waiting' },
     }
@@ -178,11 +184,13 @@ export default function AutomationPage() {
       progress[key].state = 'running'
       setSweep({ ...progress })
       let first = true
+      // Step-wise targets (JoSAA years, NIRF placement batches) carry their position between requests
+      let cursor: number | undefined
       while (!stopRef.current) {
         const res = await fetch('/api/admin/automation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sweep', target: key, startedAt, runId }),
+          body: JSON.stringify({ action: 'sweep', target: key, startedAt, runId, cursor }),
         }).catch(() => null)
         const json = res ? await res.json().catch(() => ({ error: `Server returned ${res.status}` })) : { error: 'Network error' }
         if (json.error || json.quotaStop) {
@@ -191,9 +199,12 @@ export default function AutomationPage() {
           break
         }
         runId = json.runId ?? runId
+        cursor = json.cursor ?? cursor
         for (const k of Object.keys(totals) as (keyof typeof totals)[]) totals[k] += json.stats[k] ?? 0
         const left = json.remaining[key] as number
         if (first && key !== 'nirf') progress[key].total = json.dueAtStart[key]
+        // JoSAA and NIRF placements learn their size on the first step
+        if (!progress[key].total && json.dueAtStart[key]) progress[key].total = json.dueAtStart[key]
         first = false
         progress[key].left = left
         setSweep({ ...progress })
@@ -227,7 +238,7 @@ export default function AutomationPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Automation</h1>
           <p className="text-sm text-gray-500 mt-1 max-w-xl">
-            Exam dates, syllabus and cutoffs, scholarships, and college courses, fees, placements and ranks are read from official websites. A change is
+            Exam dates, syllabus and cutoffs, scholarships, and college courses, fees, placements, ranks and admission cutoffs are read from official websites. A change is
             saved only when the official page contains it word for word. Changes to already-verified data wait here for you.
           </p>
           {lastRun && (

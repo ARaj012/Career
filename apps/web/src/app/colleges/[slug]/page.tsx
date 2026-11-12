@@ -10,6 +10,7 @@ import PlacementSummary from "@/components/college/PlacementSummary";
 import type { PlacementRow } from "@/lib/placements";
 import CutoffTrendsChart from "@/components/college/CutoffTrendsChart";
 import CutoffExplorer, { type OfficialCutoff } from "@/components/college/CutoffExplorer";
+import OfficialCollegeCutoffs, { type OfficialNoticeCutoff } from "@/components/college/OfficialCollegeCutoffs";
 import CollegeFaqs from "@/components/college/CollegeFaqs";
 import CollegeReviews from "@/components/college/CollegeReviews";
 import EstimateNote from "@/components/EstimateNote";
@@ -52,7 +53,8 @@ const NAAC_COLORS: Record<string, string> = {
 function formatStudents(n: number | null): string | null {
   if (!n) return null;
   if (n >= 100000) return `${(n / 100000).toFixed(1)}L`;
-  if (n >= 1000) return `${(n / 1000).toFixed(0)}K`;
+  if (n >= 10000) return `${(n / 1000).toFixed(0)}K`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
   return `${n}`;
 }
 
@@ -155,6 +157,9 @@ export default async function CollegeDetailPage({
   const college = collegeRaw as any;
   // Details the official sources do not publish: labelled estimates
   const est = await getEstimates(supabase, "college", college.id);
+  // Shown in the quick stats only where the official field is empty, always marked
+  const studentsEst = !college.total_students && est.total_students?.value_min != null ? est.total_students : null;
+  const naacEst = !college.naac_grade ? est.naac_grade ?? null : null;
 
   const { data: coursesRaw } = await supabase
     .from("college_courses")
@@ -177,8 +182,13 @@ export default async function CollegeDetailPage({
     cutoffsAll.push(...(page ?? []));
     if (!page || page.length < 1000) break;
   }
+  // JoSAA (JEE) ranks have their own explorer; other exams' official notices get a plain table
+  const isJosaaRow = (c: any) => ["jee-main", "jee-advanced"].includes(c.exams?.slug);
   const officialCutoffs: OfficialCutoff[] = cutoffsAll
-    .filter((c) => c.source_type === "official")
+    .filter((c) => c.source_type === "official" && isJosaaRow(c))
+    .map((c) => ({ ...c, exam_name: c.exams?.name ?? null }));
+  const noticeCutoffs: OfficialNoticeCutoff[] = cutoffsAll
+    .filter((c) => c.source_type === "official" && !isJosaaRow(c))
     .map((c) => ({ ...c, exam_name: c.exams?.name ?? null }));
   const cutoffs: any[] = cutoffsAll.filter((c) => c.source_type !== "official");
   // Sidebar: the most competitive programmes in the latest official year (OPEN, gender-neutral)
@@ -385,7 +395,13 @@ export default async function CollegeDetailPage({
             <div className="text-center">
               <Users className="w-5 h-5 text-green-400 mx-auto mb-1" />
               <div className="text-lg font-semibold text-gray-800">
-                {formatStudents(college.total_students) ?? "—"}
+                {formatStudents(college.total_students) ??
+                  (studentsEst ? (
+                    <span title="Estimate, not officially verified">
+                      ~{studentsEst.value_min}–{studentsEst.value_max}
+                      <span className="text-amber-600">*</span>
+                    </span>
+                  ) : "—")}
               </div>
               <div className="text-xs text-gray-400">Students</div>
             </div>
@@ -399,11 +415,29 @@ export default async function CollegeDetailPage({
             <div className="text-center">
               <BadgeCheck className="w-5 h-5 text-orange-400 mx-auto mb-1" />
               <div className="text-lg font-semibold text-gray-800">
-                {college.naac_grade ?? "—"}
+                {college.naac_grade ??
+                  (naacEst ? (
+                    <span className="text-base" title="Not officially verified">
+                      {naacEst.value_text}
+                      <span className="text-amber-600">*</span>
+                    </span>
+                  ) : "—")}
               </div>
               <div className="text-xs text-gray-400">NAAC Grade</div>
             </div>
           </div>
+          {(studentsEst || naacEst) && (
+            <details className="mt-3 text-sm">
+              <summary className="cursor-pointer text-xs text-amber-700">
+                <span className="text-amber-600">*</span> Not officially verified: how{" "}
+                {[studentsEst && "the student count", naacEst && "the NAAC status"].filter(Boolean).join(" and ")} were worked out
+              </summary>
+              <div className="mt-2 space-y-2">
+                {studentsEst && <EstimateNote estimate={studentsEst} title="Students" />}
+                {naacEst && <EstimateNote estimate={naacEst} title="NAAC grade" />}
+              </div>
+            </details>
+          )}
 
           {/* Fees Banner */}
           {(college.annual_fees_min !== null ||
@@ -626,14 +660,28 @@ export default async function CollegeDetailPage({
             )}
 
             {/* Student Enrollment Trend (bar chart, last 6-8 years) */}
-            <EnrollmentChart data={enrollmentHistory} />
+            {enrollmentHistory.length === 0 && est.enrollment ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">Student Enrollment Trend</h2>
+                <EstimateNote estimate={est.enrollment} />
+              </div>
+            ) : (
+              <EnrollmentChart data={enrollmentHistory} />
+            )}
 
             {/* Placement Trends — click to expand (avg & highest package vs year, last 5 years) */}
             <PlacementCharts data={placements} />
+            {placements.length === 0 && est.placements && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">Placement Data</h2>
+                <EstimateNote estimate={est.placements} />
+              </div>
+            )}
 
             {/* Admission Cutoff Trends — click to expand, only shown for exam/category series with 2+ real years */}
             <CutoffExplorer rows={officialCutoffs} />
-            {officialCutoffs.length === 0 && <CutoffTrendsChart cutoffs={cutoffTrendData} />}
+            <OfficialCollegeCutoffs rows={noticeCutoffs} />
+            {officialCutoffs.length === 0 && noticeCutoffs.length === 0 && <CutoffTrendsChart cutoffs={cutoffTrendData} />}
 
             {/* FAQs */}
             <CollegeFaqs faqs={faqs} />
@@ -664,6 +712,25 @@ export default async function CollegeDetailPage({
                   </ul>
                   <a href="#cutoffs" className="mt-3 inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline">
                     <BadgeCheck className="w-3.5 h-3.5" /> Official · see every programme and category
+                  </a>
+                </div>
+              ) : noticeCutoffs.length > 0 ? (
+                <div>
+                  <p className="text-xs text-gray-500 mb-3">
+                    {noticeCutoffs[0].exam_name} {noticeCutoffs[0].year}, last rank or score admitted
+                  </p>
+                  <ul className="space-y-2">
+                    {noticeCutoffs.filter((c) => c.year === noticeCutoffs[0].year && c.exam_name === noticeCutoffs[0].exam_name).slice(0, 5).map((c, i) => (
+                      <li key={i} className="flex justify-between gap-3 text-sm">
+                        <span className="text-gray-700 line-clamp-2">{c.program_name ?? "All programmes"} · {c.category}</span>
+                        <span className="font-medium text-gray-900 tabular-nums shrink-0">
+                          {c.cutoff_rank != null ? c.cutoff_rank.toLocaleString("en-IN") : c.cutoff_score ?? "—"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <a href="#official-cutoffs" className="mt-3 inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline">
+                    <BadgeCheck className="w-3.5 h-3.5" /> Official notice · see every programme and category
                   </a>
                 </div>
               ) : cutoffs.length > 0 ? (
@@ -710,12 +777,7 @@ export default async function CollegeDetailPage({
 
             {/* Placements: official NIRF figures first, third-party numbers only when labelled */}
             <PlacementSummary rows={placements} />
-            {placements.length === 0 && est.placements && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Placements</h3>
-                <EstimateNote estimate={est.placements} />
-              </div>
-            )}
+            {/* (an estimate for colleges with no placement figures is shown in the main column) */}
             {college.annual_fees_min == null && college.annual_fees_max == null && est.fees && (
               <EstimateNote estimate={est.fees} title="Annual fees" />
             )}

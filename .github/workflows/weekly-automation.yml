@@ -8,6 +8,8 @@ on:
     - cron: '0 0 * * 0'
     # 1st of the month 07:30 IST — 120 least-recently-checked colleges (NAAC, fees, founded); all 366 every ~3 months
     - cron: '0 2 1 * *'
+    # 8th of the month 07:30 IST — 60 colleges: official admission cutoffs for every exam except JEE (JoSAA)
+    - cron: '0 2 8 * *'
     # 15th of the month 07:30 IST — 50 colleges' websites: programmes & fees, placement reports, admission, scholarships
     - cron: '0 2 15 * *'
     # 22nd of the month 07:30 IST — official exam syllabus (with changes), exam cutoffs, career facts
@@ -63,6 +65,8 @@ jobs:
             ARGS="--mode=hot"
           elif [ "${{ github.event.schedule }}" = "0 2 1 * *" ]; then
             ARGS="--only=colleges --limit=120"
+          elif [ "${{ github.event.schedule }}" = "0 2 8 * *" ]; then
+            ARGS="--only=college_cutoffs --limit=60"
           elif [ "${{ github.event.schedule }}" = "0 2 15 * *" ]; then
             ARGS="--only=college_details --limit=50"
           elif [ "${{ github.event.schedule }}" = "0 2 22 * *" ]; then

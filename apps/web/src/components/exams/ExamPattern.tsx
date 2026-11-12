@@ -238,11 +238,70 @@ function StagePatternCard({ pattern, label }: { pattern: ExamPatternData; label:
     ? Math.max(1, ...pattern.sections!.map((s) => s.questions ?? 0))
     : 1
 
-  // Uniform marking (the common case): exam-level fields carry real values.
-  const marksPerCorrect = toNum(pattern.marks_per_correct)
-  const negativeMarking = toNum(pattern.negative_marking)
+  // When a top-level figure is missing, work it out from the sections, or say
+  // why it does not apply (an interview has no question count; a descriptive
+  // paper has no per-question mark) instead of showing a bare dash.
+  const secs = pattern.sections ?? []
+  const every = (f: (s: ExamPatternSection) => unknown) => secs.length > 0 && secs.every((s) => f(s) != null)
+  const sum = (f: (s: ExamPatternSection) => number | undefined) => secs.reduce((a, s) => a + (f(s) ?? 0), 0)
+  const same = (f: (s: ExamPatternSection) => number | null) => {
+    const v = [...new Set(secs.map(f))]
+    return secs.length > 0 && v.length === 1 && v[0] != null ? v[0] : null
+  }
+  const about = `${pattern.stage ?? ''} ${pattern.mode ?? ''} ${pattern.question_type ?? ''}`
+  const notATest = /no written test|no dedicated|discontinued|^see |not applicable/i.test(`${pattern.mode ?? ''} ${pattern.question_type ?? ''}`)
+  const isInterview = !notATest && /interview|viva|personality test|audition/i.test(about) && pattern.total_questions == null && !secs.some((s) => s.questions)
+  // Wholly written-answer papers; a mix with MCQs (e.g. ISI UGA + UGB) is "varies" instead
+  const isDescriptive =
+    !notATest && /descriptive|subjective|essay|written reasoning|long.answer/i.test(about) && !/mcq|multiple.choice|objective/i.test(about)
+  // Papers that mix MCQs with written answers have no single question count or penalty
+  const isMixedPaper =
+    !notATest && /descriptive|subjective|essay|sketch|drawing|written|case simulation/i.test(about) && /mcq|multiple.choice|objective/i.test(about)
+  // Exams reported on a scaled score (GMAT, NMAT, LSAT, USMLE…) have no raw total
+  const isScaled = /scaled|score (range|band)|\b\d{3}\s*[-–]\s*\d{3}\b|percentile|pass\/fail/i.test(`${pattern.notes ?? ''} ${pattern.question_type ?? ''}`)
+  const notesExplainMarking = /negative|deduct|marking|marks? (each|per)|points? (each|per)/i.test(pattern.notes ?? '')
+  // "pattern varies by certification module", "varies by subject paper"…
+  const variesBy = /(?:varies|vary|differs?)(?: meaningfully)? by (?:the )?(?:certification )?(module|subject|paper|post|stream|discipline)/i.exec(`${about} ${pattern.notes ?? ''}`)?.[1]
+  const why = (interview: string, descriptive: string, fallback: string) =>
+    notATest ? 'Not applicable'
+      : isInterview ? interview
+        : isDescriptive ? descriptive
+          : isMixedPaper ? 'Varies by paper'
+            : variesBy ? `Varies by ${variesBy.toLowerCase()}`
+              : fallback
+
+  const durationText =
+    pattern.duration_minutes != null
+      ? formatDuration(pattern.duration_minutes)
+      : every((s) => s.duration_minutes)
+        ? `${formatDuration(sum((s) => s.duration_minutes))}${secs.length > 1 ? ' in all' : ''}`
+        : why('Set by the board', 'Varies by paper', 'Not announced')
+  const questionsText =
+    pattern.total_questions != null
+      ? String(pattern.total_questions)
+      : every((s) => s.questions)
+        ? String(sum((s) => s.questions))
+        : why('No fixed questions', 'Varies by paper', 'Not announced')
+  const marksText =
+    pattern.total_marks != null
+      ? String(pattern.total_marks)
+      : every((s) => s.marks)
+        ? String(sum((s) => s.marks))
+        : why('Not marked separately', 'Varies by paper', isScaled ? 'Scaled score' : 'Not announced')
+
+  // Uniform marking (the common case): exam-level fields carry real values,
+  // or every section shares one value.
+  const marksPerCorrect = toNum(pattern.marks_per_correct) ?? same((s) => toNum(s.marks_per_question))
+  const negativeMarking = toNum(pattern.negative_marking) ?? same((s) => toNum(s.negative_marking))
   const hasUniformMarking = marksPerCorrect != null
   const hasNegative = negativeMarking != null && negativeMarking !== 0
+  const correctText = why('Assessed by the interview board', 'Marked by examiners', 'Varies by question')
+  const wrongText =
+    negativeMarking != null
+      ? 'No negative marking'
+      : notesExplainMarking && !notATest && !isInterview
+        ? 'Varies — see “Good to know”'
+        : why('Not applicable', 'Not applicable', isScaled ? 'Not used (scaled scoring)' : 'Not published')
 
   // Mixed marking: exam-level fields are null (by design — a single number
   // can't represent it) but sections carry their own marks_per_question /
@@ -271,19 +330,9 @@ function StagePatternCard({ pattern, label }: { pattern: ExamPatternData; label:
       {/* Top summary grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <StatTile icon={<IconMode />} label="Mode" value={pattern.mode ?? '—'} accent="indigo" />
-        <StatTile icon={<IconClock />} label="Duration" value={formatDuration(pattern.duration_minutes)} accent="blue" />
-        <StatTile
-          icon={<IconQuestions />}
-          label="Total Questions"
-          value={pattern.total_questions != null ? String(pattern.total_questions) : '—'}
-          accent="green"
-        />
-        <StatTile
-          icon={<IconMarks />}
-          label="Total Marks"
-          value={pattern.total_marks != null ? String(pattern.total_marks) : '—'}
-          accent="amber"
-        />
+        <StatTile icon={<IconClock />} label="Duration" value={durationText} accent="blue" />
+        <StatTile icon={<IconQuestions />} label="Total Questions" value={questionsText} accent="green" />
+        <StatTile icon={<IconMarks />} label="Total Marks" value={marksText} accent="amber" />
       </div>
 
       {/* Marking scheme — three states: uniform (single number for the whole
@@ -319,8 +368,8 @@ function StagePatternCard({ pattern, label }: { pattern: ExamPatternData; label:
               <IconPlus />
               <p className="text-xs font-semibold uppercase tracking-wide">For every correct answer</p>
             </div>
-            <p className="text-2xl font-bold text-green-900">
-              {hasUniformMarking ? `+${formatMarks(marksPerCorrect!)}` : 'Not specified'}
+            <p className={`${hasUniformMarking ? 'text-2xl' : 'text-lg'} font-bold text-green-900`}>
+              {hasUniformMarking ? `+${formatMarks(marksPerCorrect!)}` : correctText}
               {hasUniformMarking && <span className="text-sm font-normal text-green-700 ml-1">marks</span>}
             </p>
           </div>
@@ -329,9 +378,9 @@ function StagePatternCard({ pattern, label }: { pattern: ExamPatternData; label:
               <IconMinus />
               <p className="text-xs font-semibold uppercase tracking-wide">For every wrong answer</p>
             </div>
-            <p className={`text-2xl font-bold ${hasNegative ? 'text-red-900' : 'text-gray-600'}`}>
-              {!hasUniformMarking ? 'Not specified' : hasNegative ? `−${formatMarks(negativeMarking!)}` : 'No negative marking'}
-              {hasUniformMarking && hasNegative && <span className="text-sm font-normal text-red-700 ml-1">marks</span>}
+            <p className={`${hasNegative ? 'text-2xl' : 'text-lg'} font-bold ${hasNegative ? 'text-red-900' : 'text-gray-600'}`}>
+              {hasNegative ? `−${formatMarks(Math.abs(negativeMarking!))}` : wrongText}
+              {hasNegative && <span className="text-sm font-normal text-red-700 ml-1">marks</span>}
             </p>
           </div>
         </div>

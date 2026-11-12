@@ -9,7 +9,7 @@ import { runAutomation } from '@/lib/automation/engine/runner'
 // Updating one college reads ~15 pages of its site, so it gets longer (the host caps it at its plan limit).
 export const maxDuration = 300
 
-const SWEEP_TARGETS = ['exams', 'scholarships', 'college_details', 'colleges', 'syllabus', 'exam_cutoffs', 'careers', 'nirf'] as const
+const SWEEP_TARGETS = ['exams', 'scholarships', 'college_details', 'colleges', 'syllabus', 'exam_cutoffs', 'college_cutoffs', 'cutoffs', 'placements', 'careers', 'nirf'] as const
 type SweepTarget = (typeof SWEEP_TARGETS)[number]
 
 export async function GET(request: NextRequest) {
@@ -39,7 +39,7 @@ type Body =
   | { action: 'approve' | 'reject'; ids: string[] }
   | { action: 'run'; slug?: string; target?: 'exams' | 'scholarships' | 'nirf' }
   // One batch of "Update everything"; the page repeats it until remaining is 0
-  | { action: 'sweep'; target: SweepTarget; startedAt: string; runId?: string }
+  | { action: 'sweep'; target: SweepTarget; startedAt: string; runId?: string; cursor?: number }
   | { action: 'college'; collegeId: string }
 
 export async function POST(request: NextRequest) {
@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
         trigger: 'manual',
         sweepStartedAt: body.startedAt,
         runId: body.runId,
+        cursor: Number.isInteger(body.cursor) ? body.cursor : undefined,
         notify: false,
         deadlineMs: Date.now() + 30_000, // one slow site can add ~15 s; stays under maxDuration
       })
@@ -119,13 +120,13 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // One college, on demand: courses, fees, placements, admission, then NAAC/founded
+  // One college, on demand: courses, fees, placements, admission, then NAAC/founded, then official cutoffs
   if (body.action === 'college') {
     if (!process.env.GROQ_API_KEY) return NextResponse.json({ error: 'GROQ_API_KEY is not configured on the server' }, { status: 400 })
     if (!/^[0-9a-f-]{36}$/i.test(body.collegeId ?? '')) return NextResponse.json({ error: 'collegeId required' }, { status: 400 })
     try {
       const result = await runAutomation(db, {
-        targets: ['college_details', 'colleges'],
+        targets: ['college_details', 'colleges', 'college_cutoffs'],
         mode: 'single',
         collegeId: body.collegeId,
         force: true,

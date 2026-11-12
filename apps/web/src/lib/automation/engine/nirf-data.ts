@@ -249,10 +249,22 @@ async function allRows<T>(page: (from: number, to: number) => PromiseLike<{ data
   }
 }
 
+// The ranking directories take many requests to read and change once a year;
+// a sweep reuses them across its batches (same server process) for an hour.
+const dirCache = new Map<number, { at: number; entries: Promise<DirEntry[]> }>()
+function cachedDirectory(edition: number): Promise<DirEntry[]> {
+  const hit = dirCache.get(edition)
+  if (hit && Date.now() - hit.at < 3600_000) return hit.entries
+  const entries = fetchDirectory(edition).catch((err) => { dirCache.delete(edition); throw err })
+  dirCache.set(edition, { at: Date.now(), entries })
+  return entries
+}
+
 export async function updateNirfPlacements(
   db: SupabaseClient,
-  opts: { runId: string | null; dryRun: boolean; limit?: number; today?: Date; log?: (s: string) => void }
-): Promise<{ colleges: number; rows: number; outcomes: ProposalOutcome[]; errors: string[]; issues: string[] }> {
+  // offset + limit: one slice of the colleges (alphabetical), so a sweep can work through them across requests
+  opts: { runId: string | null; dryRun: boolean; limit?: number; offset?: number; today?: Date; log?: (s: string) => void }
+): Promise<{ colleges: number; rows: number; outcomes: ProposalOutcome[]; errors: string[]; issues: string[]; total: number }> {
   const say = opts.log ?? console.log
   const Y = (opts.today ?? new Date()).getFullYear()
   const errors: string[] = []
@@ -263,13 +275,13 @@ export async function updateNirfPlacements(
   const editions = [Y, Y - 1, Y - 2, Y - 3]
   const dir: DirEntry[] = []
   for (const e of editions) {
-    const entries = await fetchDirectory(e)
+    const entries = await cachedDirectory(e)
     say(`  NIRF ${e}: ${entries.length} institution sheets listed`)
     dir.push(...entries)
   }
   const usable = [...new Set(dir.map((d) => d.edition))].sort((a, b) => b - a).slice(0, 3)
   const directory = dir.filter((d) => usable.includes(d.edition))
-  if (!directory.length) return { colleges: 0, rows: 0, outcomes, errors: ['NIRF ranking pages not reachable or format changed'], issues }
+  if (!directory.length) return { colleges: 0, rows: 0, outcomes, errors: ['NIRF ranking pages not reachable or format changed'], issues, total: 0 }
 
   const { data: colleges } = await db.from('colleges').select('id, name, city, nirf_category, total_students').order('name')
   // Both tables hold more rows than one request returns (1000), so read them page by page
@@ -305,7 +317,8 @@ export async function updateNirfPlacements(
 
   let collegeCount = 0
   let rowCount = 0
-  for (const col of (colleges ?? []).slice(0, opts.limit ?? Infinity)) {
+  const offset = opts.offset ?? 0
+  for (const col of (colleges ?? []).slice(offset, offset + (opts.limit ?? Infinity))) {
     const sheets = findSheets(col, directory).sort((a, b) => b.entry.edition - a.entry.edition)
     if (!sheets.length) continue
     collegeCount++
@@ -385,5 +398,5 @@ export async function updateNirfPlacements(
       )
     }
   }
-  return { colleges: collegeCount, rows: rowCount, outcomes, errors, issues }
+  return { colleges: collegeCount, rows: rowCount, outcomes, errors, issues, total: (colleges ?? []).length }
 }

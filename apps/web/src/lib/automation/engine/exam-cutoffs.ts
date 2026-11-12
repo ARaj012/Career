@@ -16,6 +16,8 @@ import { examFocus, type ExamRow } from './exams'
 const CUTOFF = /(cut[\s-]?off|qualifying|press release|result|percentile|merit list|minimum marks)/i
 const CUTOFF_TEXT = /(cut[\s-]?off|qualifying (marks|percentile|score)|minimum qualifying|qualified for)/i
 const KEYWORDS = /(cut[\s-]?off|qualif|percentile|marks|score|general|unreserved|\bur\b|obc|\bsc\b|\bst\b|ews|pwd|ph\b|category)/i
+/** Rows this reader writes carry this note; anything else official was entered by hand. */
+const READER_NOTE = /^Official: /
 
 const Output = z.object({
   rows: z
@@ -138,10 +140,24 @@ JSON: {"rows":[{"year":${Y},"stage":null,"category":"UR","cutoff_type":"…","me
 
   for (const [year, rows] of byYear) {
     // Same exam/year/category/stage/type reported twice → keep the first
-    const unique = [...new Map(rows.map((r) => [`${r.stage}|${r.category}|${r.cutoff_type}`, r])).values()]
-    res.log.push(`${exam.slug} ${year}: ${unique.length} official cutoffs`)
-    if (opts.dryRun) continue
-    await db.from('exam_national_cutoffs').delete().eq('exam_id', exam.id).eq('year', year).eq('source_type', 'official')
+    let unique = [...new Map(rows.map((r) => [`${r.stage}|${r.category}|${r.cutoff_type}`, r])).values()]
+    // Official rows entered by hand (checked against the notice, often per programme or post)
+    // are never replaced by this reader; it only adds what they do not already cover.
+    const { data: existing } = await db
+      .from('exam_national_cutoffs')
+      .select('stage, category, notes')
+      .eq('exam_id', exam.id).eq('year', year).eq('source_type', 'official')
+    const manual = (existing ?? []).filter((r) => !READER_NOTE.test(r.notes ?? ''))
+    if (manual.length) {
+      const key = (stage: unknown, category: unknown) => `${normalize(String(stage ?? ''))}|${normalize(String(category ?? ''))}`
+      const covered = new Set(manual.map((r) => key(r.stage, r.category)))
+      unique = unique.filter((r) => !covered.has(key(r.stage, r.category)))
+    }
+    res.log.push(`${exam.slug} ${year}: ${unique.length} official cutoffs${manual.length ? ` (kept ${manual.length} entered by hand)` : ''}`)
+    if (opts.dryRun || (!unique.length && manual.length)) continue
+    // Replace only what this reader wrote before
+    await db.from('exam_national_cutoffs').delete().eq('exam_id', exam.id).eq('year', year).eq('source_type', 'official').like('notes', 'Official: %')
+    if (!unique.length) continue
     const { error } = await db.from('exam_national_cutoffs').insert(unique)
     if (error) res.errors.push(`${exam.slug} ${year}: ${error.message}`)
   }

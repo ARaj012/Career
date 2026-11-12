@@ -129,13 +129,17 @@ export default async function ExamDetailPage({
   const eligibility = ((exam as any).exam_eligibility ?? [])[0] ?? null
 
   // Official counselling closing ranks (JoSAA) for one branch and category, last five years
-  const { data: latestOfficial } = await supabase
-    .from('college_exam_cutoffs')
-    .select('year')
-    .eq('exam_id', exam.id)
-    .eq('source_type', 'official')
-    .order('year', { ascending: false })
-    .limit(1)
+  // (JoSAA covers JEE only; other exams' official college cutoffs are listed below)
+  const isJosaa = ['jee-main', 'jee-advanced'].includes(exam.slug)
+  const { data: latestOfficial } = isJosaa
+    ? await supabase
+        .from('college_exam_cutoffs')
+        .select('year')
+        .eq('exam_id', exam.id)
+        .eq('source_type', 'official')
+        .order('year', { ascending: false })
+        .limit(1)
+    : { data: [] as { year: number }[] }
   const latestRankYear = latestOfficial?.[0]?.year as number | undefined
   const { data: rankRows } = latestRankYear
     ? await supabase
@@ -150,19 +154,21 @@ export default async function ExamDetailPage({
         .limit(1000)
     : { data: [] }
 
-  // Older college cutoffs not (yet) from an official source, only for exams without official ones
+  // College-wise cutoffs for exams without JoSAA data: official notices first, older unverified figures marked
   const { data: cutoffRows } = latestRankYear
     ? { data: [] }
     : await supabase
         .from('college_exam_cutoffs')
         .select(
-          'year, category, cutoff_score, cutoff_rank, colleges ( name, slug, city, state, nirf_rank ), college_courses ( course_name, degree_type )'
+          'year, category, cutoff_score, cutoff_rank, program_name, quota, round, source_type, source_url, colleges ( name, slug, city, state, nirf_rank ), college_courses ( course_name, degree_type )'
         )
         .eq('exam_id', exam.id)
         .order('year', { ascending: false })
-        .limit(500)
+        .limit(1000)
 
   const rows = (cutoffRows ?? []) as any[]
+  const anyOfficialCollege = rows.some((r) => r.source_type === 'official')
+  const anyUnverifiedCollege = rows.some((r) => r.source_type !== 'official')
   const byYear = new Map<number, any[]>()
   for (const row of rows) {
     if (!byYear.has(row.year)) byYear.set(row.year, [])
@@ -170,7 +176,8 @@ export default async function ExamDetailPage({
   }
   const years = Array.from(byYear.keys()).sort((a, b) => b - a)
   for (const y of years) {
-    byYear.get(y)!.sort((a, b) => (a.colleges?.nirf_rank ?? 9999) - (b.colleges?.nirf_rank ?? 9999))
+    // Official rows first, then by NIRF rank
+    byYear.get(y)!.sort((a, b) => Number(b.source_type === 'official') - Number(a.source_type === 'official') || (a.colleges?.nirf_rank ?? 9999) - (b.colleges?.nirf_rank ?? 9999))
   }
 
   // Careers this exam is relevant for
@@ -456,14 +463,21 @@ export default async function ExamDetailPage({
           <ExamCollegeCutoffs rows={(rankRows ?? []) as any} slug={exam.slug} branch={branch} category={rankCategory} examName={exam.name} />
         )}
 
-        {/* Older college-wise cutoffs, for exams without official counselling data */}
+        {/* College-wise cutoffs for exams without JoSAA data */}
         {years.length > 0 && (
           <>
             <h2 className="text-2xl font-bold text-gray-900 mb-1">College Cutoff History</h2>
             <p className="text-gray-500 mb-2">Cutoffs for colleges in our database, {years[years.length - 1]}–{years[0]}</p>
-            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-6">
-              Not yet confirmed from an official counselling source; check the college&apos;s own notice before relying on it.
-            </p>
+            {anyOfficialCollege && (
+              <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-2">
+                Rows marked ✓ are read from the college&apos;s or the counselling body&apos;s official notice; follow the link to see it.
+              </p>
+            )}
+            {anyUnverifiedCollege && (
+              <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-6">
+                Rows marked * are not yet confirmed from an official counselling source; check the college&apos;s own notice before relying on them.
+              </p>
+            )}
           </>
         )}
 
@@ -495,12 +509,22 @@ export default async function ExamDetailPage({
                           )}
                         </td>
                         <td className="px-3 py-2 text-gray-600">
-                          {row.college_courses?.course_name ?? '—'}
-                          {row.college_courses?.degree_type ? ` (${row.college_courses.degree_type})` : ''}
+                          {row.program_name ?? row.college_courses?.course_name ?? '—'}
+                          {!row.program_name && row.college_courses?.degree_type ? ` (${row.college_courses.degree_type})` : ''}
                         </td>
-                        <td className="px-3 py-2 text-gray-600">{row.category ?? '—'}</td>
+                        <td className="px-3 py-2 text-gray-600">
+                          {row.category ?? '—'}
+                          {row.quota && <span className="block text-xs text-gray-400">{row.quota}</span>}
+                        </td>
                         <td className="px-3 py-2 text-gray-600">{row.cutoff_score ?? '—'}</td>
-                        <td className="px-3 py-2 text-gray-600">{row.cutoff_rank ? `#${row.cutoff_rank}` : '—'}</td>
+                        <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
+                          {row.cutoff_rank ? `#${row.cutoff_rank.toLocaleString('en-IN')}` : '—'}
+                          {row.source_type === 'official' ? (
+                            row.source_url ? (
+                              <a href={row.source_url} target="_blank" rel="noopener noreferrer" className="ml-1 text-emerald-600 hover:underline" title="Official notice">✓</a>
+                            ) : <span className="ml-1 text-emerald-600" title="Official notice">✓</span>
+                          ) : <span className="ml-1 text-amber-600" title="Not yet confirmed from an official notice">*</span>}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

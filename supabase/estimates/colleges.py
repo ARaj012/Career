@@ -156,6 +156,36 @@ COLLEGES = [
   cut("ncbs-bangalore", "No published cutoff: PhD admission through the NCBS/JGEEBILS entrance test and interviews."),
 
   ("techno-india-university", "fees", "estimate", "B.Tech tuition is roughly ₹1–1.6 lakh a year; other UG programmes roughly ₹60,000–1.2 lakh a year.", "Based on typical fees for private engineering universities in Kolkata."),
+
+  # ---- ISI centres: ISI files one NIRF return for the whole institute, so no centre-wise official counts ----
+  *[(s, "naac_grade", "secondary", "Not NAAC-graded",
+     "ISI is an Institution of National Importance under the ISI Act, 1959. Neither its website nor its 2024-25 Annual "
+     "Report mentions a NAAC grade, and a college profile states it has not been accredited by NAAC. NAAC's own register "
+     "could not be reached to confirm.",
+     "Aakash college profile", "https://www.aakash.ac.in/college/indian-statistical-institute")
+    for s in ["isi-kolkata", "isi-delhi", "isi-bangalore", "isi-chennai", "isi-tezpur"]],
+  ("isi-delhi", "total_students", "estimate",
+   "About 140–200 degree students in 2026-27 (B.SDS, M.Stat first year, M.Math and MS (QE)), plus PhD/JRF research scholars.",
+   "ISI's Prospectus 2026-27 gives the Delhi Centre 25 B.SDS seats a year (started 2024, so three batches), 35 MS (QE) seats "
+   "a year (two batches), 18 M.Math seats (first batch) and the first year of the 38-seat M.Stat — about 200 students if "
+   "every seat is filled. ISI's Annual Report 2024-25 shows enrolment below the seat count (41 MS (QE) students joined "
+   "against 56 seats), so the lower end allows for that. ISI files one NIRF return for all its centres, so there is no "
+   "official Delhi-only figure.",
+   "ISI Prospectus 2026-27", "https://admission.isical.ac.in/Documents/IsiAdmission2026/ISI-Prospectus-2026-27.pdf", 140, 200),
+  ("isi-delhi", "enrollment", "estimate",
+   "About 140–200 degree students at the Delhi Centre in 2026-27, up from roughly 100–140 in 2024-25 as the B.SDS batches "
+   "(from 2024) and the M.Math batch (from 2026) were added.",
+   "Worked out from the Delhi Centre's seats in ISI's prospectus and the programmes ISI's annual reports list for Delhi "
+   "(M.Stat and MS (QE) throughout; B.SDS from 2024-25; M.Math from 2026-27). ISI reports student strength to NIRF only "
+   "for the whole institute (1,241 students in 2024-25).",
+   "ISI Prospectus 2026-27", "https://admission.isical.ac.in/Documents/IsiAdmission2026/ISI-Prospectus-2026-27.pdf", 140, 200),
+  ("isi-delhi", "placements", "estimate",
+   "Expected median of about ₹15–20 lakh a year for M.Stat and MS (QE) graduates who take jobs; a large share go on to PhDs instead.",
+   "ISI's own figures for the same programmes at Kolkata in 2024-25: M.Stat 38 of 38 job-seekers placed, median ₹20 lakh "
+   "(highest ₹50 lakh); MS (QE) 10 of 10, median ₹15.5 lakh (Annual Report 2024-25). ISI's NIRF 2026 return gives a "
+   "₹22.5 lakh median for all its two-year PG graduates of 2024-25. ISI Delhi's placement page could not be reached and "
+   "no Delhi-only figures are published.",
+   "ISI Annual Report 2024-25", "https://www.isical.ac.in/isical_web/files/about/publications/annual-reports/Annual_Report_2024-25.pdf", 1500000, 2000000),
 ]
 
 # drop accidental duplicates (keep the first)

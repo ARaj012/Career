@@ -1,5 +1,5 @@
 import { TrendingUp, Briefcase, BadgeCheck, AlertTriangle } from 'lucide-react'
-import { batchLabel, formatPackage, isOfficial, levelLabel, officialLevels, type PlacementRow } from '@/lib/placements'
+import { batchLabel, COURSE_PREFIX, formatPackage, isCourseRow, isOfficial, levelLabel, officialLevels, type PlacementRow } from '@/lib/placements'
 
 function Stat({ value, label, tone = 'gray' }: { value: string | null; label: string; tone?: 'gray' | 'emerald' | 'amber' }) {
   if (!value) return null
@@ -18,7 +18,11 @@ export default function PlacementSummary({ rows }: { rows: PlacementRow[] }) {
   const latestOf = (level: string) =>
     rows.filter((r) => isOfficial(r) && r.program_level === level).sort((a, b) => b.year - a.year)[0]
   const unverified = rows.filter((r) => !isOfficial(r)).sort((a, b) => b.year - a.year)[0]
-  if (!levels.length && !unverified) return null
+  // Course-wise figures from the institute's own report, latest batch only
+  const courseRows = rows.filter((r) => isOfficial(r) && isCourseRow(r))
+  const courseYear = Math.max(...courseRows.map((r) => r.year))
+  const latestCourses = courseRows.filter((r) => r.year === courseYear)
+  if (!levels.length && !unverified && !latestCourses.length) return null
 
   const main = levels.length ? latestOf(levels[0]) : null
   return (
@@ -49,7 +53,7 @@ export default function PlacementSummary({ rows }: { rows: PlacementRow[] }) {
                   <li key={level} className="flex justify-between gap-2">
                     <span>{levelLabel(level)}</span>
                     <span className="font-medium text-gray-800">
-                      {formatPackage(r.median_package) ?? '—'}
+                      {formatPackage(r.median_package) ?? (r.higher_studies ? `${r.higher_studies} to higher studies` : '—')}
                       {r.placement_rate !== null ? ` · ${r.placement_rate}%` : ''}
                     </span>
                   </li>
@@ -65,6 +69,28 @@ export default function PlacementSummary({ rows }: { rows: PlacementRow[] }) {
           >
             <BadgeCheck className="w-3.5 h-3.5" /> Official · data submitted to NIRF (Ministry of Education)
           </a>
+        </>
+      )}
+
+      {!main && latestCourses.length > 0 && (
+        <>
+          <p className="text-xs text-gray-500 mb-3">Course-wise, batch {batchLabel(courseYear)}</p>
+          <ul className="text-sm text-gray-700 space-y-2 mb-3">
+            {latestCourses.map((r) => (
+              <li key={r.program_level} className="flex justify-between gap-2">
+                <span>{r.program_level.slice(COURSE_PREFIX.length)}</span>
+                <span className="font-medium text-gray-900 whitespace-nowrap">
+                  {formatPackage(r.median_package) ? `${formatPackage(r.median_package)} median` : ''}
+                  {r.students_placed != null && r.total_eligible_students ? ` · ${r.students_placed}/${r.total_eligible_students} placed` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {latestCourses[0].source_url && (
+            <a href={latestCourses[0].source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline">
+              <BadgeCheck className="w-3.5 h-3.5" /> Official · the institute&apos;s own placement report
+            </a>
+          )}
         </>
       )}
 
