@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Metadata } from 'next'
 import RoadmapProgressTracker from '@/components/RoadmapProgressTracker'
+import OfficialCareerFacts from '@/components/careers/OfficialCareerFacts'
 
 type Step = { title: string; description?: string; duration?: string }
 
@@ -1062,6 +1063,23 @@ export default async function RoadmapPage({
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* The official route in, kept up to date by the automation from the official body's site */}
+        {career && (career.eligibility?.length || career.how_to_enter?.length || career.licence || career.official_pay) && (
+          <div className="mb-10">
+            <OfficialCareerFacts
+              title={career.title}
+              officialBody={career.official_body}
+              officialUrl={career.official_url}
+              eligibility={career.eligibility}
+              howToEnter={career.how_to_enter}
+              licence={career.licence}
+              officialPay={career.official_pay}
+              sourceUrl={career.facts_source_url}
+              verifiedAt={career.verified_at}
+            />
           </div>
         )}
 

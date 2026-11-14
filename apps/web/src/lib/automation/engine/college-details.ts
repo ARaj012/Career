@@ -11,7 +11,7 @@
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { extractJson } from './llm'
-import { normalize, quoteSupportsNumber } from './evidence'
+import { normalize, quoteSupportsDate, quoteSupportsNumber } from './evidence'
 import { fetchPage, hostOf, type FetchedPage } from './http'
 import { buildContext, isOfficialUrl, locateQuote, saveCache } from './sources'
 import { submitProposal, type Change, type ProposalOutcome } from './proposals'
@@ -31,10 +31,17 @@ const Output = z.object({
         semester_fee: Num,
         total_fee: Num,
         seats: Num,
+        eligibility: z.object({ quote: z.string().nullish() }).nullish(),
       })
     )
     .nullish()
     .transform(orEmpty),
+  application: z
+    .object({
+      opens: z.object({ date: z.string().nullish(), quote: z.string().nullish() }).nullish(),
+      closes: z.object({ date: z.string().nullish(), quote: z.string().nullish() }).nullish(),
+    })
+    .nullish(),
   placements: z
     .array(
       z.object({
@@ -194,6 +201,8 @@ export type CollegeDetailRow = {
   fees_verified_at: string | null
   institute_scholarships: unknown
   details_read_at?: string | null
+  application_opens?: string | null
+  application_closes?: string | null
 }
 
 const DEGREE = /\b(b\.?\s?tech|b\.?e|m\.?\s?tech|m\.?e|mba|pgdm|pgp|mbbs|md|ms|bds|mds|b\.?sc|m\.?sc|b\.?com|m\.?com|b\.?a|m\.?a|ll\.?b|ll\.?m|b\.?arch|m\.?arch|b\.?des|m\.?des|b\.?pharm|m\.?pharm|ph\.?\s?d|bba|bca|mca)\b/i
@@ -301,18 +310,20 @@ export async function updateCollegeDetails(
   const context = [
     section('FEES AND PROGRAMMES', byTopic.fees, FEE_WORDS, 4500),
     section('PLACEMENTS', byTopic.placements, PLACEMENT_WORDS, 3000),
-    section('ADMISSION', byTopic.admission, ADMISSION_WORDS, 1800),
+    section('ADMISSION', byTopic.admission, ADMISSION_WORDS, 3000), // room for eligibility and application dates
     section('SCHOLARSHIPS', byTopic.scholarships, SCHOLARSHIP_WORDS, 900),
   ].join('\n\n')
 
   const task = `Institution: "${c.name}". Today is ${today.toISOString().slice(0, 10)}. Report only facts about THIS institution as written in its official pages below.
 programmes: each degree programme it offers (e.g. "B.Tech Computer Science and Engineering", "MBA"). course_name as written; degree_type = UG, PG, Integrated, Diploma or Doctoral; duration_years if stated.
   annual_fee = tuition/academic fee per YEAR in rupees for the current or latest academic year; semester_fee if only a per-semester fee is given; total_fee if only a whole-course fee is given; seats = sanctioned intake. Each with a quote that contains the amount AND names the programme. null when not stated.
+  eligibility = the sentence copied CHARACTER-FOR-CHARACTER that states who can apply to this programme (qualifying exam, subjects, minimum marks); it must name the programme. null when not stated.
+application: the dates applications open and close for the CURRENT or next admission cycle (ISO YYYY-MM-DD), each with a quote containing the date. null when not stated.
 placements: placement statistics for the last 5 placement seasons. year = calendar year the season ended (2023-24 → 2024). programme if the figures are for one programme only. average / median / highest package in rupees per annum (1 LPA = 100000); placed = students placed; eligible = students eligible/registered. Each quote must contain the value AND the year/season.
   recruiters = up to 10 company names copied from one quote.
 admission_steps: up to 6 sentences copied CHARACTER-FOR-CHARACTER from the text that explain how students get admitted (entrance exam, counselling, eligibility, application). No paraphrasing.
 scholarships: scholarships, fee waivers or concessions the INSTITUTION offers (not general government schemes unless the text says the institution administers them), with a quote describing each.
-JSON: {"programmes":[{"course_name":"…","degree_type":"UG","duration_years":4,"annual_fee":{"value":225000,"quote":"…"},"semester_fee":null,"total_fee":null,"seats":{"value":120,"quote":"…"}}],"placements":[{"year":2024,"programme":null,"average":{"value":1850000,"quote":"…"},"median":null,"highest":{"value":12000000,"quote":"…"},"placed":null,"eligible":null,"recruiters":{"value":"Google, Microsoft","quote":"…"}}],"admission_steps":["…"],"scholarships":[{"name":"…","quote":"…"}]}`
+JSON: {"programmes":[{"course_name":"…","degree_type":"UG","duration_years":4,"annual_fee":{"value":225000,"quote":"…"},"semester_fee":null,"total_fee":null,"seats":{"value":120,"quote":"…"},"eligibility":{"quote":"…"}}],"application":{"opens":{"date":"2027-01-10","quote":"…"},"closes":{"date":"2027-03-31","quote":"…"}},"placements":[{"year":2024,"programme":null,"average":{"value":1850000,"quote":"…"},"median":null,"highest":{"value":12000000,"quote":"…"},"placed":null,"eligible":null,"recruiters":{"value":"Google, Microsoft","quote":"…"}}],"admission_steps":["…"],"scholarships":[{"name":"…","quote":"…"}]}`
 
   const ai = await extractJson(task, context, Output)
   if (process.env.AUTOMATION_DEBUG) {
@@ -347,7 +358,7 @@ JSON: {"programmes":[{"course_name":"…","degree_type":"UG","duration_years":4,
     return seasons.size === 1 ? [...seasons][0] : null
   }
 
-  await programmes(db, c, ai, onTopic(byTopic.fees), nameOnSite, res, opts)
+  await programmes(db, c, ai, onTopic(byTopic.fees), nameOnSite, res, opts, onTopic(byTopic.admission))
   const placementPages = byTopic.placements.filter((p) => isOfficialUrl(p.finalUrl, own))
   await placementReports(db, c, ai, onTopic(byTopic.placements), placementPages, seasonOf, res, opts, Y)
   await textFields(db, c, ai, onTopic(byTopic.admission), onTopic(byTopic.scholarships), res, opts, today)
@@ -401,8 +412,8 @@ export function degreeType(name: string, aiType: string | null | undefined): str
   return level || null
 }
 
-async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSite: OnSite, nameOnSite: (n: string) => string | null, res: Res, opts: Opts) {
-  const { data: existing } = await db.from('college_courses').select('id, course_name, annual_fees_min, total_fees, total_seats').eq('college_id', c.id).eq('source_type', 'official')
+async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSite: OnSite, nameOnSite: (n: string) => string | null, res: Res, opts: Opts, onAdmission: OnSite = () => null) {
+  const { data: existing } = await db.from('college_courses').select('id, course_name, annual_fees_min, total_fees, total_seats, eligibility').eq('college_id', c.id).eq('source_type', 'official')
   const byName = new Map((existing ?? []).map((r) => [normalize(r.course_name), r]))
   const seen = new Set<string>()
 
@@ -426,17 +437,26 @@ async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSi
     const semester = annual ? null : fact(p.semester_fee, 'semester fee', true)
     const total = fact(p.total_fee, 'total fee', true)
     const seats = fact(p.seats, 'seats', true)
+    // Who can apply: a sentence from the fee or admission pages that names this programme
+    let eligibility: { text: string; url: string } | null = null
+    const eq = p.eligibility?.quote?.replace(/\s+/g, ' ').trim()
+    if (eq) {
+      const url = onSite(eq) ?? onAdmission(eq)
+      if (url && eq.length >= 25 && eq.length <= 500 && quoteNamesCourse(name, eq) && ELIGIBILITY_WORDS.test(eq) && !NEWS.test(eq)) eligibility = { text: eq, url }
+      else res.dropped.push(`${c.name} · ${name} eligibility: evidence failed`)
+    }
     const yearly = annual?.value ?? (semester ? semester.value * 2 : null)
     if (yearly !== null && (yearly < 1_000 || yearly > 5_000_000)) { res.dropped.push(`${c.name} · ${name}: implausible fee ${yearly}`); continue }
     const old = byName.get(key)
     const namedAt = annual || semester || total || seats ? null : nameOnSite(name)
-    if (!annual && !semester && !total && !seats && (!namedAt || old)) continue // name not on the site, or already listed
+    if (!annual && !semester && !total && !seats && !eligibility && (!namedAt || old)) continue // name not on the site, or already listed
     const fields: Record<string, Change> = {}
     const set = (k: string, v: unknown, ev: string | null, before: unknown) => { if (v !== null && v !== undefined && v !== before) fields[k] = { old: before ?? null, new: v, evidence: ev } }
     set('annual_fees_min', yearly, annual?.quote ?? semester?.quote ?? null, old?.annual_fees_min)
     set('annual_fees_max', yearly, null, undefined)
     set('total_fees', total?.value ?? null, total?.quote ?? null, old?.total_fees)
     set('total_seats', seats?.value ?? null, seats?.quote ?? null, old?.total_seats)
+    set('eligibility', eligibility?.text ?? null, eligibility?.text ?? null, old?.eligibility)
     if (!old) {
       set('course_name', name, null, undefined)
       const level = degreeType(name, p.degree_type)
@@ -444,7 +464,7 @@ async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSi
       if (p.duration_years && p.duration_years > 0 && p.duration_years <= 7) set('duration_years', p.duration_years, null, undefined)
     }
     if (!Object.keys(fields).some((k) => k !== 'annual_fees_max')) continue
-    const src = (annual ?? semester ?? total ?? seats)?.url ?? namedAt!
+    const src = (annual ?? semester ?? total ?? seats ?? eligibility)?.url ?? namedAt!
     res.outcomes.push(
       await submitProposal(db, opts.runId, {
         entity: 'college',
@@ -454,7 +474,7 @@ async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSi
         label: `${c.name} · ${name}`,
         fields,
         insertKey: old ? undefined : { college_id: c.id, source_type: 'official', mode: 'Full-Time' },
-        extra: { source_url: src, verified_at: new Date().toISOString(), fee_note: semester ? `₹${semester.value.toLocaleString('en-IN')} per semester (official)` : null },
+        extra: { source_url: src, verified_at: new Date().toISOString(), fee_note: semester ? `₹${semester.value.toLocaleString('en-IN')} per semester (official)` : null, ...(eligibility ? { eligibility_source_url: eligibility.url } : {}) },
         sourceUrl: src,
         official: true,
         overwritesVerified: false,
@@ -553,6 +573,8 @@ async function placementReports(db: SupabaseClient, c: CollegeDetailRow, ai: Out
 // Announcements ("Applications are invited…", "Registration and Orientation…") are not a process
 const NEWS = /^(applications? (are|is) invited|registration and orientation|results? (of|for|declared)|declaration of|last date|notice|circular|corrigendum|extension)/i
 // Candidate lists and notice headings on an admissions page are not a process either
+// An eligibility sentence states a qualification, subject or minimum mark
+const ELIGIBILITY_WORDS = /(eligib|passed|pass in|qualif|minimum|marks|%|per\s?cent|class\s*(xii|12)|10\s*\+\s*2|\bhsc\b|graduat|bachelor'?s|degree in|aggregate|cgpa)/i
 export const NOT_A_STEP = /(^(important )?notice|^list of|walk.?in|shortlisted|provisionally (eligible|admitted|allotted)|holders of doctoral|post.?doctoral)/i
 const PROCESS = /(through|via|based on|on the basis of|rank|score|merit|counsel|eligib|entrance|qualif|interview|selection|must|should|minimum|criteria|josaa|csab|ccmt|neet|jee|gate|cat\b|clat|cuet)/i
 
@@ -572,6 +594,24 @@ async function textFields(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onAd
       extra.admission_source_url = src
       extra.admission_verified_at = today.toISOString()
     }
+  }
+
+  // Application window of the current or next admission cycle
+  const dateOf = (d: { date?: string | null; quote?: string | null } | null | undefined, what: string) => {
+    if (!d?.date || !d.quote) return null
+    const url = onAdmission(d.quote)
+    const t = Date.parse(d.date)
+    if (!url || Number.isNaN(t) || !quoteSupportsDate(d.date, d.quote)) { res.dropped.push(`${c.name} application ${what}: evidence failed`); return null }
+    // Not a past cycle: closing at most 30 days ago, nothing more than ~15 months ahead
+    if (t < today.getTime() - 30 * 86_400_000 - (what === 'opens' ? 300 * 86_400_000 : 0) || t > today.getTime() + 460 * 86_400_000) { res.dropped.push(`${c.name} application ${what}: not the current cycle`); return null }
+    return { date: d.date, quote: d.quote, url }
+  }
+  const closes = dateOf(ai.application?.closes, 'closes')
+  const opens = closes ? dateOf(ai.application?.opens, 'opens') : null
+  if (closes && (!opens || opens.date <= closes.date)) {
+    if (closes.date !== c.application_closes) fields.application_closes = { old: c.application_closes ?? null, new: closes.date, evidence: closes.quote }
+    if (opens && opens.date !== c.application_opens) fields.application_opens = { old: c.application_opens ?? null, new: opens.date, evidence: opens.quote }
+    if (fields.application_closes || fields.application_opens) { extra.application_source_url = closes.url; src ??= closes.url }
   }
 
   // Institute scholarships

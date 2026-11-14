@@ -9,3 +9,10 @@ where not c.automation_enabled and c.official_url is null
 -- 2. Exam pattern & eligibility reader (exam-rules.ts): when each exam was last checked / read.
 alter table public.exams add column if not exists rules_checked_at timestamptz;
 alter table public.exams add column if not exists rules_read_at timestamptz;
+
+-- 3. (15 Nov 2026) Course eligibility and the college application window, read by college-details.ts
+alter table public.college_courses add column if not exists eligibility text;
+alter table public.college_courses add column if not exists eligibility_source_url text;
+alter table public.colleges add column if not exists application_opens date;
+alter table public.colleges add column if not exists application_closes date;
+alter table public.colleges add column if not exists application_source_url text;

@@ -577,6 +577,15 @@ export default async function CollegeDetailPage({
                                   ? ` · ${course.total_seats} seats`
                                   : ""}
                               </p>
+                              {course.eligibility && (
+                                <p className="text-xs text-gray-500 mt-1 max-w-xl">
+                                  <span className="font-medium text-gray-600">Eligibility: </span>
+                                  {course.eligibility}
+                                  {course.eligibility_source_url && (
+                                    <a href={course.eligibility_source_url} target="_blank" rel="noopener noreferrer" className="ml-1 text-emerald-700 hover:underline">(official)</a>
+                                  )}
+                                </p>
+                              )}
                             </div>
                             <div className="flex items-center gap-2">
                               {course.annual_fees && (
@@ -619,6 +628,16 @@ export default async function CollegeDetailPage({
                 </div>
               )}
             </div>
+
+            {/* Application window of the current admission cycle, from the college's own site */}
+            {college.application_closes && new Date(`${college.application_closes}T23:59:59`) >= new Date() && (
+              <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 text-sm text-indigo-900">
+                <span className="font-semibold">Applications {college.application_opens ? `open ${new Date(`${college.application_opens}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} and ` : ""}close {new Date(`${college.application_closes}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}.</span>
+                {college.application_source_url && (
+                  <a href={college.application_source_url} target="_blank" rel="noopener noreferrer" className="ml-1 text-emerald-700 hover:underline">Official notice</a>
+                )}
+              </div>
+            )}
 
             {/* Admission Process */}
             {college.admission_process && (

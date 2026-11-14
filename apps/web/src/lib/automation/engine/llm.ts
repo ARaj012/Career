@@ -20,9 +20,9 @@ function models(): string[] {
 // Models that hit their daily limit (or are not available) in this server process, with when
 const exhausted = new Map<string, number>()
 const DAY = 24 * 3600_000
-function model(): string | null {
+function model(skip: Set<string> = new Set()): string | null {
   for (const [m, at] of exhausted) if (Date.now() - at > DAY / 2) exhausted.delete(m)
-  return models().find((m) => !exhausted.has(m)) ?? null
+  return models().find((m) => !exhausted.has(m) && !skip.has(m)) ?? null
 }
 let client: Groq | null = null
 
@@ -51,8 +51,12 @@ export async function extractJson<T>(task: string, pageText: string, schema: z.Z
     { role: 'user' as const, content: `${task}\n\n----- PAGE TEXT START -----\n${pageText}\n----- PAGE TEXT END -----` },
   ]
 
+  // Models that could not give valid JSON for THIS text; the next one gets a turn
+  const badJson = new Map<string, number>()
+  const skip = new Set<string>()
   for (let attempt = 0; attempt < 4; attempt++) {
-    const current = model()
+    const current = model(skip)
+    if (!current && skip.size) return null // every model tried; leave this record for the next run
     if (!current) throw new AiQuotaError(`Daily Groq AI limit reached on every model (${models().join(', ')}). Click "Update everything" again after it resets; the run resumes where it stopped.`)
     try {
       const res = await groq().chat.completions.create({
@@ -81,6 +85,16 @@ export async function extractJson<T>(task: string, pageText: string, schema: z.Z
         const wait = Math.max(retryAfter * 1000, 5000 * (attempt + 1))
         console.log(`  ⏳ AI rate-limited, waiting ${Math.round(wait / 1000)}s`)
         await new Promise((r) => setTimeout(r, wait))
+        continue
+      }
+      // The model's JSON did not validate (Groq 400 json_validate_failed): ask again, then give up on this record
+      if (status === 400 && /json_validate_failed|failed to validate json/i.test(err?.message ?? '')) {
+        const n = (badJson.get(current) ?? 0) + 1
+        badJson.set(current, n)
+        if (n >= 2) skip.add(current)
+        console.log(`  ⚠️ ${current} returned invalid JSON; ${n >= 2 ? `trying ${model(skip) ?? 'no other model'}` : 'asking again'}`)
+        attempt--
+        if ([...badJson.values()].reduce((a, b) => a + b, 0) >= 6) return null
         continue
       }
       // A model Groq no longer offers (404 / model_not_found): skip it

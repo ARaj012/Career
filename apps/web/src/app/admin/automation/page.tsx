@@ -89,6 +89,9 @@ const FIELD_LABELS: Record<string, string> = {
   min_percentage: 'Minimum % in qualifying exam',
   age_min: 'Minimum age',
   age_max: 'Maximum age',
+  eligibility: 'Eligibility',
+  application_opens: 'Applications open',
+  application_closes: 'Applications close',
 }
 
 function show(v: unknown, field = ''): string {
