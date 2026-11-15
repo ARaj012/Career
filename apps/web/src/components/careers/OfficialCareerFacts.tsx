@@ -1,6 +1,7 @@
 import { BadgeCheck, ClipboardCheck, ExternalLink, FileBadge, IndianRupee, ListOrdered } from 'lucide-react'
 
-type Item = { text: string; source_url: string }
+// translated: the official notice is in Hindi (e.g. BPSC); the line is a faithful English translation
+type Item = { text: string; source_url: string; translated?: boolean }
 
 export interface OfficialCareerFactsProps {
   title: string
@@ -50,7 +51,9 @@ export default function OfficialCareerFacts({
         )}
       </div>
       <p className="text-xs text-gray-400 mb-5">
-        In the official body&apos;s own words{verifiedAt ? `, checked ${new Date(verifiedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}.
+        {[...elig, ...steps].some((i) => i.translated)
+          ? 'Translated from the official notice, which is in Hindi'
+          : <>In the official body&apos;s own words</>}{verifiedAt ? `, checked ${new Date(verifiedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}.
       </p>
 
       <div className="space-y-5">

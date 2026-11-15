@@ -285,7 +285,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
   // Skills
   const { data: skillsRaw } = await supabase
     .from('career_skills')
-    .select('skill_id, skills(name, category)')
+    .select('skill_id, importance, skills(name, category:type)')
     .eq('career_id', career.id)
     .limit(20)
   const careerSkills: any[] = skillsRaw ?? []
@@ -293,7 +293,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
   // Exams
   const { data: examsRaw } = await supabase
     .from('career_exams')
-    .select('exam_id, exams(name, slug, exam_type, conducting_body)')
+    .select('exam_id, exams(name, slug, exam_type:exam_level, conducting_body)')
     .eq('career_id', career.id)
     .limit(10)
   const careerExams: any[] = examsRaw ?? []

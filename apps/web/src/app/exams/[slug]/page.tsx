@@ -80,7 +80,7 @@ export default async function ExamDetailPage({
       `
       *,
       exam_schedules ( ${SCHEDULE_FIELDS} ),
-      exam_eligibility ( min_percentage, class_required, stream_required, age_min, age_max )
+      exam_eligibility ( min_percentage, class_required, stream_required, age_min, age_max, nationality )
     `
     )
     .eq('slug', slug)
@@ -95,7 +95,7 @@ export default async function ExamDetailPage({
         `
         *,
         exam_schedules ( ${SCHEDULE_FIELDS} ),
-        exam_eligibility ( min_percentage, class_required, stream_required, age_min, age_max )
+        exam_eligibility ( min_percentage, class_required, stream_required, age_min, age_max, nationality )
       `
       )
       .eq('slug', altSlug)
@@ -183,10 +183,15 @@ export default async function ExamDetailPage({
   // Careers this exam is relevant for
   const { data: careerLinks } = await supabase
     .from('career_exams')
-    .select('careers ( title, slug )')
+    .select('importance, careers ( title, slug, demand_score )')
     .eq('exam_id', exam.id)
-    .limit(8)
-  const relatedCareers = ((careerLinks ?? []) as any[]).map((c) => c.careers).filter(Boolean)
+    .limit(60)
+  // Every career the exam leads to (UPSC CSE fills 23 services), required ones and the most sought-after first
+  const IMPORTANCE: Record<string, number> = { Mandatory: 0, Preferred: 1, Optional: 2 }
+  const relatedCareers = ((careerLinks ?? []) as any[])
+    .filter((c) => c.careers)
+    .sort((a, b) => (IMPORTANCE[a.importance] ?? 3) - (IMPORTANCE[b.importance] ?? 3) || Number(b.careers.demand_score ?? 0) - Number(a.careers.demand_score ?? 0))
+    .map((c) => c.careers)
 
   // National/service-level cutoffs — for exams that don't gate a specific
   // college admission (NDA, UPSC CSE, CDS, NET exams, etc.)
@@ -319,7 +324,13 @@ export default async function ExamDetailPage({
                   Age: {eligibility.age_min}-{eligibility.age_max}
                 </span>
               )}
+              {eligibility.nationality && (
+                <span className="text-xs bg-gray-100 text-gray-700 px-2 sm:px-3 py-1 rounded-full">{eligibility.nationality} nationals</span>
+              )}
             </div>
+            {eligibility.age_max && (
+              <p className="mt-2 text-xs text-gray-500">The upper age limit shown is for unreserved candidates; reserved categories get the relaxation the official notification states.</p>
+            )}
           </div>
         )}
 

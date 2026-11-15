@@ -12,6 +12,7 @@ import CutoffTrendsChart from "@/components/college/CutoffTrendsChart";
 import CutoffExplorer, { type OfficialCutoff } from "@/components/college/CutoffExplorer";
 import OfficialCollegeCutoffs, { type OfficialNoticeCutoff } from "@/components/college/OfficialCollegeCutoffs";
 import CollegeFaqs from "@/components/college/CollegeFaqs";
+import CollegeScholarshipsSummary, { type InstituteScholarship, type LinkedScholarship } from "@/components/college/CollegeScholarshipsSummary";
 import CollegeReviews from "@/components/college/CollegeReviews";
 import EstimateNote from "@/components/EstimateNote";
 import { getEstimates } from "@/lib/estimates";
@@ -226,6 +227,17 @@ export default async function CollegeDetailPage({
     .limit(8);
 
   const enrollmentHistory: any[] = enrollmentRaw ?? [];
+
+  // Scholarships: the institute's own (read from its site) and the government schemes linked to it
+  const { data: schemeRows } = await supabase
+    .from("college_scholarships")
+    .select("match_type, relevance_note, scholarships ( name, slug, provider, is_active )")
+    .eq("college_id", college.id)
+    .limit(100);
+  const linkedScholarships: LinkedScholarship[] = ((schemeRows ?? []) as any[])
+    .filter((r) => r.scholarships && r.scholarships.is_active !== false)
+    .map((r) => ({ match_type: r.match_type, relevance_note: r.relevance_note, name: r.scholarships.name, slug: r.scholarships.slug, provider: r.scholarships.provider }));
+  const ownScholarships: InstituteScholarship[] = Array.isArray(college.institute_scholarships) ? college.institute_scholarships : [];
 
   // commonly asked questions
   const { data: faqsRaw } = await supabase
@@ -701,6 +713,8 @@ export default async function CollegeDetailPage({
             <CutoffExplorer rows={officialCutoffs} />
             <OfficialCollegeCutoffs rows={noticeCutoffs} />
             {officialCutoffs.length === 0 && noticeCutoffs.length === 0 && <CutoffTrendsChart cutoffs={cutoffTrendData} />}
+
+            <CollegeScholarshipsSummary own={ownScholarships} linked={linkedScholarships} collegeSlug={college.slug} />
 
             {/* FAQs */}
             <CollegeFaqs faqs={faqs} />

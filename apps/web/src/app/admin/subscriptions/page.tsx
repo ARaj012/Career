@@ -35,22 +35,24 @@ export default function AdminSubscriptionsPage() {
 
   useEffect(() => {
     async function loadData() {
-      // Load subscriptions with user info
+      // Load subscriptions, then their users: both tables point at auth.users, so there is
+      // no direct relationship for PostgREST to join on
       const { data: subData } = await supabase
         .from('user_subscriptions')
-        .select(`
-          *,
-          user_accounts (
-            email,
-            full_name
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
-      
-      const formattedSubs = (subData || []).map((sub: any) => ({
+      type Account = { user_id: string; email: string | null; full_name: string | null }
+      const subs = (subData || []) as (Subscription & { user_id: string | null })[]
+      const userIds = [...new Set(subs.map((sub) => sub.user_id).filter((id): id is string => !!id))]
+      const { data: accounts } = userIds.length
+        ? await supabase.from('user_accounts').select('user_id, email, full_name').in('user_id', userIds)
+        : { data: [] as Account[] }
+      const byUser = new Map(((accounts || []) as Account[]).map((acc) => [acc.user_id, acc]))
+
+      const formattedSubs = subs.map((sub) => ({
         ...sub,
-        user_email: sub.user_accounts?.email,
-        user_name: sub.user_accounts?.full_name
+        user_email: (sub.user_id && byUser.get(sub.user_id)?.email) || '',
+        user_name: (sub.user_id && byUser.get(sub.user_id)?.full_name) || ''
       }))
       
       setSubscriptions(formattedSubs)

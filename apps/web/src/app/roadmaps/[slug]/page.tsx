@@ -677,11 +677,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   // Fallback: check if it's a direct roadmap in the database
-  const { data: roadmap } = await supabase
+  const { data: roadmapRow } = await supabase
     .from('roadmaps')
-    .select('title, description, category')
-    .eq('slug', slug)
+    .select('title, description, careers!inner ( slug, category )')
+    .eq('careers.slug', slug)
     .maybeSingle()
+  // roadmaps has no category of its own; it is the career's
+  const roadmap = roadmapRow
+    ? { ...roadmapRow, category: ((roadmapRow as any).careers?.category as string | undefined) ?? 'your field' }
+    : null
 
   if (roadmap) {
     const description = roadmap.description || `Step-by-step career roadmap for ${roadmap.title}. Learn the exact path to build skills, get degrees, certifications, and land your dream job in ${roadmap.category}.`
@@ -792,7 +796,7 @@ export default async function RoadmapPage({
         .limit(4),
       supabase
         .from('career_skills')
-        .select('importance, skills ( name, category )')
+        .select('importance, skills ( name, category:type )')
         .eq('career_id', career.id)
         .order('importance', { ascending: false })
         .limit(6),

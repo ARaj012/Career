@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
         *,
         exams (
           id,
-          title,
+          title:name,
           slug,
           conducting_body,
           exam_schedules (

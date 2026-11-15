@@ -256,7 +256,7 @@ async function getCareerDetails(slug: string) {
   if (error || !career) return { error: 'Career not found for that slug.' }
 
   const [{ data: skillsRaw }, { data: examsRaw }] = await Promise.all([
-    supabase.from('career_skills').select('skills(name, category)').eq('career_id', career.id),
+    supabase.from('career_skills').select('skills(name, category:type)').eq('career_id', career.id),
     supabase.from('career_exams').select('exams(name, slug, conducting_body)').eq('career_id', career.id),
   ])
 

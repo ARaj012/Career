@@ -24,7 +24,7 @@ export async function GET() {
       supabase.from('colleges').select('id', { count: 'exact', head: true }),
       supabase.from('exams').select('id', { count: 'exact', head: true }),
       supabase.from('user_profiles').select('id', { count: 'exact', head: true }),
-      supabase.from('user_accounts').select('id', { count: 'exact', head: true }),
+      supabase.from('user_accounts').select('user_id', { count: 'exact', head: true }),
       getFreshnessAlerts(),
       supabase.from('admin_audit_logs').select('id', { count: 'exact', head: true }),
       supabase.from('scholarships').select('id', { count: 'exact', head: true }),
@@ -34,7 +34,7 @@ export async function GET() {
     // Get active users count
     const { count: activeUsersCount } = await supabase
       .from('user_accounts')
-      .select('id', { count: 'exact', head: true })
+      .select('user_id', { count: 'exact', head: true })
       .eq('is_active', true)
 
     return NextResponse.json({
