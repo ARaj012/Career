@@ -62,12 +62,15 @@ function formatStudents(n: number | null): string | null {
 function formatFees(min: number | null, max: number | null): string {
   if (min === 0 && max === 0) return "Free / Govt Subsidized";
   if (!min && !max) return "Fee info N/A";
+  // Up to two decimals, without trailing zeros: ₹11.75L, ₹18L, ₹2.3Cr
+  const short = (v: number) => String(Math.round(v * 100) / 100);
   const fmt = (n: number) => {
-    if (n >= 10000000) return `₹${(n / 10000000).toFixed(1)}Cr`;
-    if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
+    if (n >= 10000000) return `₹${short(n / 10000000)}Cr`;
+    if (n >= 100000) return `₹${short(n / 100000)}L`;
     if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`;
     return `₹${n}`;
   };
+  if (min && max && min === max) return `${fmt(min)}/yr`;
   if (min && max && min !== max) return `${fmt(min)} – ${fmt(max)}/yr`;
   if (min) return `From ${fmt(min)}/yr`;
   return `Up to ${fmt(max!)}/yr`;
@@ -465,6 +468,16 @@ export default async function CollegeDetailPage({
                     {college.fee_note}
                   </p>
                 )}
+                {/* A fee read from the college's own fee notice links to it; any other figure says so */}
+                {college.fees_source_url ? (
+                  <a href={college.fees_source_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline">
+                    <BadgeCheck className="w-3.5 h-3.5" /> Official fee notice
+                  </a>
+                ) : (
+                  <p className="mt-1 text-xs text-amber-700">
+                    Not yet confirmed from the college&apos;s official fee notice — check its website before relying on it.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -600,9 +613,12 @@ export default async function CollegeDetailPage({
                               )}
                             </div>
                             <div className="flex items-center gap-2">
-                              {course.annual_fees && (
-                                <span className="text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
-                                  {formatFees(course.annual_fees, null)}
+                              {(course.annual_fees_min || course.annual_fees_max) && (
+                                <span
+                                  className="text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full whitespace-nowrap"
+                                  title={course.fee_note ?? undefined}
+                                >
+                                  {formatFees(course.annual_fees_min, course.annual_fees_max)}
                                 </span>
                               )}
                               <span

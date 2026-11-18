@@ -87,6 +87,11 @@ const DOC: Record<Topic, RegExp> = {
   scholarships: /(scholarship|waiver|freeship|financial)/i,
 }
 
+// Programme / academics pages: searched for fee documents, never read for facts
+const PROGRAMME_PAGE = /(programmes?|programs?|academics?|courses?-?offered|\bpgp\b|\bmba\b|\bpgdm\b|b\.?\s?tech|undergraduate|postgraduate)/i
+
+const FEE_FORM = /(refund|request.?form|bonafide|challan|receipt|reimburse|undertaking|affidavit)/i
+
 const label = new Map<string, string>() // url → text of the link that led to it
 export const topicOf = (p: FetchedPage): Topic[] => {
   const key = `${decodeURIComponent(p.finalUrl)} ${label.get(p.url) ?? ''}`
@@ -145,14 +150,17 @@ export async function discover(db: SupabaseClient, home: string): Promise<{ page
   const pages: FetchedPage[] = []
   const errors: string[] = []
   const seen = new Set<string>()
+  // "www.x.ac.in/a" and "x.ac.in/a" are the same page
+  const key = (u: string) => u.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/+$/, '').toLowerCase()
   const get = async (url: string, text = '') => {
-    if (seen.has(url)) return null
-    seen.add(url)
+    if (seen.has(key(url))) return null
+    seen.add(key(url))
     label.set(url, text)
     try {
       const p = await fetchPage(url)
+      if (key(p.finalUrl) !== key(url) && seen.has(key(p.finalUrl))) return null // redirected to a page already read
       pages.push(p)
-      seen.add(p.finalUrl)
+      seen.add(key(p.finalUrl))
       return p
     } catch (err) {
       errors.push((err as Error).message)
@@ -168,17 +176,26 @@ export async function discover(db: SupabaseClient, home: string): Promise<{ page
   // Hop 1: up to 3 entry pages per topic from the homepage, then the sitemap
   const level1: { url: string; text: string }[] = []
   for (const t of Object.keys(TOPIC) as Topic[]) level1.push(...linksMatching(root, TOPIC[t], 3))
+  // Fee notices usually sit inside a programme page (IIM Kozhikode's PGP fee PDF is linked
+  // only from its PGP page), so up to 2 programme pages are opened as springboards. They
+  // never supply facts themselves: only the fee documents they link to do.
+  level1.push(...linksMatching(root, PROGRAMME_PAGE, 2))
   for (const u of await sitemapUrls(root.finalUrl, 6)) level1.push({ url: u, text: '' })
   const topical: FetchedPage[] = []
-  for (const l of level1.slice(0, 14)) {
+  for (const l of level1.slice(0, 18)) {
     const p = await get(l.url, l.text)
     if (p) topical.push(p)
   }
-  // Hop 2: the fee schedule / placement statistics / bulletin inside each topic page, 3 per topic
+  // Hop 2: the fee schedule / placement statistics / bulletin inside each topic page, 3 per
+  // topic (5 for fees, which may also be linked from admission and programme pages)
   for (const t of Object.keys(TOPIC) as Topic[]) {
-    let budget = 3
-    for (const p of topical.filter((x) => topicOf(x).includes(t))) {
-      for (const l of linksMatching(p, DOC[t], 4)) {
+    let budget = t === 'fees' ? 5 : 3
+    const from = t === 'fees'
+      ? topical.filter((x) => topicOf(x).some((k) => k === 'fees' || k === 'admission') || PROGRAMME_PAGE.test(`${x.finalUrl} ${label.get(x.url) ?? ''}`))
+      : topical.filter((x) => topicOf(x).includes(t))
+    for (const p of from) {
+      // Refund / bonafide request forms and payment challans sit beside fee schedules but hold no fees
+      for (const l of linksMatching(p, DOC[t], 6).filter((x) => t !== 'fees' || !FEE_FORM.test(`${x.text} ${decodeURIComponent(x.url)}`)).slice(0, 4)) {
         if (budget <= 0) break
         if (await get(l.url, l.text)) budget--
       }
@@ -219,6 +236,30 @@ export function quoteNamesCourse(courseName: string, quote: string): boolean {
   }
   const words = normalize(courseName).split(' ').filter((w) => w.length >= 5 && !/^(bachelor|master|science|technology|engineering|degree|programme|program|course|honours)$/.test(w))
   return words.some((w) => q.includes(` ${w} `))
+}
+
+/**
+ * In a fee table the programme is the heading above the rows ("COURSE: B.Tech. … Tuition Fee
+ * 62500 62500"), not part of the row. The quote passes when the nearest degree named in the
+ * 800 characters before it on the page is this programme's.
+ */
+// Normalised text turns "B.Arch." into "b arch", so a space may follow each abbreviation dot
+const HEADING_DEGREE = new RegExp(DEGREE.source.replace(/\\\.\?(?!\\s\?)/g, '\\.?\\s?'), 'gi')
+export function headedByCourse(courseName: string, quote: string, pageText: string): boolean {
+  const page = normalize(pageText)
+  const at = page.indexOf(normalize(quote))
+  if (at < 0) return false
+  const before = page.slice(Math.max(0, at - 800), at)
+  const last = [...before.matchAll(HEADING_DEGREE)].at(-1)?.[0]
+  return !!last && quoteNamesCourse(courseName, last)
+}
+
+/** A fee-table row under a "SEMESTER I II III …" column header holds per-semester amounts. */
+export function semesterColumns(quote: string, pageText: string): boolean {
+  const page = normalize(pageText)
+  const at = page.indexOf(normalize(quote))
+  if (at < 0 || /\b(annual|annum|year|yearly)\b/i.test(quote)) return false
+  return /\bsem(ester)?s?\s+(i|1)\s+(ii|2)\b/.test(page.slice(Math.max(0, at - 300), at))
 }
 
 /** A placement figure must sit next to its year: "2024", "2023-24" or "2023–2024". */
@@ -316,7 +357,7 @@ export async function updateCollegeDetails(
 
   const task = `Institution: "${c.name}". Today is ${today.toISOString().slice(0, 10)}. Report only facts about THIS institution as written in its official pages below.
 programmes: each degree programme it offers (e.g. "B.Tech Computer Science and Engineering", "MBA"). course_name as written; degree_type = UG, PG, Integrated, Diploma or Doctoral; duration_years if stated.
-  annual_fee = tuition/academic fee per YEAR in rupees for the current or latest academic year; semester_fee if only a per-semester fee is given; total_fee if only a whole-course fee is given; seats = sanctioned intake. Each with a quote that contains the amount AND names the programme. null when not stated.
+  annual_fee = tuition/academic fee per YEAR in rupees for the current or latest academic year; semester_fee if only a per-semester fee is given; total_fee if only a whole-course fee is given; seats = sanctioned intake. Each with a quote that contains the amount AND names the programme; in a fee TABLE whose heading names the programme (e.g. "COURSE: B.Tech." above "Tuition Fee 62500 62500"), quote the row exactly as written and use the tuition fee for the general/open category. null when not stated.
   eligibility = the sentence copied CHARACTER-FOR-CHARACTER that states who can apply to this programme (qualifying exam, subjects, minimum marks); it must name the programme. null when not stated.
 application: the dates applications open and close for the CURRENT or next admission cycle (ISO YYYY-MM-DD), each with a quote containing the date. null when not stated.
 placements: placement statistics for the last 5 placement seasons. year = calendar year the season ended (2023-24 → 2024). programme if the figures are for one programme only. average / median / highest package in rupees per annum (1 LPA = 100000); placed = students placed; eligible = students eligible/registered. Each quote must contain the value AND the year/season.
@@ -358,7 +399,9 @@ JSON: {"programmes":[{"course_name":"…","degree_type":"UG","duration_years":4,
     return seasons.size === 1 ? [...seasons][0] : null
   }
 
-  await programmes(db, c, ai, onTopic(byTopic.fees), nameOnSite, res, opts, onTopic(byTopic.admission))
+  const feeText = (url: string) => byTopic.fees.find((p) => p.finalUrl === url)?.text ?? ''
+  const headed = (name: string, quote: string, url: string) => headedByCourse(name, quote, feeText(url))
+  await programmes(db, c, ai, onTopic(byTopic.fees), nameOnSite, res, opts, onTopic(byTopic.admission), headed, feeText)
   const placementPages = byTopic.placements.filter((p) => isOfficialUrl(p.finalUrl, own))
   await placementReports(db, c, ai, onTopic(byTopic.placements), placementPages, seasonOf, res, opts, Y)
   await textFields(db, c, ai, onTopic(byTopic.admission), onTopic(byTopic.scholarships), res, opts, today)
@@ -412,7 +455,7 @@ export function degreeType(name: string, aiType: string | null | undefined): str
   return level || null
 }
 
-async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSite: OnSite, nameOnSite: (n: string) => string | null, res: Res, opts: Opts, onAdmission: OnSite = () => null) {
+async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSite: OnSite, nameOnSite: (n: string) => string | null, res: Res, opts: Opts, onAdmission: OnSite = () => null, headed: (name: string, quote: string, url: string) => boolean = () => false, pageText: (url: string) => string = () => '') {
   const { data: existing } = await db.from('college_courses').select('id, course_name, annual_fees_min, total_fees, total_seats, eligibility').eq('college_id', c.id).eq('source_type', 'official')
   const byName = new Map((existing ?? []).map((r) => [normalize(r.course_name), r]))
   const seen = new Set<string>()
@@ -427,14 +470,16 @@ async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSi
     const fact = (f: { value?: number | null; quote?: string | null } | null | undefined, label: string, needsName: boolean) => {
       if (f?.value == null) return null
       const url = onSite(f.quote)
-      if (!url || !quoteSupportsNumber(f.value, f.quote!) || (needsName && !quoteNamesCourse(name, f.quote!))) {
+      if (!url || !quoteSupportsNumber(f.value, f.quote!) || (needsName && !quoteNamesCourse(name, f.quote!) && !headed(name, f.quote!, url))) {
         res.dropped.push(`${c.name} · ${name} ${label}: evidence failed`)
         return null
       }
       return { value: f.value, quote: f.quote!, url }
     }
-    const annual = fact(p.annual_fee, 'annual fee', true)
-    const semester = annual ? null : fact(p.semester_fee, 'semester fee', true)
+    let annual = fact(p.annual_fee, 'annual fee', true)
+    let semester = annual ? null : fact(p.semester_fee, 'semester fee', true)
+    // A row read from a semester-wise table is a semester fee, whatever the AI called it
+    if (annual && semesterColumns(annual.quote, pageText(annual.url))) { semester = annual; annual = null }
     const total = fact(p.total_fee, 'total fee', true)
     const seats = fact(p.seats, 'seats', true)
     // Who can apply: a sentence from the fee or admission pages that names this programme

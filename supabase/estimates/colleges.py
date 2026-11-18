@@ -164,6 +164,10 @@ COLLEGES = [
      "could not be reached to confirm.",
      "Aakash college profile", "https://www.aakash.ac.in/college/indian-statistical-institute")
     for s in ["isi-kolkata", "isi-delhi", "isi-bangalore", "isi-chennai", "isi-tezpur"]],
+  ("iim-kozhikode", "naac_grade", "secondary", "Not NAAC-graded",
+   "IIM Kozhikode's accreditation page lists AMBA (since 2010) and EQUIS (since 2021, renewed 2024) accreditation and an AACSB "
+   "application in progress, and no NAAC grade. A NAAC 'A+' appears only on third-party listings, which cite no source.",
+   "IIM Kozhikode — Accreditation & Ranking", "https://www.iimk.ac.in/accreditation-and-ranking"),
   ("isi-delhi", "total_students", "estimate",
    "About 140–200 degree students in 2026-27 (B.SDS, M.Stat first year, M.Math and MS (QE)), plus PhD/JRF research scholars.",
    "ISI's Prospectus 2026-27 gives the Delhi Centre 25 B.SDS seats a year (started 2024, so three batches), 35 MS (QE) seats "

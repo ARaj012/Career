@@ -7,7 +7,7 @@ import { examNamePattern, normalizeSession, soleHost } from './exams'
 import { relevantLinks } from './http'
 import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
 import { addsNothing, careerContext, usableSentence } from './careers'
-import { degreeType, isNotAProgramme, narrowAdmissionPage, NOT_A_STEP, otherWww, placementTable, programmeName, quoteNamesMetric, quoteNamesCourse, quoteNamesYear } from './college-details'
+import { degreeType, headedByCourse, semesterColumns, isNotAProgramme, narrowAdmissionPage, NOT_A_STEP, otherWww, placementTable, programmeName, quoteNamesMetric, quoteNamesCourse, quoteNamesYear } from './college-details'
 import { matchInstitute } from './josaa'
 import { canonName, dedupe, looseNameMatch, parseNirfTable } from './nirf'
 import { isOfficialUrl, locateQuote } from './sources'
@@ -250,6 +250,17 @@ describe('college detail evidence', () => {
     expect(quoteNamesCourse('B.A. Economics', 'Tuition for Bachelor programmes: ₹ 40,000')).toBe(false)
     expect(quoteNamesCourse('M.Sc Biotechnology', 'Biotechnology (M.Sc.) Rs 60,000/year')).toBe(true)
     expect(quoteNamesCourse('MBA', 'M.Tech fee ₹1,40,000')).toBe(false)
+  })
+  it('ties a fee-table row to the programme heading above it', () => {
+    const page = 'FEES STRUCTURE FOR 2026\nCOURSE: B.Tech. CATEGORY: OPEN\nSEMESTER I II\nTuition Fee 62500 62500\nTotal 1,25,550\n'
+      + 'COURSE: B.Arch. CATEGORY: OPEN\nSEMESTER I II\nTuition Fee 70000 70000\n'
+    expect(headedByCourse('B.Tech', 'Tuition Fee 62500 62500', page)).toBe(true)
+    expect(headedByCourse('B.Arch', 'Tuition Fee 70000 70000', page)).toBe(true)
+    expect(headedByCourse('B.Arch', 'Tuition Fee 62500 62500', page)).toBe(false)
+    expect(headedByCourse('MBA', 'Tuition Fee 62500', 'Hostel fee schedule\nTuition Fee 62500')).toBe(false)
+    expect(semesterColumns('Tuition Fee 62500 62500', page)).toBe(true)
+    expect(semesterColumns('Annual tuition 1,25,000', 'SEMESTER I II\nAnnual tuition 1,25,000')).toBe(false)
+    expect(semesterColumns('Tuition Fee 2,00,000', 'YEAR I II\nTuition Fee 2,00,000')).toBe(false)
   })
   it('ties a placement figure to its season', () => {
     expect(quoteNamesYear(2024, 'Placement 2023-24: highest CTC 1.2 Cr')).toBe(true)
