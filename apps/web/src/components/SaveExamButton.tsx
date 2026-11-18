@@ -16,21 +16,23 @@ export default function SaveExamButton({ examId }: SaveExamButtonProps) {
 
   useEffect(() => {
     async function checkSaved() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data } = await supabase
+          .from('user_saved_exams')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('exam_id', examId)
+          .maybeSingle()
+
+        setIsSaved(!!data)
+      } catch (err) {
+        console.warn('Could not check whether this exam is saved:', err)
+      } finally {
         setLoading(false)
-        return
       }
-
-      const { data } = await supabase
-        .from('user_saved_exams')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('exam_id', examId)
-        .maybeSingle()
-
-      setIsSaved(!!data)
-      setLoading(false)
     }
     checkSaved()
   }, [examId, supabase])

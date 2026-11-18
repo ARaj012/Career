@@ -16,21 +16,24 @@ export default function SaveCollegeButton({ collegeId }: SaveCollegeButtonProps)
 
   useEffect(() => {
     async function checkSaved() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data } = await supabase
+          .from('user_saved_colleges')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('college_id', collegeId)
+          .maybeSingle()
+
+        setIsSaved(!!data)
+      } catch (err) {
+        // The button still works: clicking it checks the sign-in again
+        console.warn('Could not check whether this college is saved:', err)
+      } finally {
         setLoading(false)
-        return
       }
-
-      const { data } = await supabase
-        .from('user_saved_colleges')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('college_id', collegeId)
-        .maybeSingle()
-
-      setIsSaved(!!data)
-      setLoading(false)
     }
     checkSaved()
   }, [collegeId, supabase])

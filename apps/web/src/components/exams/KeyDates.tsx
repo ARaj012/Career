@@ -1,3 +1,4 @@
+import { Info } from 'lucide-react'
 import EstimateNote from '@/components/EstimateNote'
 import type { Estimate } from '@/lib/estimates'
 
@@ -40,6 +41,101 @@ export function pickCycle(schedules: ScheduleRow[], today = new Date().toISOStri
     .filter((s) => s.year === year)
     .sort((a, b) => (a.exam_date_start ?? a.registration_start ?? '9999').localeCompare(b.exam_date_start ?? b.registration_start ?? '9999'))
   return { year, sessions, isPast: upcoming === undefined }
+}
+
+export type ExpectedStep = { label: string; when: string; note: string | null }
+export type ExpectedGroup = { title: string | null; steps: ExpectedStep[] }
+
+const balanced = (s: string) => (s.match(/\(/g)?.length ?? 0) === (s.match(/\)/g)?.length ?? 0)
+
+/** "notification ~Nov–Dec 2026" → { label: "Notification", when: "Nov–Dec 2026" }; null if it doesn't read as one step */
+function parseStep(part: string): ExpectedStep | null {
+  const m = /^(.*?)\s*~\s*(.+?)\s*(?:\(([^()]+)\))?\s*\.?$/.exec(part.trim())
+  if (!m || !m[1]) return null
+  const label = m[1].trim()
+  const when = m[2].trim().replace(/\.$/, '')
+  if (label.length > 45 || when.length > 40 || when.includes('~') || !balanced(label) || !balanced(when)) return null
+  return { label: label.charAt(0).toUpperCase() + label.slice(1), when, note: m[3]?.trim() ?? null }
+}
+
+/**
+ * "Registration ~December 2026–February 2027 · Exam ~March–April 2027" → steps with a
+ * label and a time window. Leading sentences without a window become the intro; a line
+ * like "CDS I 2027: notification ~December 2026, exam ~April 2027" becomes a titled group.
+ * Null when any part doesn't read cleanly, so the text is shown as written instead.
+ */
+export function parseExpectedSchedule(text: string): { intro: string | null; groups: ExpectedGroup[] } | null {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+  const first = lines.findIndex((l) => l.includes('~'))
+  if (first < 0) return null
+  const introLines = lines.slice(0, first)
+  const groups: ExpectedGroup[] = []
+  for (const line of lines.slice(first)) {
+    if (!line.includes('~')) return null
+    const colon = line.lastIndexOf(': ', line.indexOf('~'))
+    const title = colon > 0 ? line.slice(0, colon).trim() : null
+    const body = colon > 0 ? line.slice(colon + 2) : line
+    const steps = body.split(/\s+·\s+|,\s+(?=[^,]*~)/).map(parseStep)
+    if (!steps.length || steps.some((s) => !s)) return null
+    groups.push({ title, steps: steps as ExpectedStep[] })
+  }
+  // A lone group's heading ("Per SSC's annual calendar") reads as the intro
+  if (groups.length === 1 && groups[0].title) {
+    introLines.push(groups[0].title)
+    groups[0].title = null
+  }
+  return { intro: introLines.join(' ') || null, groups }
+}
+
+const STEP_GRID: Record<number, string> = { 1: 'sm:grid-cols-1', 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3', 4: 'sm:grid-cols-2 lg:grid-cols-4' }
+
+/** The expected timeline for a cycle the official site has not announced yet. */
+function ExpectedSchedule({ estimate, year }: { estimate: Estimate; year: number | null }) {
+  const parsed = parseExpectedSchedule(estimate.value_text)
+  return (
+    <div className="rounded-xl border border-gray-200">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-gray-100">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">Expected schedule{year ? ` for ${year}` : ''}</h3>
+          {parsed?.intro && <p className="text-xs text-gray-500 mt-0.5">{parsed.intro}</p>}
+        </div>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
+          Estimate · not official yet
+        </span>
+      </div>
+
+      <div className="p-4">
+        {parsed ? (
+          <div className="space-y-4">
+            {parsed.groups.map((g, gi) => (
+              <div key={gi}>
+                {g.title && <h4 className="mb-2 text-xs font-semibold text-gray-700">{g.title}</h4>}
+                <ol className={`grid grid-cols-1 gap-3 ${STEP_GRID[Math.min(g.steps.length, 4)]}`}>
+                  {g.steps.map((s, i) => (
+                    <li key={i} className="rounded-lg bg-gray-50 px-3 py-2.5">
+                      <p className="text-xs text-gray-500">{s.label}</p>
+                      <p className="mt-0.5 text-sm font-medium text-gray-900">{s.when}</p>
+                      {s.note && <p className="mt-1 text-xs text-gray-500">{s.note}</p>}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-700 whitespace-pre-line">{estimate.value_text}</p>
+        )}
+      </div>
+
+      <p className="flex items-start gap-1.5 border-t border-gray-100 px-4 py-2.5 text-xs text-gray-500">
+        <Info className="mt-px h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden />
+        <span>
+          {estimate.basis ? `${estimate.basis} ` : ''}We'll replace this with the official dates as soon as they're published.
+        </span>
+      </p>
+    </div>
+  )
 }
 
 function StatusLine({ s }: { s: ScheduleRow }) {
@@ -90,7 +186,11 @@ export default function KeyDates({ schedules, officialUrl, estimate }: { schedul
       ) : null}
       {(sessions.length === 0 || isPast) && estimate && (
         <div className={sessions.length ? 'mb-4' : 'mt-4'}>
-          <EstimateNote estimate={estimate} title={estimate.kind === 'discontinued' ? undefined : `Expected schedule${year && isPast ? ` for ${year + 1}` : ''}`} />
+          {estimate.kind === 'estimate' ? (
+            <ExpectedSchedule estimate={estimate} year={year && isPast ? year + 1 : null} />
+          ) : (
+            <EstimateNote estimate={estimate} title={estimate.kind === 'discontinued' ? undefined : `Expected schedule${year && isPast ? ` for ${year + 1}` : ''}`} />
+          )}
         </div>
       )}
       {sessions.length === 0 ? null : (
