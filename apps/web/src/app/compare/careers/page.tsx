@@ -238,10 +238,10 @@ export default function CompareCareersPage() {
                   <div className="flex-1 bg-gray-100 rounded-full h-2">
                     <div
                       className="bg-pink-400 h-2 rounded-full"
-                      style={{ width: `${(career.work_life_balance || 0) * 10}%` }}
+                      style={{ width: `${(career.work_life_balance || 0) * 20}%` }}
                     />
                   </div>
-                  <span className="text-sm font-bold text-pink-600">{career.work_life_balance || 0}/10</span>
+                  <span className="text-sm font-bold text-pink-600">{career.work_life_balance || 0}/5</span>
                 </div>
               ))}
               {careers.length < 3 && <div />}

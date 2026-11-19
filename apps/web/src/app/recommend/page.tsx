@@ -6,6 +6,76 @@ import {
   Info, Loader2, RotateCcw, SearchX, SlidersHorizontal, Sparkles, TrendingUp, Trophy,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
+import { PREFERENCES } from '@/lib/career-preferences'
+
+type Preferences = { [K in keyof typeof PREFERENCES]?: (typeof PREFERENCES)[K][number] }
+
+const PREFERENCE_QUESTIONS: { key: keyof typeof PREFERENCES; label: string }[] = [
+  { key: 'goal', label: 'What matters most to you?' },
+  { key: 'workStyle', label: 'What kind of work do you enjoy?' },
+  { key: 'sector', label: 'Government or private?' },
+  { key: 'budget', label: 'Budget for college fees' },
+]
+
+type AdviceItem = {
+  slug: string
+  fit: 'excellent' | 'good' | 'possible'
+  why: string
+  consider: string | null
+  next_steps: string[]
+  exams: { name: string; slug: string }[]
+}
+type Advice =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ready'; summary: string; ranking: AdviceItem[] }
+  | { status: 'error'; message: string }
+
+const FIT: Record<AdviceItem['fit'], { label: string; pill: string }> = {
+  excellent: { label: 'Excellent fit for you', pill: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  good: { label: 'Good fit for you', pill: 'bg-indigo-50 text-indigo-700 ring-indigo-200' },
+  possible: { label: 'Possible fit', pill: 'bg-gray-50 text-gray-600 ring-gray-200' },
+}
+
+/** The AI advisor's note under a career card: why it fits, one thing to consider, next steps. */
+function AdviceBlock({ item, slug }: { item: AdviceItem; slug: string }) {
+  if (!item.why) return null
+  const fit = FIT[item.fit]
+  return (
+    <div className="border-t border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-violet-50/40 px-4 py-4 sm:px-6">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700">
+          <Sparkles className="h-3.5 w-3.5" /> AI advisor
+        </span>
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${fit.pill}`}>{fit.label}</span>
+      </div>
+      <p className="mt-2 text-sm leading-relaxed text-gray-800">{item.why}</p>
+      {item.consider && (
+        <p className="mt-2 text-sm text-gray-600"><span className="font-semibold text-amber-700">Think about: </span>{item.consider}</p>
+      )}
+      {item.next_steps.length > 0 && (
+        <ol className="mt-3 space-y-1.5">
+          {item.next_steps.map((step, i) => (
+            <li key={i} className="flex gap-2 text-sm text-gray-700">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-bold text-indigo-600 ring-1 ring-indigo-200">{i + 1}</span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {item.exams.map((e) => (
+          <Link key={e.slug} href={`/exams/${e.slug}`} className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-indigo-700 ring-1 ring-indigo-200 transition hover:bg-indigo-50">
+            {e.name} →
+          </Link>
+        ))}
+        <Link href={`/roadmaps/${slug}`} className="rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-indigo-700">
+          See the roadmap →
+        </Link>
+      </div>
+    </div>
+  )
+}
 
 
 interface Subject {
@@ -94,7 +164,9 @@ function CareerChips({ career }: { career: CareerResult }) {
       {career.category && (
         <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">{career.category}</span>
       )}
-      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">{formatSalary(career)}</span>
+      {career.avg_salary_max > 0 && (
+        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">{formatSalary(career)}</span>
+      )}
       {career.growth_level && (
         <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${growthChip(career.growth_level)}`}>
           <TrendingUp className="h-3 w-3" /> {career.growth_level} growth
@@ -126,6 +198,9 @@ export default function RecommendPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [step, setStep] = useState(1) // 1=stream, 2=subjects, 3=results
+  const [preferences, setPreferences] = useState<Preferences>({})
+  const [advice, setAdvice] = useState<Advice>({ status: 'idle' })
+  const [sortBy, setSortBy] = useState<'ai' | 'score'>('ai')
 
   const supabase = createClient()
   const subjectsLoading = loadedStream !== selectedStream
@@ -189,16 +264,45 @@ export default function RecommendPage() {
         setLoading(false)
         return
       }
-      setResults(data.recommendations || [])
+      const found: CareerResult[] = data.recommendations || []
+      setResults(found)
       goTo(3)
+      // The scores show at once; the AI advice arrives a few seconds later
+      if (found.length) getAdvice(found)
+      else setAdvice({ status: 'idle' })
 
       // Auto-save the recommendation session
-      await saveRecommendationSession(data.recommendations || [])
+      await saveRecommendationSession(found)
     } catch (error) {
       console.error('Error:', error)
       setError('Could not reach the server. Please try again.')
     }
     setLoading(false)
+  }
+
+  const getAdvice = async (found: CareerResult[]) => {
+    setAdvice({ status: 'loading' })
+    setSortBy('ai')
+    try {
+      const response = await fetch('/api/recommendations/advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stream: selectedStream,
+          subjects: subjectInputs.map(({ name, score, interest }) => ({ name, score, interest })),
+          preferences,
+          careers: found.slice(0, 8).map(({ slug, match_score }) => ({ slug, match_score })),
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        setAdvice({ status: 'error', message: data.error || 'AI advice is not available right now.' })
+        return
+      }
+      setAdvice({ status: 'ready', summary: data.summary, ranking: data.ranking })
+    } catch {
+      setAdvice({ status: 'error', message: 'Could not reach the AI advisor.' })
+    }
   }
 
   const saveRecommendationSession = async (recommendations: CareerResult[]) => {
@@ -223,7 +327,17 @@ export default function RecommendPage() {
     }
   }
 
-  const [top, ...rest] = results
+  // With AI advice, its order comes first (careers it did not rank keep their score order)
+  const adviceBySlug = new Map(advice.status === 'ready' ? advice.ranking.map((a) => [a.slug, a]) : [])
+  const aiOrder = advice.status === 'ready' && sortBy === 'ai'
+  const ordered = aiOrder
+    ? [
+        ...advice.ranking.map((a) => results.find((r) => r.slug === a.slug)).filter((r): r is CareerResult => !!r),
+        ...results.filter((r) => !adviceBySlug.has(r.slug)),
+      ]
+    : results
+  const [top, ...rest] = ordered
+  const topAdvice = top ? adviceBySlug.get(top.slug) : undefined
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-indigo-50/70 via-gray-50 to-gray-50">
@@ -447,6 +561,49 @@ export default function RecommendPage() {
               })}
             </div>
 
+            {/* Optional: lets the AI advisor personalise the order and advice */}
+            {!subjectsLoading && subjectInputs.length > 0 && (
+              <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 sm:p-5">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-indigo-600 ring-1 ring-indigo-100">
+                    <Sparkles className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-900">A bit about you <span className="text-sm font-normal text-gray-500">(optional)</span></h3>
+                    <p className="text-sm text-gray-500">Our AI advisor uses these to explain and personalise your matches.</p>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-4">
+                  {PREFERENCE_QUESTIONS.map(({ key, label }) => (
+                    <div key={key}>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+                      <div role="radiogroup" aria-label={label} className="mt-2 flex flex-wrap gap-2">
+                        {PREFERENCES[key].map((option) => {
+                          const selected = preferences[key] === option
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              role="radio"
+                              aria-checked={selected}
+                              onClick={() => setPreferences((p) => ({ ...p, [key]: selected ? undefined : option }))}
+                              className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                                selected
+                                  ? 'bg-indigo-600 text-white shadow-sm'
+                                  : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:ring-indigo-300'
+                              }`}
+                            >
+                              {option}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {error && (
               <div role="alert" className="mt-6 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
@@ -508,13 +665,50 @@ export default function RecommendPage() {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* AI advisor summary */}
+                {advice.status === 'loading' && (
+                  <div className="flex items-center gap-3 rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-gray-900">Your AI advisor is reading your profile…</p>
+                      <div className="mt-2 h-2 w-3/4 animate-pulse rounded bg-indigo-100" />
+                    </div>
+                  </div>
+                )}
+                {advice.status === 'ready' && (
+                  <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/60 p-4 shadow-sm sm:p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-700">
+                        <Sparkles className="h-4 w-4" /> AI advisor
+                      </p>
+                      <div role="radiogroup" aria-label="Order careers by" className="inline-flex rounded-lg bg-white p-0.5 text-xs font-semibold ring-1 ring-gray-200">
+                        {([['ai', 'Best fit for you'], ['score', 'Match score']] as const).map(([key, label]) => (
+                          <button key={key} type="button" role="radio" aria-checked={sortBy === key} onClick={() => setSortBy(key)}
+                            className={`rounded-md px-2.5 py-1 transition ${sortBy === key ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-gray-800">{advice.summary}</p>
+                    <p className="mt-2 text-xs text-gray-500">
+                      The AI only uses facts from our database and orders the careers our formula matched. Always check the official websites before deciding.
+                    </p>
+                  </div>
+                )}
+                {advice.status === 'error' && (
+                  <p className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                    <Info className="h-3.5 w-3.5 shrink-0" /> {advice.message}
+                  </p>
+                )}
+
                 {/* Top match */}
-                <Link
-                  href={`/careers/${top.slug}`}
-                  className="group block overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-sm transition hover:shadow-lg"
-                >
+                <div className="overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-sm transition hover:shadow-lg">
+                <Link href={`/careers/${top.slug}`} className="group block">
                   <div className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white">
-                    <Trophy className="h-4 w-4" /> Your best match
+                    <Trophy className="h-4 w-4" /> {aiOrder ? 'Best fit for you' : 'Your best match'}
                   </div>
                   <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
                     <div
@@ -539,6 +733,8 @@ export default function RecommendPage() {
                     </span>
                   </div>
                 </Link>
+                {topAdvice && <AdviceBlock item={topAdvice} slug={top.slug} />}
+                </div>
 
                 {/* Score explanation */}
                 <div className="flex items-start gap-3 rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
@@ -568,11 +764,12 @@ export default function RecommendPage() {
                 )}
                 {rest.map((career, i) => {
                   const band = scoreBand(career.match_score)
+                  const note = adviceBySlug.get(career.slug)
                   return (
+                    <div key={career.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md">
                     <Link
-                      key={career.id}
                       href={`/careers/${career.slug}`}
-                      className="group block rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md sm:p-5"
+                      className="group block p-4 sm:p-5"
                     >
                       <div className="flex items-start gap-3 sm:gap-4">
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-sm font-bold text-indigo-600">
@@ -595,6 +792,8 @@ export default function RecommendPage() {
                         <ChevronRight className="h-5 w-5 shrink-0 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-indigo-500" />
                       </div>
                     </Link>
+                    {note && <AdviceBlock item={note} slug={career.slug} />}
+                    </div>
                   )
                 })}
               </div>
@@ -611,7 +810,7 @@ export default function RecommendPage() {
               </button>
               <button
                 type="button"
-                onClick={() => { goTo(1); setResults([]) }}
+                onClick={() => { goTo(1); setResults([]); setAdvice({ status: 'idle' }) }}
                 className="flex items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-white py-3.5 font-semibold text-indigo-600 transition hover:bg-indigo-50"
               >
                 <RotateCcw className="h-4 w-4" /> Start over

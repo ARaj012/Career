@@ -204,6 +204,37 @@ CAREERS += [
   pay("operations-research-analyst", "Roughly ₹6–12 lakh a year at entry; graduates of ISI's M.Tech (QROR) and IIT industrial-engineering programmes often ₹12–20 lakh. About ₹20–40 lakh a year with experience in analytics, supply chain or consulting.", 600000, 4000000),
 ]
 
+GA = "Group A central services start at Pay Level 10 of the 7th Pay Commission matrix (basic ₹56,100 a month); gross pay adds DA, HRA and allowances and depends on the city. UPSC's notification itself does not state pay."
+GB = "Group B central services start at Pay Level 7 of the 7th Pay Commission matrix (basic ₹44,900 a month); gross pay adds DA, HRA and allowances and depends on the city. UPSC's notification itself does not state pay."
+
+def group_a(slug, extra=""):
+    return pay(slug, "Pay Level 10 at entry (basic ₹56,100 a month); about ₹1–1.3 lakh a month gross with DA and HRA." + extra, 1200000, 1550000, GA)
+
+def group_b(slug, extra=""):
+    return pay(slug, "Pay Level 7 at entry (basic ₹44,900 a month); about ₹75,000–95,000 a month gross with DA and HRA." + extra, 900000, 1150000, GB)
+
+CAREERS += [
+  # ---------------- UPSC Civil Services: pay (added November 2026) ----------------
+  group_a("ias-officer", " Promotions take IAS officers up to Level 17 (₹2,25,000) and the Cabinet Secretary to Level 18 (₹2,50,000), with official housing and vehicle."),
+  group_a("ips-officer", " Promotions lead up to Director General of Police at Level 16–17, with official housing and vehicle."),
+  group_a("irs-income-tax-officer"),
+  group_a("irs-customs-indirect-taxes-officer"),
+  group_a("indian-audit-accounts-service-officer"),
+  group_a("indian-civil-accounts-service-officer"),
+  group_a("indian-corporate-law-service-officer"),
+  group_a("indian-defence-accounts-service-officer"),
+  group_a("indian-defence-estates-service-officer"),
+  group_a("indian-information-service-officer"),
+  group_a("indian-postal-service-officer"),
+  group_a("indian-pt-accounts-finance-service-officer"),
+  group_a("indian-railway-protection-force-officer"),
+  group_a("indian-trade-service-officer"),
+  group_b("danics-officer"),
+  group_b("danips-officer"),
+  group_b("pondicherry-civil-police-service-officer"),
+  group_b("afhq-civil-service-officer"),
+]
+
 # policy-analyst appears twice above; keep the first
 _seen = set()
 CAREERS = [r for r in CAREERS if not ((r[0], r[1]) in _seen or _seen.add((r[0], r[1])))]

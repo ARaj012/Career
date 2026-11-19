@@ -46,11 +46,25 @@ Rules:
 export class AiQuotaError extends Error {}
 
 export async function extractJson<T>(task: string, pageText: string, schema: z.ZodType<T>): Promise<T | null> {
-  const messages = [
-    { role: 'system' as const, content: READER_RULES },
-    { role: 'user' as const, content: `${task}\n\n----- PAGE TEXT START -----\n${pageText}\n----- PAGE TEXT END -----` },
-  ]
+  return completeJson([
+    { role: 'system', content: READER_RULES },
+    { role: 'user', content: `${task}\n\n----- PAGE TEXT START -----\n${pageText}\n----- PAGE TEXT END -----` },
+  ], schema)
+}
 
+type Message = { role: 'system' | 'user'; content: string }
+type JsonOptions = {
+  temperature?: number
+  /** A person is waiting: never sleep on a rate limit, move to the next model instead */
+  interactive?: boolean
+}
+
+/** A JSON answer from the first model that gives one matching `schema`; null if none does. */
+export async function chatJson<T>(system: string, user: string, schema: z.ZodType<T>, opts: JsonOptions = {}): Promise<T | null> {
+  return completeJson([{ role: 'system', content: system }, { role: 'user', content: user }], schema, opts)
+}
+
+async function completeJson<T>(messages: Message[], schema: z.ZodType<T>, opts: JsonOptions = {}): Promise<T | null> {
   // Models that could not give valid JSON for THIS text; the next one gets a turn
   const badJson = new Map<string, number>()
   const skip = new Set<string>()
@@ -61,7 +75,7 @@ export async function extractJson<T>(task: string, pageText: string, schema: z.Z
     try {
       const res = await groq().chat.completions.create({
         model: current,
-        temperature: 0,
+        temperature: opts.temperature ?? 0,
         response_format: { type: 'json_object' },
         messages,
       })
@@ -69,6 +83,7 @@ export async function extractJson<T>(task: string, pageText: string, schema: z.Z
       const parsed = schema.safeParse(JSON.parse(raw))
       if (parsed.success) return parsed.data
       console.warn('  ⚠️ AI output did not match schema:', parsed.error.issues.slice(0, 3))
+      if (opts.interactive) { skip.add(current); continue } // give the next model a go
       return null
     } catch (caught) {
       const err = caught as { status?: number; headers?: Record<string, string>; message?: string }
@@ -82,6 +97,7 @@ export async function extractJson<T>(task: string, pageText: string, schema: z.Z
           attempt--
           continue
         }
+        if (opts.interactive) { skip.add(current); continue } // don't keep a person waiting
         const wait = Math.max(retryAfter * 1000, 5000 * (attempt + 1))
         console.log(`  ⏳ AI rate-limited, waiting ${Math.round(wait / 1000)}s`)
         await new Promise((r) => setTimeout(r, wait))
@@ -106,6 +122,7 @@ export async function extractJson<T>(task: string, pageText: string, schema: z.Z
       }
       if (caught instanceof SyntaxError) {
         console.warn('  ⚠️ AI returned invalid JSON')
+        if (opts.interactive) { skip.add(current); continue }
         return null
       }
       throw caught

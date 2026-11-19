@@ -11,91 +11,8 @@ import {
   ArrowLeft, TrendingUp, IndianRupee, Briefcase, BookOpen,
   GraduationCap, Star, CheckCircle2, Building2, Target,
   BarChart3, Lightbulb, ChevronRight, ExternalLink, Flame,
-  Scale, Heart, LineChart, ArrowRight, BadgeCheck, Zap,
+  Scale, Heart, ArrowRight, BadgeCheck, Zap,
 } from 'lucide-react'
-
-// ── Category → College slugs mapping ──────────────────────────────────────
-// Maps each career category to the most relevant colleges
-//
-// NOTE: verified against the live `colleges` table on 2026-08-20.
-// Fixed 3 stale/broken slugs that were silently dropping colleges from
-// this list with no error:
-//   - 'hyderabad-university' -> 'university-of-hyderabad' (Government, Education)
-//   - 'hyd-communication' -> removed (no matching row exists) (Media)
-//   - 'jamia-millia-islamia' -> removed, duplicate of 'jmi-delhi' which was
-//     already in the list (Education); replaced with 'aud-delhi' to keep 15 slots
-//
-// If more colleges are added/renamed/merged during the DB enrichment project,
-// re-verify these slugs against `select slug from colleges` before trusting
-// this list again.
-
-const CATEGORY_COLLEGES: Record<string, string[]> = {
-  Technology: [
-    'iit-madras', 'iit-delhi', 'iit-bombay', 'iit-kanpur', 'iit-kharagpur',
-    'iit-roorkee', 'iiit-hyderabad', 'bits-pilani', 'vit-vellore', 'nit-trichy',
-    'nit-warangal', 'iisc-bangalore', 'iit-hyderabad', 'iiit-bangalore', 'srm-university',
-  ],
-  Engineering: [
-    'iit-madras', 'iit-delhi', 'iit-bombay', 'iit-roorkee', 'iit-kharagpur',
-    'nit-trichy', 'nit-warangal', 'nit-surathkal', 'bits-pilani', 'vit-vellore',
-    'vnit-nagpur', 'mnit-jaipur', 'thapar-university', 'iit-bhu', 'iit-dhanbad',
-  ],
-  Medical: [
-    'aiims-delhi', 'jipmer-puducherry', 'cmc-vellore', 'afmc-pune', 'mamc-delhi',
-    'pgimer-chandigarh', 'aiims-jodhpur', 'aiims-bhopal', 'aiims-rishikesh',
-    'mmc-chennai', 'gmc-mumbai', 'kgmu-lucknow', 'kmc-manipal', 'aiims-patna', 'bhu-ims',
-  ],
-  Management: [
-    'iim-ahmedabad', 'iim-bangalore', 'iim-calcutta', 'iim-lucknow', 'iim-indore',
-    'iim-kozhikode', 'xlri-jamshedpur', 'spjimr-mumbai', 'nmims-mumbai', 'mdi-gurugram',
-    'iim-trichy', 'iit-delhi', 'iit-bombay', 'iit-kharagpur', 'sibm-pune',
-  ],
-  Finance: [
-    'iim-ahmedabad', 'iim-calcutta', 'iim-bangalore', 'xlri-jamshedpur', 'nmims-mumbai',
-    'srcc-delhi', 'spjimr-mumbai', 'bits-pilani', 'iit-bombay', 'dse-delhi',
-    'mdi-gurugram', 'iim-lucknow', 'lsr-delhi', 'loyola-college-chennai', 'igidr-mumbai',
-  ],
-  Law: [
-    'nlsiu-bangalore', 'nalsar-hyderabad', 'nlu-delhi', 'nujs-kolkata', 'nlu-jodhpur',
-    'gnlu-gandhinagar', 'hnlu-raipur', 'rgnul-patiala', 'mnlu-mumbai', 'nluo-cuttack',
-    'jgls-sonipat', 'sls-pune', 'du-law-faculty', 'glc-mumbai', 'cnlu-patna',
-  ],
-  Government: [
-    'lbsnaa-mussoorie', 'jnu', 'university-of-delhi', 'bhu', 'university-of-hyderabad',
-    'iipa-delhi', 'amu', 'panjab-university', 'tiss-mumbai', 'jmi-delhi',
-    'lucknow-university', 'patna-university', 'osmania-university', 'jadavpur-university', 'iim-ahmedabad',
-  ],
-  Research: [
-    'iisc-bangalore', 'tifr-mumbai', 'isi-kolkata', 'iiser-pune', 'iiser-kolkata',
-    'iiser-mohali', 'iiser-bhopal', 'iiser-tvm', 'jncasr-bangalore', 'barc-training',
-    'iit-madras', 'iit-delhi', 'iit-bombay', 'ncbs-bangalore', 'imsc-chennai',
-  ],
-  Design: [
-    'nid-ahmedabad', 'nid-bangalore', 'nift-delhi', 'nift-mumbai', 'nift-bangalore',
-    'nift-chennai', 'spa-delhi', 'cept-ahmedabad', 'srishti-bangalore', 'iit-bombay',
-    'iit-delhi', 'mit-design-pune', 'pearl-academy-delhi', 'sid-pune', 'nift-hyderabad',
-  ],
-  Agriculture: [
-    'iari-delhi', 'pau-ludhiana', 'tnau-coimbatore', 'gbpuat-pantnagar', 'angrau-guntur',
-    'kau-thrissur', 'ccshau-hisar', 'ouat-bhubaneswar', 'aau-jorhat', 'ivri-bareilly',
-    'bhu', 'iit-kharagpur', 'iit-roorkee', 'iiser-bhopal', 'university-of-delhi',
-  ],
-  Defence: [
-    'nda-pune', 'ima-dehradun', 'afa-hyderabad', 'ina-ezhimala', 'ota-chennai',
-    'rimc-dehradun', 'diat-pune', 'afmc-pune', 'iit-madras', 'iit-delhi',
-    'nit-trichy', 'bits-pilani', 'cme-pune', 'mceme-secunderabad', 'iit-bombay',
-  ],
-  Media: [
-    'iimc-delhi', 'acj-chennai', 'simc-pune', 'ftii-pune', 'srfti-kolkata',
-    'xic-mumbai', 'mic-manipal', 'ajkmcrc-delhi', 'jmi-delhi',
-    'university-of-delhi', 'jadavpur-university', 'mumbai-university', 'pondicherry-university', 'christ-university',
-  ],
-  Education: [
-    'tiss-mumbai', 'jnu', 'university-of-delhi', 'bhu', 'amu',
-    'azim-premji-university', 'niepa-delhi', 'ncert-delhi', 'ignou-delhi',
-    'aud-delhi', 'panjab-university', 'university-of-hyderabad', 'jadavpur-university', 'calcutta-university',
-  ],
-}
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
@@ -120,54 +37,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   Management:  'bg-teal-100 text-teal-700',
   Agriculture: 'bg-lime-100 text-lime-700',
   Defence:     'bg-slate-100 text-slate-700',
-}
-
-const CAREER_STEPS: Record<string, string[]> = {
-  Technology:  ['Complete B.Tech/BCA/BSc CS', 'Learn core programming skills', 'Build projects & GitHub portfolio', 'Clear internship / entry-level role', 'Gain 2-3 years experience', 'Specialise or move to senior role'],
-  Medical:     ['Clear Class 12 with Biology (85%+)', 'Crack NEET UG', 'Complete MBBS (5.5 years)', 'Complete internship (1 year)', 'Choose specialisation (MD/MS)', 'Practice or join hospital'],
-  Law:         ['Clear Class 12 (any stream)', 'Crack CLAT / AILET', 'Complete BA LLB (5 years)', 'Enrol in Bar Council', 'Join law firm / court as junior', 'Build practice area expertise'],
-  Finance:     ['Complete B.Com / BBA / Economics', 'Pursue CA / CFA / MBA Finance', 'Clear relevant certifications', 'Join bank / finance firm', 'Build domain expertise', 'Move to senior analyst / manager role'],
-  Government:  ['Complete Graduation (any stream)', 'Start UPSC/State PSC preparation', 'Clear Prelims exam', 'Clear Mains exam', 'Clear Personality Test/Interview', 'Join as IAS/IPS/IFS officer'],
-  Engineering: ['Complete B.Tech in relevant branch', 'Gain core engineering skills', 'Clear GATE for PG / PSU jobs', 'Join as junior engineer', 'Get licensed / certified', 'Grow to senior / project engineer'],
-  Management:  ['Complete graduation', 'Gain 2-3 years work experience', 'Crack CAT/XAT/GMAT', 'Complete MBA (2 years)', 'Join as management trainee', 'Rise to manager / director level'],
-  Research:    ['Complete BSc/B.Tech', 'Clear JAM/JEST/GATE', 'Complete MSc/M.Tech', 'Publish research papers', 'Complete PhD (4-5 years)', 'Join as scientist / researcher'],
-  Design:      ['Complete Class 12', 'Crack NID/NIFT entrance exam', 'Complete B.Des (4 years)', 'Build strong portfolio', 'Join design studio / agency', 'Grow to lead designer / art director'],
-  Agriculture: ['Complete Class 12 with Biology/PCM', 'Join B.Sc Agriculture', 'Gain field experience', 'Clear ARS/SRF for research', 'Join agri firm / govt dept', 'Specialise in agro-tech / research'],
-  Defence:     ['Clear Class 12 with PCM', 'Crack NDA / CDS / AFCAT', 'Complete training at NDA/IMA/AFA', 'Get commissioned as officer', 'Complete unit postings', 'Rise through ranks to senior officer'],
-  Media:       ['Complete BA Journalism / Mass Comm', 'Complete PG diploma at IIMC/ACJ', 'Intern at media house', 'Start as junior reporter/writer', 'Build byline and credibility', 'Grow to senior journalist / editor'],
-  Education:   ['Complete graduation in subject', 'Complete B.Ed / D.El.Ed', 'Clear CTET / State TET', 'Join school as teacher', 'Pursue M.Ed for advancement', 'Move to principal / academic head'],
-}
-
-const TOP_EMPLOYERS: Record<string, string[]> = {
-  Technology:  ['Google', 'Microsoft', 'Amazon', 'Infosys', 'TCS', 'Wipro', 'Flipkart', 'Zomato'],
-  Medical:     ['AIIMS', 'Apollo Hospitals', 'Fortis', 'Max Healthcare', 'Narayana Health', 'NIMHANS'],
-  Law:         ['Supreme Court', 'AZB & Partners', 'Cyril Amarchand', 'Trilegal', 'S&R Associates'],
-  Finance:     ['SEBI', 'RBI', 'Goldman Sachs', 'JP Morgan', 'HDFC Bank', 'ICICI Bank', 'Deloitte'],
-  Government:  ['IAS (DoPT)', 'IPS (MHA)', 'IFS (MEA)', 'State Governments', 'PSUs', 'UPSC'],
-  Engineering: ['L&T', 'BHEL', 'NTPC', 'ONGC', 'Tata Steel', 'Reliance', 'ISRO', 'DRDO'],
-  Management:  ['McKinsey', 'BCG', 'Bain', 'Deloitte', 'KPMG', 'Amazon', 'HUL', 'ITC'],
-  Research:    ['ISRO', 'DRDO', 'CSIR', 'IISc', 'IITs', 'TIFR', 'BARC', 'DST'],
-  Design:      ['Myntra', 'Nykaa', 'Zomato', 'Swiggy', 'Ogilvy', 'Dentsu', 'WPP', 'Pentagram'],
-  Agriculture: ['IARI', 'ICAR', 'NSC', 'Mahindra Agri', 'UPL', 'Bayer', 'State Agri Depts'],
-  Defence:     ['Indian Army', 'Indian Navy', 'Indian Air Force', 'DRDO', 'HAL', 'BEL', 'ISRO'],
-  Media:       ['Times of India', 'NDTV', 'The Hindu', 'India Today', 'ANI', 'BBC India', 'Netflix India'],
-  Education:   ['Navodaya Vidyalaya', 'KVS', 'CBSE', 'NCERT', 'State Boards', 'BYJU\'S', 'Unacademy'],
-}
-
-const KEY_FACTS: Record<string, { icon: string; text: string }[]> = {
-  Technology:  [{ icon: '💻', text: 'India has 5M+ software developers' }, { icon: '📈', text: 'IT sector growing at 15% annually' }, { icon: '🌍', text: 'Remote work widely available' }, { icon: '💰', text: 'Top engineers earn ₹1Cr+ at FAANG' }],
-  Medical:     [{ icon: '🏥', text: 'India needs 600K+ more doctors' }, { icon: '📚', text: 'NEET is mandatory for all medical colleges' }, { icon: '⏰', text: 'MBBS takes 5.5 years including internship' }, { icon: '🌟', text: 'Specialists earn ₹50L–₹2Cr/yr' }],
-  Law:         [{ icon: '⚖️', text: '1.5M+ advocates enrolled in India' }, { icon: '🏛️', text: 'Supreme Court has only 34 judges' }, { icon: '💼', text: 'Corporate lawyers earn ₹30L–₹1Cr+' }, { icon: '📜', text: 'Bar Council enrolment mandatory to practice' }],
-  Finance:     [{ icon: '📊', text: 'Finance is among highest-paying sectors' }, { icon: '🏦', text: 'India has 12 public sector banks' }, { icon: '📈', text: 'Fintech growing at 22% CAGR' }, { icon: '🎓', text: 'CA pass rate is only ~10-15%' }],
-  Government:  [{ icon: '🇮🇳', text: 'UPSC selects ~1000 officers per year' }, { icon: '📚', text: 'Average prep time: 2-4 years' }, { icon: '💼', text: 'Job security + pension benefits' }, { icon: '🏆', text: 'IAS is India\'s most prestigious career' }],
-  Engineering: [{ icon: '🔧', text: '1.5M engineers graduate yearly in India' }, { icon: '🏗️', text: 'Core engineering salaries ₹5L–₹30L' }, { icon: '🌟', text: 'GATE score opens PSU + M.Tech doors' }, { icon: '🌍', text: 'Global demand for Indian engineers' }],
-  Management:  [{ icon: '🎓', text: 'IIM graduates earn avg ₹25–30L first job' }, { icon: '🌍', text: 'MBA opens doors globally' }, { icon: '💡', text: 'Entrepreneurship common path' }, { icon: '📈', text: 'Management consulting growing rapidly' }],
-  Research:    [{ icon: '🔬', text: 'JRF fellowship: ₹37K/month' }, { icon: '🏛️', text: 'India ranks 3rd in research output in Asia' }, { icon: '🌍', text: 'Global collaboration opportunities' }, { icon: '🎓', text: 'PhD + postdoc path takes 8-10 years' }],
-  Design:      [{ icon: '🎨', text: 'Design industry worth $15B in India' }, { icon: '📱', text: 'UX/UI most in-demand design skill' }, { icon: '🏆', text: 'NID/NIFT graduates highly sought after' }, { icon: '🌍', text: 'Remote freelance opportunities abundant' }],
-  Agriculture: [{ icon: '🌾', text: '58% of India depends on agriculture' }, { icon: '📈', text: 'Agritech attracting heavy VC investment' }, { icon: '🏛️', text: 'Govt schemes: PM Kisan, PMFBY' }, { icon: '🔬', text: 'Agricultural research offers stable careers' }],
-  Defence:     [{ icon: '🎖️', text: 'Prestigious & respected career' }, { icon: '💰', text: 'Tax-free salary + perks + pension' }, { icon: '🏋️', text: 'High physical fitness required' }, { icon: '🌍', text: 'UN Peacekeeping missions available' }],
-  Media:       [{ icon: '📺', text: 'OTT platforms creating new opportunities' }, { icon: '📱', text: 'Digital media fastest growing segment' }, { icon: '✍️', text: 'Freelance journalism widely available' }, { icon: '🎬', text: 'Film & web series boom in India' }],
-  Education:   [{ icon: '📚', text: '9.5M teachers needed across India' }, { icon: '💻', text: 'EdTech sector worth $4B+' }, { icon: '🏛️', text: 'Govt teaching jobs offer job security' }, { icon: '🌟', text: 'CTET/TET mandatory for govt schools' }],
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -195,6 +64,47 @@ function formatFees(min: number | null, max: number | null): string {
   }
   if (min && max && min !== max) return `${fmt(min)}–${fmt(max)}/yr`
   return fmt(min ?? max ?? 0) + '/yr'
+}
+
+type WeightRow = { career_id: string; subject_id: string; weight: number | string }
+type SkillRow = { career_id: string; skill_id: string }
+
+/**
+ * Careers that need the same school subjects (cosine similarity of subject weights) and the
+ * same skills (overlap). Only genuinely close ones are returned; none is a valid answer.
+ */
+function relatedCareers(id: string, category: string | null, weights: WeightRow[], skills: SkillRow[], careers: any[]) {
+  const vec = new Map<string, Map<string, number>>()
+  for (const w of weights) {
+    if (!vec.has(w.career_id)) vec.set(w.career_id, new Map())
+    vec.get(w.career_id)!.set(w.subject_id, Number(w.weight))
+  }
+  const skillSet = new Map<string, Set<string>>()
+  for (const s of skills) {
+    if (!skillSet.has(s.career_id)) skillSet.set(s.career_id, new Set())
+    skillSet.get(s.career_id)!.add(s.skill_id)
+  }
+  const norm = (v: Map<string, number>) => Math.sqrt([...v.values()].reduce((a, x) => a + x * x, 0))
+  const mine = vec.get(id)
+  const mySkills = skillSet.get(id) ?? new Set<string>()
+  if (!mine) return []
+  return careers
+    .filter((c) => c.id !== id && vec.has(c.id))
+    .map((c) => {
+      const other = vec.get(c.id)!
+      let dot = 0
+      for (const [k, v] of mine) dot += v * (other.get(k) ?? 0)
+      const subjects = dot / (norm(mine) * norm(other) || 1)
+      const theirs = skillSet.get(c.id) ?? new Set<string>()
+      const shared = [...mySkills].filter((k) => theirs.has(k)).length
+      const skillScore = mySkills.size && theirs.size ? shared / Math.min(mySkills.size, theirs.size) : 0
+      const score = 0.55 * subjects + 0.35 * skillScore + (c.category === category ? 0.1 : 0)
+      return { ...c, score, sameField: c.category === category }
+    })
+    // A career from another field has to be a strong match to count as related
+    .filter((c) => c.score >= (c.sameField ? 0.6 : 0.7))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
 }
 
 // ── Metadata ───────────────────────────────────────────────────────────────
@@ -263,7 +173,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
   // Try the slug as-is first
   let { data: careerRaw } = await supabase
     .from('careers')
-    .select('id, title, slug, description, category, avg_salary_min, avg_salary_max, salary_currency, growth_level, competition_level, work_life_balance, demand_score, is_trending, created_at, official_body, official_url, eligibility, how_to_enter, licence, official_pay, official_pay_min, facts_source_url, verified_at')
+    .select('id, title, slug, description, category, avg_salary_min, avg_salary_max, salary_currency, growth_level, competition_level, work_life_balance, demand_score, is_trending, created_at, official_body, official_url, eligibility, how_to_enter, licence, official_pay, official_pay_min, facts_source_url, verified_at, path_steps, top_employers, related_college_slugs')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -272,7 +182,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
     const altSlug = slug.replace(/_/g, '-')
     const { data: altCareerRaw } = await supabase
       .from('careers')
-      .select('id, title, slug, description, category, avg_salary_min, avg_salary_max, salary_currency, growth_level, competition_level, work_life_balance, demand_score, is_trending, created_at, official_body, official_url, eligibility, how_to_enter, licence, official_pay, official_pay_min, facts_source_url, verified_at')
+      .select('id, title, slug, description, category, avg_salary_min, avg_salary_max, salary_currency, growth_level, competition_level, work_life_balance, demand_score, is_trending, created_at, official_body, official_url, eligibility, how_to_enter, licence, official_pay, official_pay_min, facts_source_url, verified_at, path_steps, top_employers, related_college_slugs')
       .eq('slug', altSlug)
       .maybeSingle()
     if (altCareerRaw) careerRaw = altCareerRaw
@@ -298,28 +208,47 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
     .limit(10)
   const careerExams: any[] = examsRaw ?? []
 
-  // ✅ FIXED: Fetch colleges relevant to this career's CATEGORY
-  const categorySlugs = CATEGORY_COLLEGES[career.category] ?? []
+  // Colleges: the ones chosen for this career, else those that admit through its entrance exams
+  const COLLEGE_FIELDS = 'id, name, slug, type, state, city, nirf_rank, naac_grade, annual_fees_min, annual_fees_max'
   let relatedColleges: any[] = []
-
-  if (categorySlugs.length > 0) {
-    const { data: collegesRaw } = await supabase
-      .from('colleges')
-      .select('id, name, slug, type, state, city, nirf_rank, naac_grade, annual_fees_min, annual_fees_max')
-      .in('slug', categorySlugs)
+  let collegesFromExams = false
+  if (career.related_college_slugs?.length) {
+    const { data } = await supabase.from('colleges').select(COLLEGE_FIELDS).in('slug', career.related_college_slugs)
+      .order('nirf_rank', { ascending: true, nullsFirst: false }).limit(8)
+    relatedColleges = data ?? []
+  } else if (careerExams.length) {
+    const { data } = await supabase.from('colleges')
+      .select(`${COLLEGE_FIELDS}, college_exam_cutoffs!inner(exam_id)`)
+      .in('college_exam_cutoffs.exam_id', careerExams.map((ce) => ce.exam_id))
+      .limit(1, { referencedTable: 'college_exam_cutoffs' })
       .order('nirf_rank', { ascending: true, nullsFirst: false })
       .limit(8)
-    relatedColleges = collegesRaw ?? []
+    relatedColleges = data ?? []
+    collegesFromExams = relatedColleges.length > 0
   }
 
-  // Similar careers
-  const { data: similarRaw } = await supabase
-    .from('careers')
-    .select('id, title, slug, category, avg_salary_min, avg_salary_max, demand_score, growth_level')
-    .eq('category', career.category ?? '')
-    .neq('id', career.id)
-    .limit(5)
-  const similarCareers: any[] = similarRaw ?? []
+  // Related careers: those that rely on the same school subjects and skills. A career with
+  // no close neighbour shows none, rather than unrelated careers from the same category.
+  // The API returns at most 1,000 rows per request, so the link tables are read page by page
+  const allRows = async <T,>(table: string, columns: string): Promise<T[]> => {
+    const rows: T[] = []
+    for (let from = 0; ; from += 1000) {
+      const { data } = await supabase.from(table).select(columns).range(from, from + 999)
+      rows.push(...((data ?? []) as T[]))
+      if (!data || data.length < 1000) return rows
+    }
+  }
+  const [allWeights, allSkills, { data: allCareers }, { data: subjectRows }] = await Promise.all([
+    allRows<WeightRow>('career_subject_weights', 'career_id, subject_id, weight'),
+    allRows<SkillRow>('career_skills', 'career_id, skill_id'),
+    supabase.from('careers').select('id, title, slug, category, avg_salary_min, avg_salary_max, demand_score, growth_level'),
+    supabase.from('subjects').select('id, name'),
+  ])
+  const similarCareers = relatedCareers(career.id, career.category, allWeights ?? [], allSkills ?? [], allCareers ?? [])
+  const subjectName = new Map((subjectRows ?? []).map((s) => [s.id, s.name as string]))
+  const keySubjects = (allWeights ?? []).filter((w) => w.career_id === career.id)
+    .sort((x, y) => Number(y.weight) - Number(x.weight)).slice(0, 2)
+    .map((w) => subjectName.get(w.subject_id)).filter(Boolean) as string[]
 
   // Group skills by category
   const skillGroups = careerSkills.reduce<Record<string, string[]>>((acc, cs) => {
@@ -332,12 +261,10 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
 
   const growthConfig = GROWTH_COLORS[career.growth_level] ?? GROWTH_COLORS['Medium']
   const categoryColor = career.category ? (CATEGORY_COLORS[career.category] ?? 'bg-gray-100 text-gray-700') : 'bg-gray-100 text-gray-700'
-  const careerSteps = CAREER_STEPS[career.category] ?? CAREER_STEPS['Technology']
-  const topEmployers = TOP_EMPLOYERS[career.category] ?? TOP_EMPLOYERS['Technology']
-  // Category templates (key facts, steps, employers, colleges, salary bands) are general guides
-  // written per category; careers read from an official body show their own facts instead
+  const careerSteps: string[] = career.path_steps ?? []
+  const topEmployers: string[] = career.top_employers ?? []
+  // Careers read from an official body show its own route and pay instead of the general guide
   const generic = !career.official_body
-  const keyFacts = generic ? KEY_FACTS[career.category] ?? [] : []
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -412,10 +339,10 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                   <div>
                     <div className="flex justify-between text-xs text-gray-400 mb-1">
                       <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> Work-Life Balance</span>
-                      <span className="font-semibold text-pink-600">{career.work_life_balance}/10</span>
+                      <span className="font-semibold text-pink-600">{career.work_life_balance}/5</span>
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-2">
-                      <div className="bg-pink-400 h-2 rounded-full" style={{ width: `${(career.work_life_balance / 10) * 100}%` }} />
+                      <div className="bg-pink-400 h-2 rounded-full" style={{ width: `${(career.work_life_balance / 5) * 100}%` }} />
                     </div>
                   </div>
                 )}
@@ -450,7 +377,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
               const noFacts = !(career.eligibility?.length || career.how_to_enter?.length)
               const notes = [
                 noFacts && est.eligibility && { e: est.eligibility, t: 'Typical eligibility' },
-                noFacts && est.how_to_enter && { e: est.how_to_enter, t: 'Usual route into this career' },
+                noFacts && !careerSteps.length && est.how_to_enter && { e: est.how_to_enter, t: 'Usual route into this career' },
                 !(career.avg_salary_min || career.avg_salary_max) && est.salary && { e: est.salary, t: 'Expected salary in India' },
               ].filter(Boolean) as { e: Estimate; t: string }[]
               return notes.length ? (
@@ -461,26 +388,8 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
               ) : null
             })()}
 
-            {/* Key Facts */}
-            {keyFacts.length > 0 && (
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-100 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <LineChart className="w-5 h-5 text-indigo-500" />
-                  Key Facts about {career.category}
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {keyFacts.map((fact, i) => (
-                    <div key={i} className="flex items-start gap-3 bg-white rounded-xl p-3 border border-indigo-100">
-                      <span className="text-xl">{fact.icon}</span>
-                      <p className="text-sm text-gray-700">{fact.text}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Career Path Steps: a general guide for the category, hidden when the official route is known */}
-            {generic && (
+            {/* Career Path Steps, written for this career (the official route, when known, is shown above) */}
+            {careerSteps.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900 mb-5 flex items-center gap-2">
                 <ArrowRight className="w-5 h-5 text-green-500" />
@@ -532,11 +441,11 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
               </div>
             )}
 
-            {/* Top Employers */}
-            {generic && (
+            {/* Where they work */}
+            {topEmployers.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-blue-500" /> Top Employers
+                <Building2 className="w-5 h-5 text-blue-500" /> Where They Work
               </h2>
               <div className="flex flex-wrap gap-2">
                 {topEmployers.map((employer, i) => (
@@ -559,7 +468,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {careerExams.map((ce) => (
                     ce.exams && (
-                      <Link key={ce.exam_id} href="/exams">
+                      <Link key={ce.exam_id} href={`/exams/${ce.exams.slug}`}>
                         <div className="flex items-center justify-between p-3 bg-gray-50 hover:bg-orange-50 rounded-lg transition-colors group border border-transparent hover:border-orange-200">
                           <div>
                             <p className="text-sm font-medium text-gray-800 group-hover:text-orange-700">{ce.exams.name}</p>
@@ -578,14 +487,30 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
               </div>
             )}
 
-            {/* ✅ FIXED: Best Colleges for THIS Career */}
-            {generic && relatedColleges.length > 0 && (
+            {careerExams.length === 0 && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-orange-500" /> Entrance Exams
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Entry to this career is not through one of the entrance exams listed on our site.
+                  {careerSteps.length || career.how_to_enter?.length || est.how_to_enter
+                    ? ' The steps on this page explain how selection works.'
+                    : ' Selection is done by the training institutes and employers themselves.'}
+                </p>
+              </div>
+            )}
+
+            {/* Colleges for this career */}
+            {relatedColleges.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-purple-500" />
-                  Best Colleges for {career.category}
+                  {collegesFromExams ? 'Colleges That Admit Through These Exams' : `Where to Study`}
                 </h2>
-                <p className="text-xs text-gray-400 mb-4">Top institutions that offer programs relevant to this career</p>
+                <p className="text-xs text-gray-400 mb-4">
+                  {collegesFromExams ? 'Top-ranked colleges in our database that take students through the entrance exams above' : 'Institutions that train students for this career'}
+                </p>
                 <div className="space-y-3">
                   {relatedColleges.map((college) => (
                     <Link key={college.id} href={`/colleges/${college.slug}`}>
@@ -663,7 +588,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                   { label: 'Growth',      value: career.growth_level,       Icon: TrendingUp  },
                   { label: 'Competition', value: career.competition_level,  Icon: Scale      },
                   { label: 'Demand',      value: career.demand_score ? `${career.demand_score}/10` : null, Icon: BarChart3 },
-                  { label: 'Work-Life',   value: career.work_life_balance ? `${career.work_life_balance}/10` : null, Icon: Heart },
+                  { label: 'Work-Life',   value: career.work_life_balance ? `${career.work_life_balance}/5` : null, Icon: Heart },
                   { label: 'Trending',    value: career.is_trending ? 'Yes 🔥' : 'Stable',  Icon: Flame  },
                 ].filter(item => item.value).map(({ label, value, Icon }) => (
                   <div key={label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
@@ -709,10 +634,10 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
               </h3>
               <div className="space-y-2">
                 {[
-                  { text: `You enjoy ${career.category?.toLowerCase() ?? 'this field'} topics`, good: true },
+                  { text: keySubjects.length ? `You enjoy ${keySubjects.join(' and ')}` : 'You enjoy the work this career involves', good: true },
                   { text: 'Manageable competition level', good: career.competition_level !== 'Very High' },
-                  { text: 'Good work-life balance', good: (career.work_life_balance ?? 5) >= 6 },
-                  { text: 'High job demand in market', good: (career.demand_score ?? 5) >= 7 },
+                  { text: 'Good work-life balance', good: (career.work_life_balance ?? 0) >= 4 },
+                  { text: 'High job demand in market', good: (career.demand_score ?? 0) >= 7 },
                   { text: 'Strong growth potential', good: ['High', 'Very High'].includes(career.growth_level) },
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -733,7 +658,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
             {similarCareers.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <Star className="w-4 h-4 text-amber-500" /> Similar Careers
+                  <Star className="w-4 h-4 text-amber-500" /> Related Careers
                 </h3>
                 <div className="space-y-1">
                   {similarCareers.map((sc) => (
