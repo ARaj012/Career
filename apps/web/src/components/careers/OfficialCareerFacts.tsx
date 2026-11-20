@@ -30,11 +30,11 @@ export default function OfficialCareerFacts({
     if (!officialBody || !officialUrl) return null
     return (
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">How to become {article} {title}</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">Who sets the rules</h2>
         <p className="text-sm text-gray-600">
-          Entry rules are set by{' '}
+          Eligibility and selection for {article} {title} are set by{' '}
           <a href={officialUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">{officialBody}</a>.
-          We are still reading them from its official website.
+          Check its official website for the current rules before you apply.
         </p>
       </div>
     )

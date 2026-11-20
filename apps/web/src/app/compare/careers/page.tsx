@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, TrendingUp, IndianRupee, BarChart3, Scale, Heart, X, CheckCircle2 } from 'lucide-react'
 import { PageSkeleton } from '@/components/LoadingSkeleton'
 
@@ -25,6 +26,7 @@ export default function CompareCareersPage() {
   const [careers, setCareers] = useState<Career[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     async function fetchCareers() {
@@ -54,7 +56,7 @@ export default function CompareCareersPage() {
       const newIds = updated.map(c => c.id).join(',')
       window.history.replaceState({}, '', `/compare/careers?ids=${newIds}`)
     } else {
-      window.location.href = '/careers'
+      router.push('/careers')
     }
   }
 
