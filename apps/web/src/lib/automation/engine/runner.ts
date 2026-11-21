@@ -213,7 +213,7 @@ export async function runAutomation(db: SupabaseClient, opts: RunOptions) {
     if (opts.targets.includes('college_details') && (opts.mode !== 'single' || opts.collegeId)) {
       let q = db
         .from('colleges')
-        .select('id, name, website_url, admission_process, admission_verified_at, annual_fees_min, annual_fees_max, fees_verified_at, institute_scholarships, details_read_at, application_opens, application_closes, last_checked_at:details_checked_at')
+        .select('id, name, website_url, admission_process, admission_verified_at, annual_fees_min, annual_fees_max, fees_verified_at, fee_note, institute_scholarships, details_read_at, application_opens, application_closes, last_checked_at:details_checked_at')
         .not('website_url', 'is', null)
       q = opts.collegeId ? q.eq('id', opts.collegeId) : q.eq('automation_enabled', true)
       const { data: rows, error } = await q.order('details_checked_at', { ascending: true, nullsFirst: true })

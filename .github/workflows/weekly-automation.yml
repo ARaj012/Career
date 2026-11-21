@@ -28,6 +28,14 @@ on:
         description: 'Dry run (log only, change nothing)'
         type: boolean
         default: false
+      papers:
+        description: 'Also refresh previous-year papers (no AI)'
+        type: boolean
+        default: false
+      alerts:
+        description: 'Also send today''s exam reminder emails'
+        type: boolean
+        default: false
 
 concurrency:
   group: data-automation
@@ -79,12 +87,37 @@ jobs:
           echo "Running: npx tsx scripts/automation.ts $ARGS"
           npx tsx scripts/automation.ts $ARGS | tee automation.log
 
+      # Every morning (07:00 IST, after the date check): reminder emails and
+      # in-app notifications for the exams each student tracks
+      - name: Exam reminders
+        if: always() && (github.event.schedule == '30 1 * * *' || inputs.alerts == true)
+        working-directory: apps/web
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CAREER_GUIDANCE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ vars.APP_URL }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          ALERTS_FROM_EMAIL: ${{ vars.ALERTS_FROM_EMAIL }}
+          ALERTS_FROM_NAME: ${{ vars.ALERTS_FROM_NAME }}
+        run: npx tsx scripts/exam-alerts.ts | tee -a automation.log
+
+      # 22nd of the month, or on request: previous-year papers and answer keys
+      # from each exam's official site (link reader, no AI)
+      - name: Previous-year papers
+        if: always() && (github.event.schedule == '0 2 22 * *' || inputs.papers == true)
+        working-directory: apps/web
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CAREER_GUIDANCE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ vars.APP_URL }}
+        run: npx tsx scripts/papers.ts | tee -a automation.log
+
       - name: Summary
         if: always()
         working-directory: apps/web
         run: |
           echo "## Data automation" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          grep -E "Summary|Exams to check|Scholarships to check|Colleges to check|College details|Exam syllabi|Exam cutoffs|Careers to check|JoSAA|NIRF|errors|Daily Groq|Stopped" automation.log >> $GITHUB_STEP_SUMMARY || true
+          grep -E "Summary|Previous papers|Exam alerts|Exams to check|Scholarships to check|Colleges to check|College details|Exam syllabi|Exam cutoffs|Careers to check|JoSAA|NIRF|errors|Daily Groq|Stopped" automation.log >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "Review queued changes in Admin → Automation." >> $GITHUB_STEP_SUMMARY

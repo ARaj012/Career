@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { Calendar, Clock, Target, Heart, Filter, Bell, CheckCircle, ChevronDown, AlertCircle } from 'lucide-react'
 import ExamStatusBadge from '@/components/ExamStatusBadge'
+import EmailAlertsToggle from '@/components/EmailAlertsToggle'
 import ExamCountdown from '@/components/ExamCountdown'
 import ExamCalendar from '@/components/ExamCalendar'
 import ExamRoadmap from '@/components/ExamRoadmap'
@@ -461,6 +462,7 @@ export default function MyExamsPage() {
                   <p className="text-sm text-gray-500">Manage your exam notifications</p>
                 </div>
               </div>
+              <EmailAlertsToggle />
               <Link
                 href="/notifications"
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"

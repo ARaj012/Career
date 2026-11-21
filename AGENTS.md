@@ -53,6 +53,10 @@ npm start
 - **AI Chat Assistant**: Site-wide chat widget with Groq integration
 - **Freemium Subscription**: `/pricing` - Mock payment system for testing payment flow
 - **Subscription Management**: `/subscription` - View and manage subscription status
+- **Scholarship Matcher**: `/scholarships/match` - Checks a student's answers against each scholarship's published eligibility rules (no AI)
+- **Fees vs Placements**: `/colleges/value` - Whole-course fee vs NIRF median salary for the same programme
+- **Previous Year Papers**: `/papers` and each exam page - Official question papers/answer keys found by `scripts/papers.ts` (monthly, no AI)
+- **Exam Reminder Emails**: daily digest for tracked exams; on/off switch on `/my-exams`, one-click unsubscribe at `/alerts/unsubscribe`
 
 ### Admin Panel Features
 - **Dashboard**: `/admin` - Overview with stats, system health, and activity logs
@@ -123,7 +127,12 @@ RAZORPAY_KEY_ID=your_razorpay_key_id (optional - mock mode if missing)
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret (optional - mock mode if missing)
 RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret (optional - mock mode if missing)
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+BREVO_API_KEY=your_brevo_api_key (optional - exam reminder emails; mock mode if missing)
+ALERTS_FROM_EMAIL=sender address verified in Brevo (optional)
+ALERTS_FROM_NAME=CareerGuide (optional)
 ```
+
+**Exam reminder emails**: `scripts/exam-alerts.ts` runs every morning in GitHub Actions (Data Automation workflow). Without `BREVO_API_KEY` + `ALERTS_FROM_EMAIL` it still creates in-app notifications and only logs the email (mock mode). For GitHub, add `BREVO_API_KEY` as a repository secret and `ALERTS_FROM_EMAIL` as a repository variable.
 
 **Note**: The application automatically uses mock payment mode if Razorpay credentials are not provided. This allows you to test the entire payment flow UI/UX without real payment integration.
 

@@ -1,0 +1,16 @@
+import type { Metadata } from 'next'
+import UnsubscribeForm from './UnsubscribeForm'
+
+export const metadata: Metadata = {
+  title: 'Exam reminder emails | CareerGuide',
+  robots: { index: false },
+}
+
+export default async function UnsubscribePage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
+  const { token } = await searchParams
+  return (
+    <main className="min-h-[70vh] bg-gray-50 flex items-center justify-center px-4 py-12">
+      <UnsubscribeForm token={token ?? ''} />
+    </main>
+  )
+}

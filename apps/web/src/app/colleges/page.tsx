@@ -241,6 +241,9 @@ export default function CollegesPage() {
                 <span className="text-gray-400 ml-1">{s.label}</span>
               </div>
             ))}
+            <Link href="/colleges/value" className="text-sm font-medium text-indigo-600 hover:text-indigo-800 sm:ml-auto">
+              Fees vs placements: which colleges pay back fastest? →
+            </Link>
           </div>
         </div>
       </div>

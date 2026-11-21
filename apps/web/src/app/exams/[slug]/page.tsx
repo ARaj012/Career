@@ -6,6 +6,7 @@ import { Metadata } from 'next'
 import TrackExamButton from '@/components/TrackExamButton'
 import KeyDates, { type ScheduleRow } from '@/components/exams/KeyDates'
 import EstimateNote from '@/components/EstimateNote'
+import PreviousPapers, { type PaperRow } from '@/components/exams/PreviousPapers'
 import { getEstimates } from '@/lib/estimates'
 import { ExamQualifyingCutoffs, ExamCollegeCutoffs, BRANCHES, RANK_CATEGORIES } from '@/components/exams/ExamCutoffs'
 
@@ -206,6 +207,15 @@ export default async function ExamDetailPage({
   const nationalCutoffs = ((nationalCutoffRows ?? []) as any[]).filter((r) => !/topper/i.test(r.notes ?? ''))
 
   const nationalYearsAsc = [...new Set(nationalCutoffs.map((r) => r.year as number))].sort((a, b) => a - b)
+
+  // Previous-year papers found on the official website (newest first)
+  const { data: papersRaw } = await supabase
+    .from('exam_papers')
+    .select('url, title, kind, year, source_url')
+    .eq('exam_id', exam.id)
+    .order('year', { ascending: false, nullsFirst: false })
+    .order('title')
+  const papers = (papersRaw ?? []) as PaperRow[]
 
   // Toppers — most recent year available, if any have been entered
   const { data: allToppers } = await supabase
@@ -420,6 +430,10 @@ export default async function ExamDetailPage({
             <EstimateNote estimate={est.syllabus} />
           </div>
         )}
+
+        <div id="papers" className="scroll-mt-20">
+          <PreviousPapers papers={papers} examName={exam.name} officialUrl={exam.official_url} />
+        </div>
 
         {/* Toppers */}
         <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-10">

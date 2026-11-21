@@ -13,8 +13,10 @@ import {
   ExternalLink,
   X,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import { ListSkeleton } from "@/components/LoadingSkeleton";
+import { formatScholarshipAmount } from "@/lib/scholarship-match";
 
 interface Scholarship {
   id: string;
@@ -35,6 +37,15 @@ interface Scholarship {
   state: string;
   is_active: boolean;
 }
+
+const LEVEL_NAMES: Record<string, string> = {
+  school: "School",
+  class_11_12: "Class 11–12",
+  undergraduate: "Undergraduate",
+  postgraduate: "Postgraduate",
+  diploma: "Diploma",
+  phd: "PhD",
+};
 
 export default function ScholarshipsPage() {
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
@@ -63,6 +74,7 @@ export default function ScholarshipsPage() {
 
   const categories = [
     { label: "All Categories", value: "all" },
+    { label: "Government", value: "government" },
     { label: "Merit-based", value: "merit" },
     { label: "Need-based", value: "need_based" },
     { label: "Sports", value: "sports" },
@@ -75,6 +87,8 @@ export default function ScholarshipsPage() {
   const levels = [
     { label: "All Levels", value: "all" },
     { label: "School", value: "school" },
+    { label: "Class 11–12", value: "class_11_12" },
+    { label: "Diploma", value: "diploma" },
     { label: "Undergraduate", value: "undergraduate" },
     { label: "Postgraduate", value: "postgraduate" },
     { label: "PhD", value: "phd" },
@@ -82,11 +96,11 @@ export default function ScholarshipsPage() {
 
   const amountTypes = [
     { label: "All Types", value: "all" },
-    { label: "Fixed Amount", value: "fixed" },
-    { label: "Range", value: "range" },
-    { label: "Full Tuition", value: "full_tuition" },
-    { label: "Partial Tuition", value: "partial_tuition" },
-    { label: "Stipend", value: "stipend" },
+    { label: "Every year", value: "annual" },
+    { label: "Every month", value: "monthly" },
+    { label: "One-time amount", value: "fixed" },
+    { label: "Research stipend", value: "stipend" },
+    { label: "Education loan", value: "loan" },
   ];
 
   const states = [
@@ -110,20 +124,7 @@ export default function ScholarshipsPage() {
     return colors[category] || { bg: "bg-gray-50", text: "text-gray-700" };
   };
 
-  const formatAmount = (scholarship: Scholarship) => {
-    if (scholarship.amount_type === "full_tuition") return "Full Tuition";
-    if (scholarship.amount_type === "partial_tuition") return "Partial Tuition";
-    if (scholarship.amount_type === "stipend") return "Stipend";
-
-    if (scholarship.amount_min && scholarship.amount_max) {
-      return `₹${(scholarship.amount_min / 100000).toFixed(1)}L - ₹${(scholarship.amount_max / 100000).toFixed(1)}L`;
-    }
-    if (scholarship.amount_min)
-      return `₹${(scholarship.amount_min / 100000).toFixed(1)}L+`;
-    if (scholarship.amount_max)
-      return `Up to ₹${(scholarship.amount_max / 100000).toFixed(1)}L`;
-    return "Amount not specified";
-  };
+  const formatAmount = (scholarship: Scholarship) => formatScholarshipAmount(scholarship);
 
   const formatDate = (date: string | null) => {
     if (!date) return "No deadline";
@@ -156,7 +157,8 @@ export default function ScholarshipsPage() {
     const matchesCategory =
       selectedCategory === "all" || scholarship.category === selectedCategory;
     const matchesLevel =
-      selectedLevel === "all" || scholarship.level === selectedLevel;
+      selectedLevel === "all" ||
+      scholarship.level.split(",").map((l) => l.trim()).includes(selectedLevel);
     const matchesAmountType =
       selectedAmountType === "all" ||
       scholarship.amount_type === selectedAmountType;
@@ -201,33 +203,6 @@ export default function ScholarshipsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm px-8 py-4 flex items-center justify-between">
-        <Link href="/dashboard" className="text-2xl font-bold text-indigo-600">
-          CareerGuide
-        </Link>
-        <div className="flex gap-6">
-          <Link
-            href="/careers"
-            className="text-gray-600 hover:text-indigo-600 text-sm"
-          >
-            Careers
-          </Link>
-          <Link
-            href="/colleges"
-            className="text-gray-600 hover:text-indigo-600 text-sm"
-          >
-            Colleges
-          </Link>
-          <Link
-            href="/exams"
-            className="text-gray-600 hover:text-indigo-600 text-sm"
-          >
-            Exams
-          </Link>
-        </div>
-      </nav>
-
       {/* Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-500 px-8 py-12 text-white">
         <h1 className="text-4xl font-extrabold mb-2">
@@ -259,6 +234,12 @@ export default function ScholarshipsPage() {
             </div>
           ))}
         </div>
+        <Link
+          href="/scholarships/match"
+          className="mt-8 inline-flex items-center gap-2 bg-white text-emerald-700 font-semibold px-5 py-3 rounded-xl shadow-sm hover:bg-emerald-50 transition"
+        >
+          <Sparkles className="w-5 h-5" /> Find the scholarships I qualify for
+        </Link>
       </div>
 
       <div className="max-w-7xl mx-auto px-8 py-10">
@@ -437,10 +418,11 @@ export default function ScholarshipsPage() {
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <GraduationCap className="w-4 h-4" />
-                    <span className="capitalize">
+                    <span>
                       {scholarship.level
-                        .replace("_", " ")
-                        .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        .split(",")
+                        .map((l) => LEVEL_NAMES[l.trim()] ?? l.trim())
+                        .join(", ")}
                     </span>
                   </div>
                   {scholarship.state && (

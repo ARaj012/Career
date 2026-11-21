@@ -16,6 +16,7 @@ import CollegeScholarshipsSummary, { type InstituteScholarship, type LinkedSchol
 import CollegeReviews from "@/components/college/CollegeReviews";
 import EstimateNote from "@/components/EstimateNote";
 import { getEstimates } from "@/lib/estimates";
+import { buildValueRows, payback, rupees, PROGRAMMES } from "@/lib/college-value";
 
 import {
   MapPin,
@@ -219,6 +220,8 @@ export default async function CollegeDetailPage({
     .order("year", { ascending: false });
 
   const placements = (placementsRaw ?? []) as PlacementRow[];
+  // Fees vs median salary for each programme with both (same rules as /colleges/value)
+  const valueRows = buildValueRows([college as any], courses, placements as any);
 
   // year-wise student enrollment as the institution reported it to NIRF — powers the students-vs-years chart
   const { data: enrollmentRaw } = await supabase
@@ -826,6 +829,27 @@ export default async function CollegeDetailPage({
 
             {/* Placements: official NIRF figures first, third-party numbers only when labelled */}
             <PlacementSummary rows={placements} />
+            {valueRows.length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <IndianRupee className="w-4 h-4 text-indigo-500" /> Fees vs salary
+                </h3>
+                <ul className="space-y-3">
+                  {valueRows.map((r) => (
+                    <li key={r.programme} className="text-sm">
+                      <p className="text-xs text-gray-500">{PROGRAMMES.find((p) => p.key === r.programme)?.label}</p>
+                      <p className="text-gray-700">
+                        {rupees(r.totalFee)} course fee{r.feeOfficial ? "" : " (approx.)"} · {rupees(r.median)} median salary
+                      </p>
+                      <p className="font-medium text-gray-900">Paid back in {payback(r.ratio)}</p>
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/colleges/value" className="mt-3 block text-xs font-medium text-indigo-600 hover:text-indigo-800">
+                  Compare with other colleges →
+                </Link>
+              </div>
+            )}
             {/* (an estimate for colleges with no placement figures is shown in the main column) */}
             {college.annual_fees_min == null && college.annual_fees_max == null && est.fees && (
               <EstimateNote estimate={est.fees} title="Annual fees" />

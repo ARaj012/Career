@@ -7,7 +7,7 @@ import { examNamePattern, normalizeSession, soleHost } from './exams'
 import { relevantLinks } from './http'
 import { quoteSupportsGrade, quoteSupportsYear } from './colleges'
 import { addsNothing, careerContext, usableSentence } from './careers'
-import { degreeType, headedByCourse, semesterColumns, isNotAProgramme, narrowAdmissionPage, NOT_A_STEP, otherWww, placementTable, programmeName, quoteNamesMetric, quoteNamesCourse, quoteNamesYear } from './college-details'
+import { annualCharges, degreeType, handVerifiedFee, semesterFeeNote, headedByCourse, semesterColumns, verifiedFeeGuard, isNotAProgramme, narrowAdmissionPage, NOT_A_STEP, otherWww, placementTable, programmeName, quoteNamesMetric, quoteNamesCourse, quoteNamesYear } from './college-details'
 import { matchInstitute } from './josaa'
 import { canonName, dedupe, looseNameMatch, parseNirfTable } from './nirf'
 import { isOfficialUrl, locateQuote } from './sources'
@@ -261,6 +261,66 @@ describe('college detail evidence', () => {
     expect(semesterColumns('Tuition Fee 62500 62500', page)).toBe(true)
     expect(semesterColumns('Annual tuition 1,25,000', 'SEMESTER I II\nAnnual tuition 1,25,000')).toBe(false)
     expect(semesterColumns('Tuition Fee 2,00,000', 'YEAR I II\nTuition Fee 2,00,000')).toBe(false)
+  })
+  // NIT Trichy's B.Tech 2026 fee PDF, as the reader's PDF text comes out. On 18 Nov 2026 the AI
+  // quoted the table from its heading, so the semester header sat inside the quote, and ₹62,500
+  // (one semester) was stored as the yearly fee over the verified ₹1,52,750.
+  const nitt = 'ACADEMIC OFFICE / FEES SECTION\nNATIONAL INSTITUTE OF TECHNOLOGY\nTIRUCHIRAPPALLI - 620 015 , TAMIL NADU, INDIA\n'
+    + 'INSTITUTE FEES STRUCTURE FOR 2026 ADMISSION BATCH\nCOURSE: B.Tech. CATEGORY: OPEN/OPEN-EWS/OBC-NCL/ICCR/DASA (CIWG)\n'
+    + 'Sl.No. SEMESTER I II III IV V VI VII VIII\n1 Tuition Fee 62500 62500 62500 62500 62500 62500 62500 62500\nAnnual Fee\n'
+    + '1 Computer Fee 3200 -- 3500 -- 3850 -- 4250 --\nTotal Annual Fee 27750 -- 30450 -- 33450 -- 36800 --\n'
+    + 'TOTAL 1,25,550 62,500 92,950 62,500 95,950 62,500 99,300 62,500\n'
+  it('reads a semester-wise fee table whose header is inside the quote (NIT Trichy 2026)', () => {
+    const fromHeading = 'COURSE: B.Tech. CATEGORY: OPEN/OPEN-EWS/OBC-NCL/ICCR/DASA (CIWG)\nSl.No. SEMESTER I II III IV V VI VII VIII\n1 Tuition Fee 62500 62500 62500 62500 62500 62500 62500 62500'
+    expect(semesterColumns(fromHeading, nitt)).toBe(true)
+    expect(quoteNamesCourse('B.Tech.', fromHeading)).toBe(true) // the heading is in the quote itself
+    // Just the row, header above it
+    expect(semesterColumns('Tuition Fee 62500 62500 62500 62500 62500 62500 62500 62500', nitt)).toBe(true)
+    expect(headedByCourse('B.Tech.', 'Tuition Fee 62500 62500 62500 62500 62500 62500 62500 62500', nitt)).toBe(true)
+    // A quote that says "annual" is a yearly figure, header or not
+    expect(semesterColumns('Total Annual Fee 27750 -- 30450', nitt)).toBe(false)
+  })
+  it('adds the first year\'s annual charges from the same semester table (NIT Trichy 2026: 2 × 62,500 + 27,750)', () => {
+    const row = 'Tuition Fee 62500 62500 62500 62500 62500 62500 62500 62500'
+    const fromHeading = 'COURSE: B.Tech. CATEGORY: OPEN/OPEN-EWS/OBC-NCL/ICCR/DASA (CIWG)\nSl.No. SEMESTER I II III IV V VI VII VIII\n1 Tuition Fee 62500 62500 62500 62500 62500 62500 62500 62500'
+    expect(annualCharges(row, nitt)).toEqual({ value: 27750, row: 'Total Annual Fee 27750 -- 30450 -- 33450 -- 36800 --' })
+    expect(annualCharges(fromHeading, nitt)?.value).toBe(27750)
+    expect(2 * 62500 + annualCharges(row, nitt)!.value).toBe(152750)
+    expect(semesterFeeNote(62500, 27750)).toBe('₹62,500 tuition each semester + ₹27,750 annual fee (official)')
+    // The reader's own note is not a hand check
+    expect(handVerifiedFee('2026-11-21T00:00:00Z', semesterFeeNote(62500, 27750))).toBe(false)
+
+    // Charges belong to the table they sit in: the next programme's table never contributes
+    const noCharges = 'COURSE: B.Tech.\nSEMESTER I II\n1 Tuition Fee 62500 62500\nTOTAL 62500 62500\nCOURSE: M.Tech.\nSEMESTER I II\n1 Tuition Fee 70000 70000\nTotal Annual Fee 20000 --\n'
+    expect(annualCharges('Tuition Fee 62500 62500', noCharges)).toBeNull()
+    // The same tuition row in two tables: which charges apply is unclear, so none are added
+    const twice = 'COURSE: B.Tech.\nSEMESTER I II\n1 Tuition Fee 62500 62500\nTotal Annual Fee 27750 --\nCOURSE: B.Arch.\nSEMESTER I II\n1 Tuition Fee 62500 62500\nTotal Annual Fee 30000 --\n'
+    expect(annualCharges('Tuition Fee 62500 62500', twice)).toBeNull()
+    // No semester header: not a semester table, nothing to add
+    expect(annualCharges('Tuition Fee 62500', 'Tuition Fee 62500\nTotal Annual Fee 27750\n')).toBeNull()
+  })
+  it('keeps hand-verified fees from being replaced without review', () => {
+    const note = 'B.Tech first year (2026 batch, open category): ₹62,500 tuition each semester + ₹27,750 annual fee'
+    expect(handVerifiedFee('2026-11-18T19:26:15Z', note)).toBe(true)
+    expect(handVerifiedFee(null, note)).toBe(false)
+    expect(handVerifiedFee('2026-11-18T19:26:15Z', null)).toBe(false)
+    // Notes the automation writes itself are not hand checks
+    expect(handVerifiedFee('2026-11-18T19:26:15Z', 'Tuition per year across 1 programme, from the official fee schedule')).toBe(false)
+    expect(handVerifiedFee('2026-11-18T19:26:15Z', '₹62,500 per semester (official)')).toBe(false)
+
+    const stored = { verifiedAt: '2026-11-18T19:26:15Z', note, min: 152750, max: 152750 }
+    // One semester's tuition: under half, always waits for review
+    const semester = verifiedFeeGuard(stored, { min: 62500, max: 62500 })
+    expect(semester.overwritesVerified).toBe(true)
+    expect(semester.forceReview).toMatch(/under half the hand-verified ₹1,52,750/)
+    // Tuition for the year without the annual charges: a change to a verified fee, held under the safe policy
+    expect(verifiedFeeGuard(stored, { min: 125000, max: 125000 })).toEqual({ overwritesVerified: true })
+    // IIM Ranchi: a range collapsing to its lower end is still a change to verified data
+    const ranchi = { verifiedAt: '2026-11-18T19:15:02Z', note: 'MBA 2026-28: ₹9,75,000 in year 1 and ₹9,45,000 in year 2', min: 945000, max: 975000 }
+    expect(verifiedFeeGuard(ranchi, { min: 945000, max: 945000 })).toEqual({ overwritesVerified: true })
+    expect(verifiedFeeGuard(ranchi, { min: 945000, max: 472500 - 1 }).forceReview).toBeTruthy()
+    // Nothing checked by hand: the reading may fill or refresh the fee as before
+    expect(verifiedFeeGuard({ verifiedAt: null, note: null, min: 150000 }, { min: 62500 })).toEqual({ overwritesVerified: false })
   })
   it('ties a placement figure to its season', () => {
     expect(quoteNamesYear(2024, 'Placement 2023-24: highest CTC 1.2 Cr')).toBe(true)

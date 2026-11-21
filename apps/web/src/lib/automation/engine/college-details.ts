@@ -216,6 +216,7 @@ export type CollegeDetailRow = {
   annual_fees_min: number | null
   annual_fees_max: number | null
   fees_verified_at: string | null
+  fee_note?: string | null
   institute_scholarships: unknown
   details_read_at?: string | null
   application_opens?: string | null
@@ -254,12 +255,80 @@ export function headedByCourse(courseName: string, quote: string, pageText: stri
   return !!last && quoteNamesCourse(courseName, last)
 }
 
-/** A fee-table row under a "SEMESTER I II III …" column header holds per-semester amounts. */
+/**
+ * A fee-table row under a "SEMESTER I II III …" column header holds per-semester amounts.
+ * The header may sit just above the row, or inside the quote itself when the AI copies the
+ * table from its heading down ("COURSE: B.Tech. … SEMESTER I II … VIII\n1 Tuition Fee 62500 …",
+ * as in NIT Trichy's 2026 fee PDF).
+ */
 export function semesterColumns(quote: string, pageText: string): boolean {
   const page = normalize(pageText)
-  const at = page.indexOf(normalize(quote))
+  const q = normalize(quote)
+  const at = page.indexOf(q)
   if (at < 0 || /\b(annual|annum|year|yearly)\b/i.test(quote)) return false
-  return /\bsem(ester)?s?\s+(i|1)\s+(ii|2)\b/.test(page.slice(Math.max(0, at - 300), at))
+  return /\bsem(ester)?s?\s+(i|1)\s+(ii|2)\b/.test(`${page.slice(Math.max(0, at - 300), at)} ${q}`)
+}
+
+/**
+ * The once-a-year charges in the same semester-wise table as a tuition row: "Total Annual Fee
+ * 27750 -- 30450 -- …" (NIT Trichy). The first column is the first year's charge. Read only
+ * below the tuition row and before the next programme or category heading, so another
+ * programme's or category's table never contributes.
+ */
+const ANNUAL_TOTAL = /^total\s+annual\s+(?:fees?|charges)\s+(\d[\d,]*)(?=\s|$)/i
+const TABLE_END = /^(course|category)\s*:|\bsem(ester)?s?\s+(i|1)\s+(ii|2)\b/i
+export function annualCharges(quote: string, pageText: string): { value: number; row: string } | null {
+  if (!semesterColumns(quote, pageText)) return null
+  const lastLine = normalize(quote.trim().split('\n').at(-1) ?? '')
+  if (!lastLine) return null
+  const lines = pageText.split('\n').map((l) => l.trim())
+  const hits = lines.flatMap((l, i) => { const n = normalize(l); return n && (n === lastLine || n.includes(lastLine)) ? [i] : [] })
+  // The same tuition row in two tables (another programme or category): unclear which charges belong to it
+  if (hits.length !== 1) return null
+  const at = hits[0]
+  for (const line of lines.slice(at + 1, at + 40)) {
+    if (TABLE_END.test(line)) return null
+    const m = ANNUAL_TOTAL.exec(line)
+    if (m) {
+      const value = Number(m[1].replace(/,/g, ''))
+      return value > 0 && value < 1_000_000 ? { value, row: line } : null
+    }
+  }
+  return null
+}
+
+const inrText = (n: number) => `₹${n.toLocaleString('en-IN')}`
+/** The note the reader writes for a fee it built from a semester-wise table. */
+export function semesterFeeNote(semester: number, annual: number | null): string {
+  return annual ? `${inrText(semester)} tuition each semester + ${inrText(annual)} annual fee (official)` : `${inrText(semester)} per semester (official)`
+}
+
+// Notes the automation writes itself. Any other note on a verified fee was written by hand
+// from the official notice (e.g. "₹62,500 tuition each semester + ₹27,750 annual fee; one-time …").
+const AUTO_FEE_NOTE = /^(₹[\d,]+ per semester \(official\)|₹[\d,]+ tuition each semester \+ ₹[\d,]+ annual fee \(official\)|Tuition per year across \d+ programmes?, from the official fee schedule)$/
+/** True when a fee was checked by hand against the official notice and annotated. */
+export function handVerifiedFee(verifiedAt: string | null | undefined, note: string | null | undefined): boolean {
+  return !!verifiedAt && !!note?.trim() && !AUTO_FEE_NOTE.test(note.trim())
+}
+
+/**
+ * How a new fee reading may treat a fee checked by hand. Changing it always counts as
+ * overwriting a verified value (waits for approval under the default "safe" policy). A reading
+ * under half the stored figure is far more likely one semester or one instalment than a fee cut,
+ * so it waits for review whatever the policy.
+ */
+export function verifiedFeeGuard(
+  stored: { verifiedAt: string | null | undefined; note: string | null | undefined; min: number | null | undefined; max?: number | null },
+  reading: { min: number | null | undefined; max?: number | null }
+): { overwritesVerified: boolean; forceReview?: string } {
+  if (!handVerifiedFee(stored.verifiedAt, stored.note)) return { overwritesVerified: false }
+  const inr = inrText
+  const pairs: [number | null | undefined, number | null | undefined][] = [[stored.min, reading.min], [stored.max, reading.max]]
+  const drop = pairs.find(([s, r]) => s && r != null && r < s * 0.5)
+  return {
+    overwritesVerified: true,
+    ...(drop ? { forceReview: `New reading ${inr(drop[1]!)} is under half the hand-verified ${inr(drop[0]!)}; check whether it is one semester or one instalment rather than the yearly fee` } : {}),
+  }
 }
 
 /** A placement figure must sit next to its year: "2024", "2023-24" or "2023–2024". */
@@ -456,7 +525,7 @@ export function degreeType(name: string, aiType: string | null | undefined): str
 }
 
 async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSite: OnSite, nameOnSite: (n: string) => string | null, res: Res, opts: Opts, onAdmission: OnSite = () => null, headed: (name: string, quote: string, url: string) => boolean = () => false, pageText: (url: string) => string = () => '') {
-  const { data: existing } = await db.from('college_courses').select('id, course_name, annual_fees_min, total_fees, total_seats, eligibility').eq('college_id', c.id).eq('source_type', 'official')
+  const { data: existing } = await db.from('college_courses').select('id, course_name, annual_fees_min, total_fees, total_seats, eligibility, fee_note, verified_at').eq('college_id', c.id).eq('source_type', 'official')
   const byName = new Map((existing ?? []).map((r) => [normalize(r.course_name), r]))
   const seen = new Set<string>()
 
@@ -490,14 +559,16 @@ async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSi
       if (url && eq.length >= 25 && eq.length <= 500 && quoteNamesCourse(name, eq) && ELIGIBILITY_WORDS.test(eq) && !NEWS.test(eq)) eligibility = { text: eq, url }
       else res.dropped.push(`${c.name} · ${name} eligibility: evidence failed`)
     }
-    const yearly = annual?.value ?? (semester ? semester.value * 2 : null)
+    // A semester-wise table may also list once-a-year charges below the tuition row; they are part of the yearly fee
+    const charges = semester ? annualCharges(semester.quote, pageText(semester.url)) : null
+    const yearly = annual?.value ?? (semester ? semester.value * 2 + (charges?.value ?? 0) : null)
     if (yearly !== null && (yearly < 1_000 || yearly > 5_000_000)) { res.dropped.push(`${c.name} · ${name}: implausible fee ${yearly}`); continue }
     const old = byName.get(key)
     const namedAt = annual || semester || total || seats ? null : nameOnSite(name)
     if (!annual && !semester && !total && !seats && !eligibility && (!namedAt || old)) continue // name not on the site, or already listed
     const fields: Record<string, Change> = {}
     const set = (k: string, v: unknown, ev: string | null, before: unknown) => { if (v !== null && v !== undefined && v !== before) fields[k] = { old: before ?? null, new: v, evidence: ev } }
-    set('annual_fees_min', yearly, annual?.quote ?? semester?.quote ?? null, old?.annual_fees_min)
+    set('annual_fees_min', yearly, annual?.quote ?? (semester ? (charges ? `${semester.quote}\n${charges.row}` : semester.quote) : null), old?.annual_fees_min)
     set('annual_fees_max', yearly, null, undefined)
     set('total_fees', total?.value ?? null, total?.quote ?? null, old?.total_fees)
     set('total_seats', seats?.value ?? null, seats?.quote ?? null, old?.total_seats)
@@ -510,6 +581,9 @@ async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSi
     }
     if (!Object.keys(fields).some((k) => k !== 'annual_fees_max')) continue
     const src = (annual ?? semester ?? total ?? seats ?? eligibility)?.url ?? namedAt!
+    const feeChanged = !!fields.annual_fees_min
+    // A fee checked by hand is not replaced without review (NIT Trichy's ₹1,52,750 a year once became one semester's ₹62,500)
+    const guard = feeChanged ? verifiedFeeGuard({ verifiedAt: old?.verified_at, note: old?.fee_note, min: old?.annual_fees_min }, { min: yearly }) : { overwritesVerified: false }
     res.outcomes.push(
       await submitProposal(db, opts.runId, {
         entity: 'college',
@@ -519,10 +593,12 @@ async function programmes(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onSi
         label: `${c.name} · ${name}`,
         fields,
         insertKey: old ? undefined : { college_id: c.id, source_type: 'official', mode: 'Full-Time' },
-        extra: { source_url: src, verified_at: new Date().toISOString(), fee_note: semester ? `₹${semester.value.toLocaleString('en-IN')} per semester (official)` : null, ...(eligibility ? { eligibility_source_url: eligibility.url } : {}) },
+        // The fee note describes the fee, so it changes only with the fee (never wiped by an eligibility-only update)
+        extra: { source_url: src, verified_at: new Date().toISOString(), ...(feeChanged ? { fee_note: semester ? semesterFeeNote(semester.value, charges?.value ?? null) : null } : {}), ...(eligibility ? { eligibility_source_url: eligibility.url } : {}) },
         sourceUrl: src,
         official: true,
-        overwritesVerified: false,
+        overwritesVerified: guard.overwritesVerified,
+        forceReview: guard.forceReview,
       }, opts.dryRun)
     )
   }
@@ -679,7 +755,7 @@ async function textFields(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onAd
     if (min !== c.annual_fees_min || max !== c.annual_fees_max) {
       fields.annual_fees_min = { old: c.annual_fees_min, new: min, evidence: 'Lowest official annual programme fee' }
       fields.annual_fees_max = { old: c.annual_fees_max, new: max, evidence: 'Highest official annual programme fee' }
-      fields.fee_note = { old: null, new: `Tuition per year across ${amounts.length} programme${amounts.length > 1 ? 's' : ''}, from the official fee schedule`, evidence: null }
+      fields.fee_note = { old: c.fee_note ?? null, new: `Tuition per year across ${amounts.length} programme${amounts.length > 1 ? 's' : ''}, from the official fee schedule`, evidence: null }
       extra.fees_source_url = fees![0].source_url
       extra.fees_verified_at = today.toISOString()
       src ??= fees![0].source_url
@@ -687,6 +763,10 @@ async function textFields(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onAd
   }
 
   if (!Object.keys(fields).length || !src) return
+  // A hand-written official fee note and range (IIM Ranchi's ₹9,45,000–₹9,75,000) is not replaced by a generic reading without review
+  const guard = fields.annual_fees_min
+    ? verifiedFeeGuard({ verifiedAt: c.fees_verified_at, note: c.fee_note, min: c.annual_fees_min, max: c.annual_fees_max }, { min: fields.annual_fees_min.new as number, max: fields.annual_fees_max.new as number })
+    : { overwritesVerified: false }
   res.outcomes.push(
     await submitProposal(db, opts.runId, {
       entity: 'college',
@@ -697,7 +777,8 @@ async function textFields(db: SupabaseClient, c: CollegeDetailRow, ai: Out, onAd
       extra,
       sourceUrl: src,
       official: true,
-      overwritesVerified: !!(c.admission_verified_at && fields.admission_process) || !!(c.fees_verified_at && fields.annual_fees_min),
+      overwritesVerified: !!(c.admission_verified_at && fields.admission_process) || !!(c.fees_verified_at && fields.annual_fees_min) || guard.overwritesVerified,
+      forceReview: guard.forceReview,
     }, opts.dryRun)
   )
 }

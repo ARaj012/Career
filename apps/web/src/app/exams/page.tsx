@@ -307,6 +307,9 @@ export default function ExamsPage() {
       <div className="bg-gradient-to-r from-indigo-600 to-blue-500 px-8 py-12 text-white">
         <h1 className="text-4xl font-extrabold mb-2">Entrance Exams</h1>
         <p className="text-indigo-100 text-lg">{exams.length}+ exams with dates, eligibility and official links</p>
+        <Link href="/papers" className="inline-block mt-2 text-sm font-medium text-white underline underline-offset-4 decoration-indigo-300 hover:decoration-white">
+          Previous year question papers & answer keys →
+        </Link>
         {/* Stats */}
         <div className="flex gap-8 mt-6">
           {[
