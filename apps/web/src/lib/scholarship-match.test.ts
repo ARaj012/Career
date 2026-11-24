@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { answersFromProfile, formatScholarshipAmount, matchScholarship, parseRules, type ScholarshipLike } from './scholarship-match'
+import { answersFromProfile, formatScholarshipAmount, matchScholarship, parseRules, scholarshipLevelLabel, type ScholarshipLike } from './scholarship-match'
 
 const base = (over: Partial<ScholarshipLike>): ScholarshipLike => ({
   slug: 's', name: 'S', level: 'undergraduate,postgraduate,diploma', state: 'All States', category: 'government',
@@ -81,6 +81,11 @@ describe('helpers', () => {
   it('formats amounts in words students use', () => {
     expect(formatScholarshipAmount({ amount_min: 12000, amount_max: 20000, amount_type: 'annual' })).toBe('₹12,000–₹20,000 a year')
     expect(formatScholarshipAmount({ amount_min: 100000, amount_max: 1000000, amount_type: 'loan' })).toBe('Loan of ₹1 lakh–₹10 lakh')
+    expect(formatScholarshipAmount({ amount_min: 4000, amount_max: 4000, amount_type: 'monthly' })).toBe('₹4,000 a month')
+    expect(formatScholarshipAmount({ amount_min: 5000, amount_max: 12400, amount_type: 'stipend' })).toBe('₹5,000–₹12,400 a month (stipend)')
+    // A fee waiver has no figure: the note's first phrase stands in
+    expect(formatScholarshipAmount({ amount_min: null, amount_max: null, amount_type: 'annual', amount_note: 'Tuition fee waiver: full for SC/ST' })).toBe('Tuition fee waiver')
+    expect(scholarshipLevelLabel('class_11_12,undergraduate,postgraduate')).toBe('Class 11–12, Undergraduate, Postgraduate')
   })
 
   it('asks about the exam or institute behind exam- and college-linked awards', () => {

@@ -14,6 +14,7 @@ import {
   FileCheck2,
   ShieldAlert,
 } from 'lucide-react'
+import { formatScholarshipAmount } from '@/lib/scholarship-match'
 
 export interface ScholarshipDetail {
   link_id: string
@@ -39,6 +40,7 @@ export interface ScholarshipDetail {
   scholarship_state: string | null
   match_type: 'national' | 'state' | 'field_specific'
   relevance_note: string | null
+  amount_note?: string | null
 }
 
 export interface ScholarshipUserProfile {
@@ -48,31 +50,7 @@ export interface ScholarshipUserProfile {
   class_level: string | null
 }
 
-function formatAmount(
-  amount_type: string,
-  min: number | null,
-  max: number | null,
-): string {
-  const fmt = (n: number) => {
-    if (n >= 10000000) return `₹${(n / 10000000).toFixed(1)}Cr`
-    if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`
-    if (n >= 1000) return `₹${(n / 1000).toFixed(0)}K`
-    return `₹${n}`
-  }
-  const suffix =
-    amount_type === 'annual'
-      ? '/year'
-      : amount_type === 'monthly'
-        ? '/month'
-        : amount_type === 'loan'
-          ? ' (loan)'
-          : ''
-  if (min === null && max === null) return 'Amount varies'
-  if (min !== null && max !== null && min !== max)
-    return `${fmt(min)} – ${fmt(max)}${suffix}`
-  const n = max ?? min ?? 0
-  return `${fmt(n)}${suffix}`
-}
+const formatAmount = (s: ScholarshipDetail) => formatScholarshipAmount(s)
 
 function formatDeadline(deadline: string | null): string | null {
   if (!deadline) return null
@@ -327,7 +305,7 @@ export default function CollegeScholarships({
                 <div className="flex-shrink-0 text-right">
                   <div className="flex items-center gap-1 text-sm font-semibold text-gray-800">
                     <Wallet className="w-3.5 h-3.5 text-green-600" />
-                    {formatAmount(s.amount_type, s.amount_min, s.amount_max)}
+                    {formatAmount(s)}
                   </div>
                   {deadline && (
                     <div className="flex items-center gap-1 text-xs text-gray-400 mt-1 justify-end">

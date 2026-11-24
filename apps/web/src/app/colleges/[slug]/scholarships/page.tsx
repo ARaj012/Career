@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { formatScholarshipAmount } from "@/lib/scholarship-match";
 import {
   ArrowLeft,
   Award,
@@ -329,11 +330,7 @@ export default async function CollegeScholarshipsPage({
                           </div>
                         </div>
                         <div className="text-right sm:text-left">
-                          {scholarship.amount_max && (
-                            <p className="text-lg sm:text-xl font-bold text-emerald-600">
-                              ₹{scholarship.amount_max.toLocaleString('en-IN')}
-                            </p>
-                          )}
+                          <p className="text-lg sm:text-xl font-bold text-emerald-600">{formatScholarshipAmount(scholarship)}</p>
                           {scholarship.application_url && !scholarship.notEligible && (
                             <a
                               href={scholarship.application_url}
@@ -407,11 +404,7 @@ export default async function CollegeScholarshipsPage({
                           </div>
                         </div>
                         <div className="text-right sm:text-left">
-                          {scholarship.amount_max && (
-                            <p className="text-lg sm:text-xl font-bold text-orange-600">
-                              ₹{scholarship.amount_max.toLocaleString('en-IN')}
-                            </p>
-                          )}
+                          <p className="text-lg sm:text-xl font-bold text-orange-600">{formatScholarshipAmount(scholarship)}</p>
                           {scholarship.application_url && (
                             <a
                               href={scholarship.application_url}
@@ -475,11 +468,7 @@ export default async function CollegeScholarshipsPage({
                           </div>
                         </div>
                         <div className="text-right sm:text-left">
-                          {scholarship.amount_max && (
-                            <p className="text-lg sm:text-xl font-bold text-emerald-600">
-                              ₹{scholarship.amount_max.toLocaleString('en-IN')}
-                            </p>
-                          )}
+                          <p className="text-lg sm:text-xl font-bold text-emerald-600">{formatScholarshipAmount(scholarship)}</p>
                           {scholarship.application_url && (
                             <a
                               href={scholarship.application_url}
@@ -543,11 +532,7 @@ export default async function CollegeScholarshipsPage({
                           </div>
                         </div>
                         <div className="text-right sm:text-left">
-                          {scholarship.amount_max && (
-                            <p className="text-lg sm:text-xl font-bold text-emerald-600">
-                              ₹{scholarship.amount_max.toLocaleString('en-IN')}
-                            </p>
-                          )}
+                          <p className="text-lg sm:text-xl font-bold text-emerald-600">{formatScholarshipAmount(scholarship)}</p>
                           {scholarship.application_url && (
                             <a
                               href={scholarship.application_url}

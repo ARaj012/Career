@@ -398,12 +398,29 @@ export function answersFromProfile(p: {
 }
 
 /** "₹12,000–₹20,000 a year", "₹16,000–₹18,000 a month", "Loan of ₹1–10 lakh" */
-export function formatScholarshipAmount(s: { amount_min: number | string | null; amount_max: number | string | null; amount_type: string | null }): string {
+/**
+ * The amount in the words students use: "₹4,000 a month", "₹12,000–₹20,000 a year".
+ * Awards with no single figure (fee waivers) fall back to the first phrase of amount_note.
+ */
+const LEVEL_WORD: Record<string, string> = {
+  school: 'School', class_11_12: 'Class 11–12', undergraduate: 'Undergraduate',
+  postgraduate: 'Postgraduate', diploma: 'Diploma', phd: 'PhD',
+}
+
+/** "class_11_12,undergraduate" -> "Class 11–12, Undergraduate" */
+export function scholarshipLevelLabel(level: string | null | undefined): string {
+  return (level ?? '').split(',').map((l) => l.trim()).filter(Boolean)
+    .map((l) => LEVEL_WORD[l] ?? l.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())).join(', ')
+}
+
+export function formatScholarshipAmount(s: {
+  amount_min: number | string | null; amount_max: number | string | null; amount_type: string | null; amount_note?: string | null
+}): string {
   const min = s.amount_min == null ? null : Number(s.amount_min)
   const max = s.amount_max == null ? null : Number(s.amount_max)
   const fmt = (n: number) => (n >= 100000 ? `₹${+(n / 100000).toFixed(2)} lakh` : `₹${n.toLocaleString('en-IN')}`)
   const range = min && max && min !== max ? `${fmt(min)}–${fmt(max)}` : max ? fmt(max) : min ? fmt(min) : null
-  if (!range) return 'Amount set by the scheme'
+  if (!range) return s.amount_note?.split(/[:,(]/)[0].trim() || 'Amount set by the scheme'
   switch (s.amount_type) {
     case 'loan': return `Loan of ${range}`
     case 'monthly': return `${range} a month`

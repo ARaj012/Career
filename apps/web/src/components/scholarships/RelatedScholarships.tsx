@@ -10,6 +10,7 @@ export interface RelatedScholarship {
   amount_min: number | string | null
   amount_max: number | string | null
   amount_type: string | null
+  amount_note?: string | null
   /** Why it is listed here, e.g. "A valid GATE score gets you ₹12,400 a month …" */
   note: string
   /** The exam it comes through, when listed on a career page */
@@ -24,13 +25,13 @@ export function toRelated(rows: Row[] | null | undefined, via?: string): Related
     .filter((r) => r.scholarships && r.scholarships.is_active !== false)
     .map(({ relevance_note, scholarships: s }) => ({
       slug: s!.slug, name: s!.name, provider: s!.provider, state: s!.state,
-      amount_min: s!.amount_min, amount_max: s!.amount_max, amount_type: s!.amount_type,
+      amount_min: s!.amount_min, amount_max: s!.amount_max, amount_type: s!.amount_type, amount_note: s!.amount_note,
       note: relevance_note, via,
     }))
 }
 
 export const RELATED_SCHOLARSHIP_COLUMNS =
-  'relevance_note, scholarships ( slug, name, provider, state, amount_min, amount_max, amount_type, is_active )'
+  'relevance_note, scholarships ( slug, name, provider, state, amount_min, amount_max, amount_type, amount_note, is_active )'
 
 const SHOWN = 5
 

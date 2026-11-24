@@ -27,6 +27,7 @@ interface Scholarship {
   amount_min: number | null;
   amount_max: number | null;
   amount_type: string;
+  amount_note?: string | null;
   eligibility_criteria: string;
   application_deadline: string | null;
   application_url: string | null;

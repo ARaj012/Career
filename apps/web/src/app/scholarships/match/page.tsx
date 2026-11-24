@@ -17,6 +17,7 @@ interface Scholarship extends ScholarshipLike {
   amount_min: number | null
   amount_max: number | null
   amount_type: string | null
+  amount_note?: string | null
   application_url: string | null
 }
 
@@ -59,7 +60,7 @@ export default function ScholarshipMatchPage() {
     ;(async () => {
       const { data } = await supabase
         .from('scholarships')
-        .select('id, slug, name, provider, level, state, category, field_of_study, eligibility_criteria, application_deadline, amount_min, amount_max, amount_type, application_url')
+        .select('id, slug, name, provider, level, state, category, field_of_study, eligibility_criteria, application_deadline, amount_min, amount_max, amount_type, amount_note, application_url')
         .eq('is_active', true)
       setAll((data as Scholarship[]) ?? [])
       setLoading(false)

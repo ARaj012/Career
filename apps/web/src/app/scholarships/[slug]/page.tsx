@@ -5,6 +5,7 @@ import EstimateNote from '@/components/EstimateNote'
 import { getEstimates } from '@/lib/estimates'
 import { Metadata } from 'next'
 import { GraduationCap, MapPin, ExternalLink, FileText, User, CheckCircle2, ListOrdered } from 'lucide-react'
+import { formatScholarshipAmount, scholarshipLevelLabel } from '@/lib/scholarship-match'
 
 interface Scholarship {
   id: string
@@ -16,6 +17,7 @@ interface Scholarship {
   amount_min: number | null
   amount_max: number | null
   amount_type: string
+  amount_note: string | null
   eligibility_criteria: string
   required_documents: string[] | null
   application_deadline: string | null
@@ -35,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   // Try the slug as-is first
   let { data: scholarship } = await supabase
     .from('scholarships')
-    .select('name, description, provider, amount_min, amount_max, amount_type, application_deadline, category, level, state, country')
+    .select('name, description, provider, amount_min, amount_max, amount_type, amount_note, application_deadline, category, level, state, country')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -44,7 +46,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const altSlug = slug.replace(/_/g, '-')
     const { data: altScholarship } = await supabase
       .from('scholarships')
-      .select('name, description, provider, amount_min, amount_max, amount_type, application_deadline, category, level, state, country')
+      .select('name, description, provider, amount_min, amount_max, amount_type, amount_note, application_deadline, category, level, state, country')
       .eq('slug', altSlug)
       .maybeSingle()
     if (altScholarship) scholarship = altScholarship
@@ -57,21 +59,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     }
   }
 
-  const formatAmount = (min: number | null, max: number | null, type: string) => {
-    if (type === 'full_tuition') return 'Full Tuition'
-    if (type === 'partial_tuition') return 'Partial Tuition'
-    if (type === 'fixed_amount') {
-      if (min && max && min !== max) return `₹${min.toLocaleString()} - ₹${max.toLocaleString()}`
-      if (min) return `₹${min.toLocaleString()}`
-      if (max) return `₹${max.toLocaleString()}`
-    }
-    return 'Amount varies'
-  }
-
-  const amountText = formatAmount(scholarship.amount_min, scholarship.amount_max, scholarship.amount_type)
+  const amountText = formatScholarshipAmount(scholarship)
   const deadline = scholarship.application_deadline ? new Date(scholarship.application_deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Rolling deadline'
   const location = scholarship.state ? `${scholarship.state}, India` : scholarship.country
-  const levelText = scholarship.level === 'all' ? 'All Levels' : scholarship.level
+  const levelText = scholarship.level === 'all' ? 'All Levels' : scholarshipLevelLabel(scholarship.level)
 
   const description = `${scholarship.name}: ${amountText} by ${scholarship.provider}. ${levelText} students. Deadline: ${deadline}. ${scholarship.description?.slice(0, 120) || ''}. Eligibility, documents, and application details.`
 
@@ -120,18 +111,14 @@ export default async function ScholarshipDetailPage({
   // Details the provider does not publish: labelled estimates
   const est = await getEstimates(supabase, 'scholarship', scholarship.id)
 
-  const formatAmount = (scholarship: Scholarship) => {
-    if (scholarship.amount_type === 'full_tuition') return 'Full Tuition'
-    if (scholarship.amount_type === 'partial_tuition') return 'Partial Tuition'
-    if (scholarship.amount_type === 'stipend') return 'Stipend'
-
-    if (scholarship.amount_min && scholarship.amount_max) {
-      return `₹${(scholarship.amount_min / 100000).toFixed(1)}L - ₹${(scholarship.amount_max / 100000).toFixed(1)}L`
-    }
-    if (scholarship.amount_min) return `₹${(scholarship.amount_min / 100000).toFixed(1)}L+`
-    if (scholarship.amount_max) return `Up to ₹${(scholarship.amount_max / 100000).toFixed(1)}L`
-    return 'Amount not specified'
-  }
+  const amountText = formatScholarshipAmount(scholarship)
+  // The note explains amounts that are not one figure (rates by programme, a waiver on top, one-time awards)
+  // (when the headline is the note's first phrase — fee waivers — only the rest is shown below it)
+  const note = scholarship.amount_note?.startsWith(amountText)
+    ? scholarship.amount_note.slice(amountText.length).replace(/^[\s:,]+/, '')
+    : scholarship.amount_note
+  const amountNote = note ? note.charAt(0).toUpperCase() + note.slice(1) : null
+  const levelText = scholarshipLevelLabel(scholarship.level)
 
   const formatDate = (date: string | null) => {
     if (!date) return 'No deadline'
@@ -185,7 +172,7 @@ export default async function ScholarshipDetailPage({
             </span>
             <span className="bg-white/10 backdrop-blur px-4 py-1.5 rounded-full text-sm">
               <GraduationCap className="w-4 h-4 inline mr-1" />
-              {scholarship.level.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+              {levelText}
             </span>
             {scholarship.state && (
               <span className="bg-white/10 backdrop-blur px-4 py-1.5 rounded-full text-sm">
@@ -204,7 +191,8 @@ export default async function ScholarshipDetailPage({
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="bg-emerald-50 rounded-xl p-4">
               <p className="text-xs text-gray-500">Amount</p>
-              <p className="font-bold text-emerald-700 text-lg mt-1">{formatAmount(scholarship)}</p>
+              <p className="font-bold text-emerald-700 text-lg mt-1">{amountText}</p>
+              {amountNote && <p className="text-sm text-emerald-900/80 mt-1">{amountNote}</p>}
             </div>
             <div className="bg-blue-50 rounded-xl p-4">
               <p className="text-xs text-gray-500">Provider</p>
@@ -218,7 +206,7 @@ export default async function ScholarshipDetailPage({
             </div>
             <div className="bg-orange-50 rounded-xl p-4">
               <p className="text-xs text-gray-500">Education Level</p>
-              <p className="font-bold text-orange-700 text-lg mt-1 capitalize">{scholarship.level.replace('_', ' ')}</p>
+              <p className="font-bold text-orange-700 text-lg mt-1">{levelText}</p>
             </div>
           </div>
           {!scholarship.application_deadline && est.deadline && (
