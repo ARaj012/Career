@@ -85,6 +85,9 @@ describe('helpers', () => {
     expect(formatScholarshipAmount({ amount_min: 5000, amount_max: 12400, amount_type: 'stipend' })).toBe('₹5,000–₹12,400 a month (stipend)')
     // A fee waiver has no figure: the note's first phrase stands in
     expect(formatScholarshipAmount({ amount_min: null, amount_max: null, amount_type: 'annual', amount_note: 'Tuition fee waiver: full for SC/ST' })).toBe('Tuition fee waiver')
+    // …and a note that opens with a short sentence keeps just that sentence; ₹15,400 is not split
+    expect(formatScholarshipAmount({ amount_min: null, amount_max: null, amount_type: 'annual', amount_note: 'Depends on the scheme. Central rates apply' })).toBe('Depends on the scheme')
+    expect(formatScholarshipAmount({ amount_min: null, amount_max: null, amount_type: 'annual', amount_note: 'Full tuition plus US$15,400 a year living allowance (£9,900 in the UK)' })).toBe('Full tuition plus US$15,400 a year living allowance')
     expect(scholarshipLevelLabel('class_11_12,undergraduate,postgraduate')).toBe('Class 11–12, Undergraduate, Postgraduate')
   })
 

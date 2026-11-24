@@ -420,7 +420,8 @@ export function formatScholarshipAmount(s: {
   const max = s.amount_max == null ? null : Number(s.amount_max)
   const fmt = (n: number) => (n >= 100000 ? `₹${+(n / 100000).toFixed(2)} lakh` : `₹${n.toLocaleString('en-IN')}`)
   const range = min && max && min !== max ? `${fmt(min)}–${fmt(max)}` : max ? fmt(max) : min ? fmt(min) : null
-  if (!range) return s.amount_note?.split(/[:,(]/)[0].trim() || 'Amount set by the scheme'
+  // first phrase of the note: up to ":", "(", ";", ", " or ". " (not the comma inside ₹15,400)
+  if (!range) return s.amount_note?.split(/[:(;]|,\s|\.\s/)[0].trim() || 'Amount set by the scheme'
   switch (s.amount_type) {
     case 'loan': return `Loan of ${range}`
     case 'monthly': return `${range} a month`

@@ -114,9 +114,11 @@ export default async function ScholarshipDetailPage({
   const amountText = formatScholarshipAmount(scholarship)
   // The note explains amounts that are not one figure (rates by programme, a waiver on top, one-time awards)
   // (when the headline is the note's first phrase — fee waivers — only the rest is shown below it)
-  const note = scholarship.amount_note?.startsWith(amountText)
-    ? scholarship.amount_note.slice(amountText.length).replace(/^[\s:,]+/, '')
-    : scholarship.amount_note
+  const rest = scholarship.amount_note?.startsWith(amountText)
+    ? scholarship.amount_note.slice(amountText.length).replace(/^[\s:,.;]+/, '')
+    : null
+  // a remainder that opens mid-thought ("(£9,900 in the UK)…") reads better as the whole note
+  const note = rest !== null && !rest.startsWith('(') ? rest : scholarship.amount_note
   const amountNote = note ? note.charAt(0).toUpperCase() + note.slice(1) : null
   const levelText = scholarshipLevelLabel(scholarship.level)
 
