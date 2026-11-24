@@ -6,6 +6,7 @@ import { Metadata } from 'next'
 import SaveCareerButton from '@/components/SaveCareerButton'
 import OfficialCareerFacts from '@/components/careers/OfficialCareerFacts'
 import EstimateNote from '@/components/EstimateNote'
+import RelatedScholarships, { RELATED_SCHOLARSHIP_COLUMNS, toRelated, type RelatedScholarship } from '@/components/scholarships/RelatedScholarships'
 import { getEstimates, type Estimate } from '@/lib/estimates'
 import {
   ArrowLeft, TrendingUp, IndianRupee, Briefcase, BookOpen,
@@ -207,6 +208,21 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
     .eq('career_id', career.id)
     .limit(10)
   const careerExams: any[] = examsRaw ?? []
+
+  // Scholarships: for the studies that lead here, then those that come with its entrance exams
+  const examIds = careerExams.map((ce) => ce.exam_id)
+  const [{ data: directScholarships }, { data: examScholarships }] = await Promise.all([
+    supabase.from('career_scholarships').select(RELATED_SCHOLARSHIP_COLUMNS).eq('career_id', career.id).order('sort_order'),
+    examIds.length
+      ? supabase.from('exam_scholarships').select(`exam_id, ${RELATED_SCHOLARSHIP_COLUMNS}`).in('exam_id', examIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ])
+  const examName = new Map(careerExams.map((ce) => [ce.exam_id as string, ce.exams?.name as string]))
+  const scholarships: RelatedScholarship[] = []
+  for (const s of [
+    ...toRelated(directScholarships as any),
+    ...((examScholarships ?? []) as any[]).flatMap((r) => toRelated([r], examName.get(r.exam_id))),
+  ]) if (!scholarships.some((x) => x.slug === s.slug)) scholarships.push(s)
 
   // Colleges: the ones chosen for this career, else those that admit through its entrance exams
   const COLLEGE_FIELDS = 'id, name, slug, type, state, city, nirf_rank, naac_grade, annual_fees_min, annual_fees_max'
@@ -545,6 +561,12 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                 </Link>
               </div>
             )}
+
+            <RelatedScholarships
+              items={scholarships}
+              title="Scholarships on the Way"
+              subtitle="For the studies and entrance exams that lead into this career"
+            />
 
             {/* Salary by Experience */}
             {generic && (career.avg_salary_min || career.avg_salary_max) && (

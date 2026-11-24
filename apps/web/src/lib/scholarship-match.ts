@@ -13,7 +13,7 @@ export type Social = 'general' | 'ews' | 'obc' | 'sc' | 'st'
 export type Field =
   | 'engineering' | 'medical' | 'science' | 'commerce' | 'arts'
   | 'management' | 'law' | 'performing_arts' | 'other'
-export type Special = 'athlete' | 'artist' | 'capf_ward' | 'orphan_or_martyr_ward' | 'single_girl'
+export type Special = 'athlete' | 'artist' | 'capf_ward' | 'esm_ward' | 'orphan_or_martyr_ward' | 'single_girl'
 
 export interface StudentAnswers {
   level?: Level
@@ -72,6 +72,7 @@ export const SPECIAL_LABEL: Record<Special, string> = {
   athlete: 'I compete in a sport at state or national level',
   artist: 'I have trained in a classical or folk art for 5+ years',
   capf_ward: 'My parent serves / served in the CAPF or Assam Rifles',
+  esm_ward: 'My parent is an ex-serviceman (Army, Navy, Air Force or Coast Guard), or I am a widow of one',
   orphan_or_martyr_ward: 'I am an orphan, lost a parent to COVID-19, or my parent was martyred in action',
   single_girl: 'I am the only child (a single girl child)',
 }
@@ -192,6 +193,11 @@ function parseConditions(text: string): { conditions: string[]; notes: string[] 
   if (/outside the home state/i.test(text)) conditions.push('Only if you study outside your home state')
   if (/selection is through|interview or performance|talent hunt/i.test(text))
     conditions.push('Selection is by interview, performance or trials')
+  // Exam- and institute-linked awards: "must have qualified the GATE …", "only for students admitted to an IIT …"
+  const exam = text.match(/must have (qualified|cleared|passed|secured)\s+([^;]+?)(?=;|\.\s|\.?$)/i)
+  if (exam) conditions.push(`Only after you have ${exam[1].toLowerCase()} ${exam[2]}`)
+  const inst = text.match(/only for students (admitted to|of) ([^;]+?)(?=;|\.\s|\.?$)/i)
+  if (inst) conditions.push(`Only for students ${inst[1].toLowerCase()} ${inst[2]}`)
   const marks = text.match(/(?:minimum|at least)\s+(\d+)%\s+marks/i)
   if (marks) conditions.push(`Needs at least ${marks[1]}% marks in your last exam`)
   const age =
@@ -210,6 +216,7 @@ function parseSpecial(s: ScholarshipLike, text: string): Special | null {
   if (/single girl child/i.test(text)) return 'single_girl'
   if (/orphan|lost one or both parents|martyred/i.test(text)) return 'orphan_or_martyr_ward'
   if (/ward or widow of CAPF/i.test(text)) return 'capf_ward'
+  if (/ex-servicem[ae]n/i.test(text)) return 'esm_ward'
   if (s.category === 'sports' || /\bathlete/i.test(text)) return 'athlete'
   if (s.category === 'arts' || /training with a guru/i.test(text)) return 'artist'
   return null
@@ -303,6 +310,8 @@ export function matchScholarship(s: ScholarshipLike, a: StudentAnswers, now = ne
     else if (!a.social) check.push(who)
     else if (set.includes('ebc') && (a.social === 'general' || a.social === 'ews'))
       check.push('Open to EBC students (general category with low family income) — confirm on the portal')
+    else if (set.includes('ebc') && a.social === 'obc')
+      check.push('Open to EBC students — some states (e.g. Bihar) list EBC separately from OBC/BC; confirm your caste is on the EBC list')
     else if (set.includes('other') || r.groups.soft) check.push(`${who} — other routes may exist, confirm on the portal`)
     else fails.push(who)
   }

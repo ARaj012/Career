@@ -82,4 +82,22 @@ describe('helpers', () => {
     expect(formatScholarshipAmount({ amount_min: 12000, amount_max: 20000, amount_type: 'annual' })).toBe('₹12,000–₹20,000 a year')
     expect(formatScholarshipAmount({ amount_min: 100000, amount_max: 1000000, amount_type: 'loan' })).toBe('Loan of ₹1 lakh–₹10 lakh')
   })
+
+  it('asks about the exam or institute behind exam- and college-linked awards', () => {
+    const gate = base({ level: 'postgraduate', field_of_study: ['Engineering'], eligibility_criteria: 'Must have qualified the GATE or CEED with a valid score at the time of admission; admitted as a full-time student.' })
+    const v = matchScholarship(gate, { level: 'pg', field: 'engineering', special: [] })
+    expect(v.status).toBe('check')
+    expect(v.check).toContain('Only after you have qualified the GATE or CEED with a valid score at the time of admission')
+    const iit = parseRules(base({ eligibility_criteria: 'Only for students admitted to an IIT (B.Tech or BS); family income below ₹5 lakh per annum — full waiver below ₹1 lakh.' }))
+    expect(iit.conditions).toContain('Only for students admitted to an IIT (B.Tech or BS)')
+  })
+
+  it('needs the ex-servicemen box for KSB scholarships, and treats EBC as a check for OBC students', () => {
+    const ksb = base({ eligibility_criteria: 'Only for dependent wards and widows of ex-servicemen and ex-Coast Guard personnel; minimum 60% marks.' })
+    expect(matchScholarship(ksb, { level: 'ug', special: [] }).status).toBe('no')
+    expect(matchScholarship(ksb, { level: 'ug', special: ['esm_ward'] }).status).not.toBe('no')
+    const ebc = base({ state: 'Bihar', eligibility_criteria: 'Must belong to the Extremely Backward Class (EBC) category.' })
+    expect(matchScholarship(ebc, { state: 'Bihar', social: 'obc', special: [] }).status).toBe('check')
+    expect(matchScholarship(ebc, { state: 'Bihar', social: 'sc', special: [] }).status).toBe('no')
+  })
 })

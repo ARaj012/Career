@@ -53,6 +53,7 @@ npm start
 - **AI Chat Assistant**: Site-wide chat widget with Groq integration
 - **Freemium Subscription**: `/pricing` - Mock payment system for testing payment flow
 - **Subscription Management**: `/subscription` - View and manage subscription status
+- **Scholarships on exam & career pages**: `exam_scholarships` (awards earned through an exam) and `career_scholarships` (awards for the studies leading into a career); a career page also shows its exams' scholarships
 - **Scholarship Matcher**: `/scholarships/match` - Checks a student's answers against each scholarship's published eligibility rules (no AI)
 - **Fees vs Placements**: `/colleges/value` - Whole-course fee vs NIRF median salary for the same programme
 - **Previous Year Papers**: `/papers` and each exam page - Official question papers/answer keys found by `scripts/papers.ts` (monthly, no AI)

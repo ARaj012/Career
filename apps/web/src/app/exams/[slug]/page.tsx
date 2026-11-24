@@ -7,6 +7,7 @@ import TrackExamButton from '@/components/TrackExamButton'
 import KeyDates, { type ScheduleRow } from '@/components/exams/KeyDates'
 import EstimateNote from '@/components/EstimateNote'
 import PreviousPapers, { type PaperRow } from '@/components/exams/PreviousPapers'
+import RelatedScholarships, { RELATED_SCHOLARSHIP_COLUMNS, toRelated } from '@/components/scholarships/RelatedScholarships'
 import { getEstimates } from '@/lib/estimates'
 import { ExamQualifyingCutoffs, ExamCollegeCutoffs, BRANCHES, RANK_CATEGORIES } from '@/components/exams/ExamCutoffs'
 
@@ -216,6 +217,13 @@ export default async function ExamDetailPage({
     .order('year', { ascending: false, nullsFirst: false })
     .order('title')
   const papers = (papersRaw ?? []) as PaperRow[]
+
+  // Scholarships, fellowships and free coaching that come with this exam
+  const { data: scholarshipRows } = await supabase
+    .from('exam_scholarships')
+    .select(RELATED_SCHOLARSHIP_COLUMNS)
+    .eq('exam_id', exam.id)
+  const scholarships = toRelated(scholarshipRows as any)
 
   // Toppers — most recent year available, if any have been entered
   const { data: allToppers } = await supabase
@@ -433,6 +441,15 @@ export default async function ExamDetailPage({
 
         <div id="papers" className="scroll-mt-20">
           <PreviousPapers papers={papers} examName={exam.name} officialUrl={exam.official_url} />
+        </div>
+
+        <div id="scholarships" className="scroll-mt-20">
+          <RelatedScholarships
+            items={scholarships}
+            title={`Scholarships linked to ${exam.name}`}
+            subtitle="Money you can get by taking or clearing this exam — open one to see the full rules on the official source"
+            className="mb-6 sm:mb-10"
+          />
         </div>
 
         {/* Toppers */}
