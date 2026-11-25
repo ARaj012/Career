@@ -77,7 +77,7 @@ export default function UpcomingExams() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            Upcoming Exams
+            Upcoming exams
           </h3>
           <Lock className="w-4 h-4 text-gray-500" />
         </div>
@@ -102,10 +102,10 @@ export default function UpcomingExams() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            Upcoming Exams
+            Upcoming exams
           </h3>
           <Link href="/exams" className="text-indigo-600 text-sm hover:underline">
-            Browse Exams
+            Browse exams
           </Link>
         </div>
         <div className="text-center py-8">
@@ -127,10 +127,10 @@ export default function UpcomingExams() {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
           <Calendar className="w-5 h-5" />
-          Upcoming Exams
+          Upcoming exams
         </h3>
         <Link href="/my-exams" className="text-indigo-600 text-sm hover:underline">
-          View All
+          View all
         </Link>
       </div>
       <div className="space-y-4">
