@@ -1,225 +1,206 @@
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import {
+  ArrowRight, Award, BookOpen, Bookmark, Building2, CheckCircle2, Circle, Compass, FileText, History, Map as MapIcon, Target, TrendingUp,
+  type LucideIcon,
+} from 'lucide-react'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { BRAND_TAGLINE } from '@/lib/brand'
 import UpcomingExams from '@/components/UpcomingExams'
+
+const lakh = (n: number) => `₹${+(n / 100000).toFixed(1)}L`
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
-  
   const { data: { user } } = await supabase.auth.getUser()
-  
   if (!user) redirect('/login')
 
-  const { data: careers } = await supabase
-    .from('careers')
-    .select('*')
-    .eq('is_trending', true)
-    .limit(6)
+  const mine = (table: string) => supabase.from(table).select('id', { count: 'exact', head: true }).eq('user_id', user.id)
+  const [
+    { data: careers },
+    { count: savedCareers },
+    { count: savedColleges },
+    { count: savedExams },
+    { count: matchRuns },
+    { data: subscription },
+    { data: profile },
+  ] = await Promise.all([
+    supabase.from('careers').select('id, title, slug, category, avg_salary_min, avg_salary_max, demand_score').eq('is_trending', true).limit(6),
+    mine('user_saved_careers'),
+    mine('user_saved_colleges'),
+    mine('user_saved_exams'),
+    mine('user_recommendation_history'),
+    supabase.from('user_subscriptions').select('plan_id, status').eq('user_id', user.id).maybeSingle(),
+    supabase.from('user_profiles').select('*').eq('user_id', user.id).maybeSingle(),
+  ])
 
-  const { data: savedCareers } = await supabase
-    .from('user_saved_careers')
-    .select('id, created_at, careers(*)')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(4)
-
-  const { count: savedCollegesCount } = await supabase
-    .from('user_saved_colleges')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-
-  const { count: savedExamsCount } = await supabase
-    .from('user_saved_exams')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
-
-  const { count: scholarshipCount } = await supabase
-    .from('scholarships')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_active', true)
-
-  const { count: blogCount } = await supabase
-    .from('blog_posts')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_published', true)
-
-  // Get user subscription
-  const { data: subscription } = await supabase
-    .from('user_subscriptions')
-    .select('plan_id, status')
-    .eq('user_id', user.id)
-    .single()
-
-  // Profile completion
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  const firstName = (user.user_metadata?.full_name as string | undefined)?.split(' ')[0] || 'Student'
 
   const sections = [
-    { label: 'Basic Info', done: true },
+    { label: 'Basic info', done: true },
     { label: 'Education', done: !!profile?.class_level },
     { label: 'Stream', done: !!profile?.stream },
     { label: 'Board', done: !!profile?.board },
     { label: 'State', done: !!profile?.state },
     { label: 'Subjects', done: (profile?.subjects?.length || 0) > 0 },
-    { label: 'Target Exams', done: (profile?.target_exams?.length || 0) > 0 },
-    { label: 'Career Goal', done: !!profile?.career_goal },
+    { label: 'Target exams', done: (profile?.target_exams?.length || 0) > 0 },
+    { label: 'Career goal', done: !!profile?.career_goal },
   ]
-  const completedCount = sections.filter(s => s.done).length
+  const completedCount = sections.filter((s) => s.done).length
   const completionPct = Math.round((completedCount / sections.length) * 100)
+
+  const stats: { icon: LucideIcon; label: string; value: number; href: string; tint: string }[] = [
+    { icon: Compass, label: 'Career matches run', value: matchRuns ?? 0, href: '/recommendation-history', tint: 'bg-indigo-50 text-indigo-600' },
+    { icon: Bookmark, label: 'Saved careers', value: savedCareers ?? 0, href: '/saved/careers', tint: 'bg-pink-50 text-pink-600' },
+    { icon: Building2, label: 'Saved colleges', value: savedColleges ?? 0, href: '/saved/colleges', tint: 'bg-sky-50 text-sky-600' },
+    { icon: FileText, label: 'Saved exams', value: savedExams ?? 0, href: '/saved/exams', tint: 'bg-amber-50 text-amber-600' },
+  ]
+
+  const actions: { icon: LucideIcon; label: string; href: string }[] = [
+    { icon: Compass, label: 'Find my career matches', href: '/recommend' },
+    { icon: Target, label: 'My exams and reminders', href: '/my-exams' },
+    { icon: Award, label: 'Scholarship matcher', href: '/scholarships/match' },
+    { icon: TrendingUp, label: 'Fees vs placements', href: '/colleges/value' },
+    { icon: FileText, label: 'Previous year papers', href: '/papers' },
+    { icon: MapIcon, label: 'Career roadmaps', href: '/roadmaps' },
+    { icon: History, label: 'Recommendation history', href: '/recommendation-history' },
+    { icon: BookOpen, label: 'Blog', href: '/blog' },
+  ]
 
   return (
     <div className="min-h-screen bg-gray-50">
-      
-      {/* Navbar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
 
-
-      <div className="max-w-7xl mx-auto px-8 py-10">
-
-        {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-3xl p-8 text-white mb-10">
-          <div className="flex items-center justify-between">
+        {/* Welcome */}
+        <div className="bg-indigo-600 rounded-3xl p-6 sm:p-8 text-white mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
-              <h2 className="text-3xl font-bold mb-2">
-                Welcome back, {user.user_metadata?.full_name?.split(' ')[0] || 'Student'}! 👋
-              </h2>
-              <p className="text-indigo-100 mb-6">
-                Know your path, own your future.
-              </p>
-              <div className="flex gap-4">
-                <a href="/recommend" className="bg-white text-indigo-600 px-6 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition">
-                  Get Career Recommendations
-                </a>
-                <a href="/careers" className="bg-indigo-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-400 transition border border-indigo-400">
-                  Browse All Careers
-                </a>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Welcome back, {firstName}</h1>
+              <p className="text-indigo-100 mt-1">{BRAND_TAGLINE}</p>
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <Link href="/recommend" className="inline-flex items-center justify-center gap-2 bg-white text-indigo-700 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition">
+                  Find my career matches <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                </Link>
+                <Link href="/careers" className="inline-flex items-center justify-center bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-400 transition border border-indigo-400">
+                  Browse careers
+                </Link>
               </div>
             </div>
             {subscription && (
-              <div className="hidden md:block text-right">
-                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur px-4 py-2 rounded-lg">
-                  <span className="text-sm font-medium capitalize">{subscription.plan_id} Plan</span>
-                  {subscription.plan_id === 'free' && (
-                    <a href="/pricing" className="text-xs bg-white text-indigo-600 px-3 py-1 rounded-full font-medium hover:bg-indigo-50 transition">
-                      Upgrade
-                    </a>
-                  )}
-                </div>
+              <div className="inline-flex items-center gap-2 self-start md:self-center bg-white/15 px-4 py-2 rounded-xl">
+                <span className="text-sm font-medium capitalize">{subscription.plan_id} plan</span>
+                {subscription.plan_id === 'free' && (
+                  <Link href="/pricing" className="text-xs bg-white text-indigo-700 px-3 py-1 rounded-full font-medium hover:bg-indigo-50 transition">
+                    Upgrade
+                  </Link>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-10">
-          {[
-            { icon: '🎯', label: 'Career Matches', value: '0', color: 'bg-purple-50 text-purple-600' },
-            { icon: '📚', label: 'Saved Careers', value: savedCareers?.length || 0, color: 'bg-blue-50 text-blue-600' },
-            { icon: '📝', label: 'Saved Exams', value: savedExamsCount || 0, color: 'bg-green-50 text-green-600' },
-            { icon: '🏫', label: 'Saved Colleges', value: savedCollegesCount || 0, color: 'bg-orange-50 text-orange-600' },
-            { icon: '💰', label: 'Scholarships', value: scholarshipCount || 0, color: 'bg-emerald-50 text-emerald-600' },
-            { icon: '📰', label: 'Blog Posts', value: blogCount || 0, color: 'bg-teal-50 text-teal-600' },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-white rounded-2xl p-6 shadow-sm">
-              <div className={`text-2xl w-10 h-10 flex items-center justify-center rounded-xl mb-3 ${stat.color}`}>
-                {stat.icon}
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              <p className="text-gray-500 text-sm">{stat.label}</p>
-            </div>
+        {/* Your numbers */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8">
+          {stats.map(({ icon: Icon, label, value, href, tint }) => (
+            <Link key={label} href={href} className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-indigo-300 hover:shadow-sm transition">
+              <span className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${tint}`}>
+                <Icon className="w-5 h-5" aria-hidden="true" />
+              </span>
+              <p className="text-2xl font-bold text-gray-900 tabular-nums">{value}</p>
+              <p className="text-sm text-gray-500">{label}</p>
+            </Link>
           ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Trending Careers */}
+
+          {/* Trending careers */}
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Trending Careers</h3>
-              <a href="/careers" className="text-indigo-600 text-sm hover:underline">View all</a>
+              <h2 className="text-xl font-bold text-gray-900">Trending careers</h2>
+              <Link href="/careers" className="text-indigo-600 text-sm font-medium hover:text-indigo-800">View all</Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {careers?.map((career) => (
-                <div key={career.id} className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition border border-gray-100">
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="bg-indigo-50 text-indigo-600 text-xs font-medium px-2 py-1 rounded-full">
-                      {career.category}
-                    </span>
-                    <span className="bg-orange-100 text-orange-600 text-xs font-medium px-2 py-1 rounded-full">
-                      Trending
-                    </span>
+                <Link key={career.id} href={`/careers/${career.slug}`} className="group bg-white rounded-2xl p-5 border border-gray-200 hover:border-indigo-300 hover:shadow-sm transition">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="bg-indigo-50 text-indigo-700 text-xs font-medium px-2 py-1 rounded-full">{career.category}</span>
+                    <span className="bg-orange-50 text-orange-700 text-xs font-medium px-2 py-1 rounded-full">Trending</span>
                   </div>
-                  <h4 className="font-bold text-gray-900 mt-2">{career.title}</h4>
-                  <p className="text-green-600 text-sm font-semibold mt-1">
-                    Rs.{(career.avg_salary_min/100000).toFixed(0)}L - Rs.{(career.avg_salary_max/100000).toFixed(0)}L/yr
-                  </p>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="text-xs text-gray-400">Demand</span>
-                    <span className="text-indigo-600 font-bold text-sm">{career.demand_score}/10</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
-                    <div className="bg-indigo-500 h-1.5 rounded-full" 
-                      style={{ width: `${(career.demand_score/10)*100}%` }}/>
-                  </div>
-                </div>
+                  <h3 className="font-semibold text-gray-900 mt-3 group-hover:text-indigo-700">{career.title}</h3>
+                  {(career.avg_salary_min || career.avg_salary_max) && (
+                    <p className="text-emerald-600 text-sm font-medium mt-1">
+                      {career.avg_salary_min && career.avg_salary_max
+                        ? `${lakh(career.avg_salary_min)} – ${lakh(career.avg_salary_max)} a year`
+                        : `${lakh(career.avg_salary_min || career.avg_salary_max)} a year`}
+                    </p>
+                  )}
+                  {career.demand_score != null && (
+                    <>
+                      <div className="mt-3 flex items-center justify-between text-xs">
+                        <span className="text-gray-500">Demand</span>
+                        <span className="text-indigo-600 font-semibold">{career.demand_score}/10</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
+                        <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${(career.demand_score / 10) * 100}%` }} />
+                      </div>
+                    </>
+                  )}
+                </Link>
               ))}
             </div>
           </div>
 
-          {/* Right Sidebar */}
+          {/* Sidebar */}
           <div className="space-y-6">
-            
-            {/* Quick Actions */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h3 className="font-bold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="space-y-3">
-                {[
-                  { icon: '🎯', label: 'Get Recommendations', href: '/recommend', color: 'bg-purple-50 text-purple-700' },
-                  { icon: '❤️', label: 'Saved Careers', href: '/saved/careers', color: 'bg-pink-50 text-pink-700' },
-                  { icon: '🏫', label: 'Saved Colleges', href: '/saved/colleges', color: 'bg-blue-50 text-blue-700' },
-                  { icon: '📝', label: 'Saved Exams', href: '/saved/exams', color: 'bg-green-50 text-green-700' },
-                  { icon: '📊', label: 'Recommendation History', href: '/recommendation-history', color: 'bg-indigo-50 text-indigo-700' },
-                  { icon: '💰', label: 'Scholarships', href: '/scholarships', color: 'bg-emerald-50 text-emerald-700' },
-                  { icon: '🗺️', label: 'View Roadmaps', href: '/roadmaps', color: 'bg-orange-50 text-orange-700' },
-                  { icon: '📖', label: 'Career Blog', href: '/blog', color: 'bg-rose-50 text-rose-700' },
-                ].map((action) => (
-                  <a key={action.label} href={action.href}
-                    className={`flex items-center gap-3 p-3 rounded-xl hover:opacity-80 transition ${action.color}`}>
-                    <span>{action.icon}</span>
-                    <span className="font-medium text-sm">{action.label}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
 
-            {/* Profile Completion */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h3 className="font-bold text-gray-900 mb-2">Profile Completion</h3>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-500">{completedCount}/{sections.length} complete</span>
-                <span className="text-indigo-600 font-bold text-sm">{completionPct}%</span>
+            {/* Profile completion */}
+            <div className="bg-white rounded-2xl p-6 border border-gray-200">
+              <h2 className="font-bold text-gray-900 mb-2">Profile completion</h2>
+              <div className="flex items-center justify-between mb-2 text-sm">
+                <span className="text-gray-500">{completedCount} of {sections.length} done</span>
+                <span className="text-indigo-600 font-semibold">{completionPct}%</span>
               </div>
               <div className="w-full bg-gray-100 rounded-full h-2">
-                <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${completionPct}%` }}/>
+                <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${completionPct}%` }} />
               </div>
-              <div className="mt-4 space-y-2">
-                {sections.map((item) => (
-                  <div key={item.label} className="flex items-center gap-2 text-sm">
-                    <span>{item.done ? '✅' : '⬜'}</span>
-                    <span className={item.done ? 'text-gray-400 line-through' : 'text-gray-700'}>
-                      {item.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <a href="/profile" className="block mt-4 text-center bg-indigo-600 text-white py-2 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition">
-                Complete Profile
-              </a>
+              {completionPct < 100 && (
+                <>
+                  <ul className="mt-4 space-y-2">
+                    {sections.map((item) => (
+                      <li key={item.label} className="flex items-center gap-2 text-sm">
+                        {item.done
+                          ? <CheckCircle2 className="w-4 h-4 text-emerald-500" aria-hidden="true" />
+                          : <Circle className="w-4 h-4 text-gray-300" aria-hidden="true" />}
+                        <span className={item.done ? 'text-gray-400' : 'text-gray-700'}>{item.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-gray-500 mt-3">A complete profile gives you better career matches and scholarship results.</p>
+                  <Link href="/profile" className="block mt-4 text-center bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition">
+                    Complete profile
+                  </Link>
+                </>
+              )}
             </div>
 
-            {/* Upcoming Exams */}
+            {/* Upcoming exams */}
             <UpcomingExams />
+
+            {/* Shortcuts */}
+            <div className="bg-white rounded-2xl p-6 border border-gray-200">
+              <h2 className="font-bold text-gray-900 mb-3">Shortcuts</h2>
+              <ul className="space-y-1">
+                {actions.map(({ icon: Icon, label, href }) => (
+                  <li key={href}>
+                    <Link href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-700 transition">
+                      <Icon className="w-4 h-4 text-gray-400" aria-hidden="true" />
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { safeRedirectPath } from '@/lib/safe-redirect'
 import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
+import { CheckCircle2 } from 'lucide-react'
 
 function LoginForm() {
   const [loading, setLoading] = useState(false)
@@ -56,33 +57,22 @@ function LoginForm() {
           {loading ? 'Signing in...' : 'Continue with Google'}
         </button>
 
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-gray-200"/>
-          <span className="text-gray-400 text-sm">or</span>
-          <div className="flex-1 h-px bg-gray-200"/>
-        </div>
-
-        {/* Email coming soon */}
-        <button
-          disabled
-          className="w-full bg-gray-50 border-2 border-gray-200 text-gray-400 font-semibold py-3 px-6 rounded-xl cursor-not-allowed"
-        >
-          Continue with Email (Coming Soon)
-        </button>
-
-        {/* Features List */}
-        <div className="mt-8 space-y-3">
-          {[
-            '🎯 Get personalized career recommendations',
-            '🗺️ Track your career roadmap progress',
-            '📝 Save exams and college shortlists',
-            '💰 Compare salaries across careers',
-          ].map((feature) => (
-            <div key={feature} className="flex items-center gap-2 text-sm text-gray-500">
-              <span>{feature}</span>
-            </div>
-          ))}
+        {/* What signing in adds */}
+        <div className="mt-8 pt-6 border-t border-gray-100">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">With a free account you can</p>
+          <ul className="space-y-2.5">
+            {[
+              'Save careers, colleges and exams',
+              'Get email reminders before exam deadlines',
+              'See scholarships that fit your profile',
+              'Track your career roadmap progress',
+            ].map((feature) => (
+              <li key={feature} className="flex items-center gap-2.5 text-sm text-gray-600">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" aria-hidden="true" />
+                {feature}
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Terms */}

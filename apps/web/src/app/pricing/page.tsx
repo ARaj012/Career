@@ -349,7 +349,7 @@ export default function PricingPage() {
           <Link href="/" className="text-sm text-gray-500 hover:text-indigo-600 mb-4 inline-block">
             ← Back to Home
           </Link>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Choose Your Plan</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Choose your plan</h1>
           <p className="text-gray-600">Unlock everything Snova has for your future</p>
         </div>
       </div>

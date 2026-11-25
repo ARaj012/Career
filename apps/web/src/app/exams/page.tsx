@@ -276,66 +276,34 @@ export default function ExamsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm px-8 py-4 flex items-center justify-between">
-        <Link href="/dashboard" className="text-2xl font-bold text-indigo-600">
-          Snova
-        </Link>
-        <div className="flex gap-6">
-          <Link
-            href="/careers"
-            className="text-gray-600 hover:text-indigo-600 text-sm"
-          >
-            Careers
-          </Link>
-          <Link
-            href="/recommend"
-            className="text-gray-600 hover:text-indigo-600 text-sm"
-          >
-            Recommend
-          </Link>
-          <Link
-            href="/colleges"
-            className="text-gray-600 hover:text-indigo-600 text-sm"
-          >
-            Colleges
-          </Link>
-        </div>
-      </nav>
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 px-8 py-12 text-white">
-        <h1 className="text-4xl font-extrabold mb-2">Entrance Exams</h1>
-        <p className="text-indigo-100 text-lg">{exams.length}+ exams with dates, eligibility and official links</p>
-        <Link href="/papers" className="inline-block mt-2 text-sm font-medium text-white underline underline-offset-4 decoration-indigo-300 hover:decoration-white">
-          Previous year question papers & answer keys →
-        </Link>
-        {/* Stats */}
-        <div className="flex gap-8 mt-6">
-          {[
-            { label: "Total Exams", value: `${exams.length}+` },
-            {
-              label: "National Level",
-              value: `${exams.filter((e) => e.exam_level === "National").length}+`,
-            },
-            {
-              label: "State Level",
-              value: `${exams.filter((e) => e.exam_level === "State").length}+`,
-            },
-            {
-              label: "International",
-              value: `${exams.filter((e) => e.exam_level === "International").length}+`,
-            },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <p className="text-2xl font-bold">{stat.value}</p>
-              <p className="text-indigo-200 text-sm">{stat.label}</p>
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <FileText className="w-6 h-6 text-indigo-600" aria-hidden="true" />
             </div>
-          ))}
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Entrance exams</h1>
+              <p className="text-gray-500 text-sm mt-0.5">{exams.length} exams with dates, eligibility and official links</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 sm:ml-14 text-sm">
+            {[
+              { label: "national", value: exams.filter((e) => e.exam_level === "National").length },
+              { label: "state", value: exams.filter((e) => e.exam_level === "State").length },
+              { label: "international", value: exams.filter((e) => e.exam_level === "International").length },
+            ].filter((s) => s.value > 0).map((s) => (
+              <span key={s.label} className="text-gray-600"><span className="font-semibold text-gray-900">{s.value}</span> {s.label}</span>
+            ))}
+            <Link href="/papers" className="font-medium text-indigo-600 hover:text-indigo-800">Previous year papers and answer keys →</Link>
+            <Link href="/my-exams" className="font-medium text-indigo-600 hover:text-indigo-800">Get exam reminders →</Link>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-8 py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         {/* Search and Filters */}
         <div className="bg-white rounded-2xl p-6 shadow-sm mb-8">
           <div className="flex flex-col md:flex-row gap-4 mb-4">

@@ -132,7 +132,7 @@ export default function Navbar() {
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-indigo-600 hover:bg-gray-50 transition-colors"
                 >
                   <Target className="w-4 h-4" />
-                  My Exams
+                  My exams
                 </Link>
 
                 <div className="relative">
@@ -203,7 +203,7 @@ export default function Navbar() {
                         onClick={handleSignOut}
                         className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
                       >
-                        <LogOut className="w-4 h-4" /> Sign Out
+                        <LogOut className="w-4 h-4" /> Sign out
                       </button>
                     </div>
                   </div>
@@ -211,24 +211,12 @@ export default function Navbar() {
               </div>
             </>
             ) : (
-              <>
-                <Link
-                  href="/dashboard"
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    pathname === '/dashboard'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50'
-                  }`}
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/login"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                  Sign In
-                </Link>
-              </>
+              <Link
+                href="/login"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Sign in
+              </Link>
             )}
           </div>
 
@@ -285,7 +273,7 @@ export default function Navbar() {
                 </Link>
                 <Link href="/my-exams" onClick={() => setMenuOpen(false)}
                   className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 flex items-center gap-2">
-                  <Target className="w-4 h-4" /> My Exams
+                  <Target className="w-4 h-4" /> My exams
                 </Link>
                 <Link href="/notifications" onClick={() => setMenuOpen(false)}
                   className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 flex items-center gap-2">
@@ -310,20 +298,14 @@ export default function Navbar() {
                 </Link>
                 <button onClick={() => { handleSignOut(); setMenuOpen(false) }}
                   className="block w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50">
-                  Sign Out
+                  Sign out
                 </button>
               </>
             ) : (
-              <>
-                <Link href="/dashboard" onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
-                  Dashboard
-                </Link>
-                <Link href="/login" onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium text-center">
-                  Sign In
-                </Link>
-              </>
+              <Link href="/login" onClick={() => setMenuOpen(false)}
+                className="block px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium text-center">
+                Sign in
+              </Link>
             )}
           </div>
         </div>

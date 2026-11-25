@@ -205,45 +205,29 @@ export default function ScholarshipsPage() {
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-500 px-8 py-12 text-white">
-        <h1 className="text-4xl font-extrabold mb-2">
-          Scholarships & Financial Aid
-        </h1>
-        <p className="text-emerald-100 text-lg">
-          {scholarships.length}+ scholarships to help fund your education
-        </p>
-        {/* Stats */}
-        <div className="flex gap-8 mt-6">
-          {[
-            { label: "Total Scholarships", value: `${scholarships.length}+` },
-            {
-              label: "Merit-based",
-              value: `${scholarships.filter((s) => s.category === "merit").length}+`,
-            },
-            {
-              label: "Need-based",
-              value: `${scholarships.filter((s) => s.category === "need_based").length}+`,
-            },
-            {
-              label: "Active Applications",
-              value: "Apply Now",
-            },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <p className="text-2xl font-bold">{stat.value}</p>
-              <p className="text-emerald-200 text-sm">{stat.label}</p>
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-100 rounded-lg">
+              <GraduationCap className="w-6 h-6 text-emerald-600" aria-hidden="true" />
             </div>
-          ))}
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Scholarships and financial aid</h1>
+              <p className="text-gray-500 text-sm mt-0.5">
+                {scholarships.length} government, merit and need-based scholarships, with official links
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/scholarships/match"
+            className="inline-flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold px-5 py-3 rounded-xl hover:bg-emerald-700 transition shrink-0"
+          >
+            <Sparkles className="w-5 h-5" aria-hidden="true" /> Find the ones I qualify for
+          </Link>
         </div>
-        <Link
-          href="/scholarships/match"
-          className="mt-8 inline-flex items-center gap-2 bg-white text-emerald-700 font-semibold px-5 py-3 rounded-xl shadow-sm hover:bg-emerald-50 transition"
-        >
-          <Sparkles className="w-5 h-5" /> Find the scholarships I qualify for
-        </Link>
       </div>
 
-      <div className="max-w-7xl mx-auto px-8 py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         {/* Search and Filters */}
         <div className="bg-white rounded-2xl p-6 shadow-sm mb-8">
           <div className="flex flex-col md:flex-row gap-4 mb-4">
