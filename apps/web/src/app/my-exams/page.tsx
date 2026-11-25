@@ -318,8 +318,8 @@ export default function MyExamsPage() {
                                 <Target className="w-5 h-5 text-white" />
                               </div>
                               <div className="text-left">
-                                <p className="font-bold text-gray-900">AI Study Roadmap</p>
-                                <p className="text-xs text-gray-600">Personalized plan based on {daysRemaining !== null ? `${daysRemaining} days` : 'time'} remaining</p>
+                                <p className="font-bold text-gray-900">Study roadmap</p>
+                                <p className="text-xs text-gray-600">A plan sized to the {daysRemaining !== null ? `${daysRemaining} days` : 'time'} remaining</p>
                               </div>
                             </div>
                             <ChevronDown className={`w-5 h-5 text-gray-600 transition-transform ${item.showRoadmap ? 'rotate-180' : ''}`} />
