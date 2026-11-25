@@ -46,7 +46,7 @@ export default function AdminSidebar() {
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-semibold text-white leading-tight">CareerGuide</p>
+            <p className="font-semibold text-white leading-tight">Snova</p>
             <p className="text-xs text-slate-400">Admin console</p>
           </div>
         </div>

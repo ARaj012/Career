@@ -654,24 +654,24 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const description = career.description || `Step-by-step career roadmap for ${career.title}. Learn the exact path to build skills, get degrees, certifications, and land your dream job in ${career.category}.`
 
     return {
-      title: `${career.title} - Career Roadmap | CareerGuide`,
+      title: `${career.title} - Career Roadmap | Snova`,
       description,
       keywords: `${career.title}, career roadmap, ${career.category}, career path, step-by-step guide, skills, certifications, career planning`,
       openGraph: {
         type: 'article',
         locale: 'en_IN',
-        url: `https://careerguide.com/roadmaps/${slug}`,
+        url: `/roadmaps/${slug}`,
         title: `${career.title} - Complete Career Roadmap`,
         description,
-        siteName: 'CareerGuide',
+        siteName: 'Snova',
       },
       twitter: {
         card: 'summary_large_image',
-        title: `${career.title} | CareerGuide`,
+        title: `${career.title} | Snova`,
         description,
       },
       alternates: {
-        canonical: `https://careerguide.com/roadmaps/${slug}`,
+        canonical: `/roadmaps/${slug}`,
       },
     }
   }
@@ -691,30 +691,30 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const description = roadmap.description || `Step-by-step career roadmap for ${roadmap.title}. Learn the exact path to build skills, get degrees, certifications, and land your dream job in ${roadmap.category}.`
 
     return {
-      title: `${roadmap.title} - Career Roadmap | CareerGuide`,
+      title: `${roadmap.title} - Career Roadmap | Snova`,
       description,
       keywords: `${roadmap.title}, career roadmap, ${roadmap.category}, career path, step-by-step guide, skills, certifications, career planning`,
       openGraph: {
         type: 'article',
         locale: 'en_IN',
-        url: `https://careerguide.com/roadmaps/${slug}`,
+        url: `/roadmaps/${slug}`,
         title: `${roadmap.title} - Complete Career Roadmap`,
         description,
-        siteName: 'CareerGuide',
+        siteName: 'Snova',
       },
       twitter: {
         card: 'summary_large_image',
-        title: `${roadmap.title} | CareerGuide`,
+        title: `${roadmap.title} | Snova`,
         description,
       },
       alternates: {
-        canonical: `https://careerguide.com/roadmaps/${slug}`,
+        canonical: `/roadmaps/${slug}`,
       },
     }
   }
 
   return {
-    title: 'Roadmap Not Found | CareerGuide',
+    title: 'Roadmap Not Found | Snova',
     description: 'The roadmap you are looking for does not exist.',
   }
 }

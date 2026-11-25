@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { safeRedirectPath } from '@/lib/safe-redirect'
+import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
 
 function LoginForm() {
   const [loading, setLoading] = useState(false)
@@ -29,14 +30,14 @@ function LoginForm() {
         
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold text-indigo-600">CareerGuide</h1>
-          <p className="text-gray-500 mt-2 text-sm">India&apos;s Smartest Career Guidance Platform</p>
+          <h1 className="text-3xl font-extrabold text-indigo-600">{BRAND_NAME}</h1>
+          <p className="text-gray-500 mt-2 text-sm">{BRAND_TAGLINE}</p>
         </div>
 
         {/* Welcome Text */}
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2>
-          <p className="text-gray-500 mt-1">Sign in to access your career roadmap</p>
+          <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
+          <p className="text-gray-500 mt-1">Sign in to continue your journey</p>
         </div>
 
         {/* Google Sign In Button */}

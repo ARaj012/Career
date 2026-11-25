@@ -141,7 +141,8 @@ export function renderDigest(opts: { name?: string | null; items: DigestItem[]; 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px">
       <tr><td style="padding:24px 24px 8px">
-        <div style="font-size:18px;font-weight:700;color:#4f46e5">CareerGuide</div>
+        <div style="font-size:18px;font-weight:700;color:#4f46e5">Snova</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:2px">Know your path, own your future.</div>
         <p style="color:#111827;margin:16px 0 4px">${esc(hello)}</p>
         <p style="color:#374151;margin:0">Here are the dates coming up for the exams you track:</p>
       </td></tr>
@@ -149,7 +150,7 @@ export function renderDigest(opts: { name?: string | null; items: DigestItem[]; 
       <tr><td style="padding:20px 24px">
         <a href="${esc(opts.appUrl)}/my-exams" style="display:inline-block;background:#4f46e5;color:#ffffff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">Open my exams</a>
         <p style="color:#6b7280;font-size:12px;margin:20px 0 0">Always confirm dates on the exam board's official website.
-        You get these because you track these exams on CareerGuide. <a href="${esc(opts.unsubscribeUrl)}" style="color:#6b7280">Stop these emails</a></p>
+        You get these because you track these exams on Snova. <a href="${esc(opts.unsubscribeUrl)}" style="color:#6b7280">Stop these emails</a></p>
       </td></tr>
     </table>
   </td></tr></table></body></html>`
@@ -170,7 +171,7 @@ export async function sendEmail(msg: { to: string; subject: string; html: string
       method: 'POST',
       headers: { 'api-key': process.env.BREVO_API_KEY!, 'content-type': 'application/json', accept: 'application/json' },
       body: JSON.stringify({
-        sender: { email: process.env.ALERTS_FROM_EMAIL, name: process.env.ALERTS_FROM_NAME || 'CareerGuide' },
+        sender: { email: process.env.ALERTS_FROM_EMAIL, name: process.env.ALERTS_FROM_NAME || 'Snova' },
         to: [{ email: msg.to }],
         subject: msg.subject,
         htmlContent: msg.html,

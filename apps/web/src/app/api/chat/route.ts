@@ -34,7 +34,7 @@ const groq = new Groq({ apiKey: groqApiKey })
 // testing, drop to 'openai/gpt-oss-20b' for higher request/day headroom.
 const MODEL = 'openai/gpt-oss-120b'
 
-const SYSTEM_PROMPT = `You are the CareerGuide Assistant, a friendly guide for Indian students exploring colleges, entrance exams, and careers.
+const SYSTEM_PROMPT = `You are the Snova Assistant, a friendly guide for Indian students exploring colleges, entrance exams, and careers.
 
 Rules you must follow:
 - For ANY question involving specific facts — cutoffs, fees, placement packages, seat counts, exam dates, eligibility criteria, NIRF ranks — you MUST call a tool to look up real data first. Never state a specific number from memory.

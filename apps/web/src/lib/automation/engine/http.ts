@@ -16,7 +16,7 @@ import { createHash, X509Certificate } from 'node:crypto'
 import * as tls from 'node:tls'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://example.com'
-export const USER_AGENT = `Mozilla/5.0 (compatible; CareerGuideBot/2.0; +${APP_URL})`
+export const USER_AGENT = `Mozilla/5.0 (compatible; SnovaBot/2.0; +${APP_URL})`
 
 const PER_HOST_DELAY_MS = 2500
 const TIMEOUT_MS = 30_000
@@ -65,7 +65,7 @@ async function rawFetch(url: string): Promise<Response> {
 type RobotRule = { allow: boolean; pattern: string; re: RegExp }
 
 /** Parse robots.txt (RFC 9309): groups of User-agent lines, Allow/Disallow with * and $. */
-export function parseRobots(txt: string, agent = 'careerguidebot'): RobotRule[] {
+export function parseRobots(txt: string, agent = 'snovabot'): RobotRule[] {
   const groups: { agents: string[]; rules: RobotRule[] }[] = []
   let current: { agents: string[]; rules: RobotRule[] } | null = null
   let lastWasAgent = false

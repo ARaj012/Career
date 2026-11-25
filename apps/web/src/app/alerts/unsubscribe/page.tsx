@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import UnsubscribeForm from './UnsubscribeForm'
 
 export const metadata: Metadata = {
-  title: 'Exam reminder emails | CareerGuide',
+  title: 'Exam reminder emails | Snova',
   robots: { index: false },
 }
 

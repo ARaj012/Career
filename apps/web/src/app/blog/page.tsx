@@ -92,7 +92,7 @@ export default function BlogPage() {
     <main className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-12 text-white">
-        <h1 className="text-4xl font-extrabold mb-2">Career Guide Blog</h1>
+        <h1 className="text-4xl font-extrabold mb-2">Snova Blog</h1>
         <p className="text-purple-100 text-lg">Expert tips, industry insights, and success stories to guide your career journey</p>
       </div>
 

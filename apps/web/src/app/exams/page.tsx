@@ -279,7 +279,7 @@ export default function ExamsPage() {
       {/* Navbar */}
       <nav className="bg-white shadow-sm px-8 py-4 flex items-center justify-between">
         <Link href="/dashboard" className="text-2xl font-bold text-indigo-600">
-          CareerGuide
+          Snova
         </Link>
         <div className="flex gap-6">
           <Link

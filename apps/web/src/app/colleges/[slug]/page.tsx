@@ -106,7 +106,7 @@ export async function generateMetadata({
 
   if (!college) {
     return {
-      title: "College Not Found | CareerGuide",
+      title: "College Not Found | Snova",
       description: "The college you are looking for does not exist.",
     };
   }
@@ -119,24 +119,24 @@ export async function generateMetadata({
   const description = `${college.name}: ${rankText}, ${gradeText}, ${feesText}, ${studentsText}. Located in ${college.city}, ${college.state}. Established ${college.established_year}. Courses, placements, cutoffs, and admissions.`;
 
   return {
-    title: `${college.name} - Rankings, Fees, Courses & Admissions 2026 | CareerGuide`,
+    title: `${college.name} - Rankings, Fees, Courses & Admissions 2026 | Snova`,
     description,
     keywords: `${college.name}, ${college.type} college, ${college.city} ${college.state}, ${rankText}, ${feesText}, ${college.naac_grade}, college admissions, NIRF ranking`,
     openGraph: {
       type: "article",
       locale: "en_IN",
-      url: `https://careerguide.com/colleges/${slug}`,
+      url: `/colleges/${slug}`,
       title: `${college.name} - ${rankText}, ${feesText}`,
       description,
-      siteName: "CareerGuide",
+      siteName: "Snova",
     },
     twitter: {
       card: "summary_large_image",
-      title: `${college.name} | CareerGuide`,
+      title: `${college.name} | Snova`,
       description,
     },
     alternates: {
-      canonical: `https://careerguide.com/colleges/${slug}`,
+      canonical: `/colleges/${slug}`,
     },
   };
 }

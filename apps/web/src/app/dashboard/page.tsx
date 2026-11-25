@@ -85,7 +85,7 @@ export default async function DashboardPage() {
                 Welcome back, {user.user_metadata?.full_name?.split(' ')[0] || 'Student'}! 👋
               </h2>
               <p className="text-indigo-100 mb-6">
-                Ready to explore your career path today?
+                Know your path, own your future.
               </p>
               <div className="flex gap-4">
                 <a href="/recommend" className="bg-white text-indigo-600 px-6 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition">

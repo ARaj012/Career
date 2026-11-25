@@ -286,7 +286,7 @@ export default function PricingPage() {
         key: data.keyId,
         amount: data.amount,
         currency: data.currency,
-        name: 'CareerGuide',
+        name: 'Snova',
         description: `${plans.find(p => p.id === planId)?.name} Plan - ${billingCycle}`,
         order_id: data.orderId,
         handler: async function (response: any) {
@@ -350,7 +350,7 @@ export default function PricingPage() {
             ← Back to Home
           </Link>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Choose Your Plan</h1>
-          <p className="text-gray-600">Unlock your full potential with our career guidance platform</p>
+          <p className="text-gray-600">Unlock everything Snova has for your future</p>
         </div>
       </div>
 

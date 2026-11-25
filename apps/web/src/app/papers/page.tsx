@@ -4,7 +4,7 @@ import { BookOpen, FileText, KeyRound } from 'lucide-react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export const metadata: Metadata = {
-  title: 'Previous year question papers | CareerGuide',
+  title: 'Previous year question papers | Snova',
   description: 'Official previous-year question papers and answer keys for entrance and recruitment exams, linked from each exam board’s website.',
 }
 

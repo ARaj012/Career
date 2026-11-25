@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { Menu, X, GraduationCap, LogOut, User as UserIcon, Bell, Target } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
+import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
 
 const NAV_LINKS = [
   { href: '/careers',   label: 'Careers'    },
@@ -80,12 +81,14 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 flex-shrink-0" aria-label="CareerGuide Home">
+          <Link href="/" className="flex items-center gap-2 flex-shrink-0" aria-label={`${BRAND_NAME} home`}>
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center" aria-hidden="true">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">
-              Career<span className="text-indigo-600">Guide</span>
+            <span className="flex flex-col leading-none">
+              <span className="text-xl font-bold text-gray-900">{BRAND_NAME}</span>
+              {/* The tagline only where there is room for it; phones show the name alone */}
+              <span className="hidden lg:block text-[11px] font-normal text-gray-500 mt-0.5">{BRAND_TAGLINE}</span>
             </span>
           </Link>
 
@@ -242,6 +245,10 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-1">
+          <div className="px-4 pt-1 pb-3 mb-1 border-b border-gray-100">
+            <p className="text-base font-bold text-gray-900 leading-tight">{BRAND_NAME}</p>
+            <p className="text-xs text-gray-500">{BRAND_TAGLINE}</p>
+          </div>
           {NAV_LINKS.map(({ href, label }) => (
             <Link
               key={href}

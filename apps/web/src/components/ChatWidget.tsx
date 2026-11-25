@@ -41,7 +41,7 @@ function renderContent(text: string) {
 const WELCOME_MESSAGE: Message = {
   role: 'assistant',
   content:
-    "Hi! I'm the CareerGuide Assistant. Ask me about any college, entrance exam, or career path — cutoffs, placements, fees, eligibility, anything on the site.",
+    "Hi! I'm the Snova Assistant. Ask me about any college, entrance exam, or career path — cutoffs, placements, fees, eligibility, anything on the site.",
 }
 
 export default function ChatWidget() {
@@ -129,7 +129,7 @@ export default function ChatWidget() {
           <div className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white px-4 py-3.5 flex items-center gap-2 flex-shrink-0">
             <Sparkles className="w-5 h-5" />
             <div>
-              <p className="text-sm font-semibold leading-tight">CareerGuide Assistant</p>
+              <p className="text-sm font-semibold leading-tight">Snova Assistant</p>
               <p className="text-xs text-indigo-100 leading-tight">Ask about colleges, exams, careers</p>
             </div>
           </div>

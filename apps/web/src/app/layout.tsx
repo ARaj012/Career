@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
 import AppChrome from '@/components/AppChrome'
+import { BRAND_NAME, BRAND_TAGLINE, SITE_URL } from '@/lib/brand'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -14,26 +15,31 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
+const HOME_TITLE = `${BRAND_NAME} — ${BRAND_TAGLINE}`
+const HOME_DESCRIPTION = `${BRAND_NAME} helps Indian students choose careers, colleges, entrance exams and scholarships with official data, and get personalised career recommendations.`
+
 export const metadata: Metadata = {
-  title: 'CareerGuide — Find Your Perfect Career Path with AI',
-  description: 'Discover careers, explore colleges, find entrance exams and get personalised career recommendations based on your interests and skills. India\'s smartest career guidance platform.',
+  // Relative URLs in page metadata (canonical, Open Graph) resolve against the site address
+  metadataBase: new URL(SITE_URL),
+  title: HOME_TITLE,
+  description: HOME_DESCRIPTION,
   keywords: 'career guidance, career counseling, career options, colleges, entrance exams, scholarships, AI career recommendations, Indian students',
-  authors: [{ name: 'CareerGuide' }],
-  creator: 'CareerGuide',
-  publisher: 'CareerGuide',
+  authors: [{ name: BRAND_NAME }],
+  creator: BRAND_NAME,
+  publisher: BRAND_NAME,
   robots: 'index, follow',
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    url: 'https://careerguide.com',
-    title: 'CareerGuide — AI-Powered Career Guidance for Indian Students',
-    description: 'Discover your perfect career path with AI. Explore 80+ careers, 500+ colleges, and 50+ entrance exams.',
-    siteName: 'CareerGuide',
+    url: '/',
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    siteName: BRAND_NAME,
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CareerGuide — AI-Powered Career Guidance',
-    description: 'Discover your perfect career path with AI.',
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
   },
 }
 

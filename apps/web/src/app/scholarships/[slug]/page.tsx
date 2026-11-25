@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   if (!scholarship) {
     return {
-      title: 'Scholarship Not Found | CareerGuide',
+      title: 'Scholarship Not Found | Snova',
       description: 'The scholarship you are looking for does not exist.',
     }
   }
@@ -67,24 +67,24 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const description = `${scholarship.name}: ${amountText} by ${scholarship.provider}. ${levelText} students. Deadline: ${deadline}. ${scholarship.description?.slice(0, 120) || ''}. Eligibility, documents, and application details.`
 
   return {
-    title: `${scholarship.name} - ${amountText} | CareerGuide`,
+    title: `${scholarship.name} - ${amountText} | Snova`,
     description,
     keywords: `${scholarship.name}, ${scholarship.provider}, ${amountText}, ${levelText} scholarship, ${location}, ${deadline}, financial aid, education funding`,
     openGraph: {
       type: 'article',
       locale: 'en_IN',
-      url: `https://careerguide.com/scholarships/${slug}`,
+      url: `/scholarships/${slug}`,
       title: `${scholarship.name} - ${amountText}`,
       description,
-      siteName: 'CareerGuide',
+      siteName: 'Snova',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${scholarship.name} | CareerGuide`,
+      title: `${scholarship.name} | Snova`,
       description,
     },
     alternates: {
-      canonical: `https://careerguide.com/scholarships/${slug}`,
+      canonical: `/scholarships/${slug}`,
     },
   }
 }

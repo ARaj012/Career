@@ -134,7 +134,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   if (!career) {
     return {
-      title: 'Career Not Found | CareerGuide',
+      title: 'Career Not Found | Snova',
       description: 'The career you are looking for does not exist.',
     }
   }
@@ -143,24 +143,24 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const description = career.description?.slice(0, 160) || `Explore ${career.title} career: ${salaryText}, ${career.growth_level} growth, ${career.demand_score}/100 demand. Skills, colleges, exams, and career roadmap.`
 
   return {
-    title: `${career.title} Career Guide 2026 | CareerGuide`,
+    title: `${career.title} Career Guide 2026 | Snova`,
     description,
     keywords: `${career.title}, career guidance, ${career.category}, ${salaryText}, ${career.growth_level} growth, career options, Indian students`,
     openGraph: {
       type: 'article',
       locale: 'en_IN',
-      url: `https://careerguide.com/careers/${slug}`,
+      url: `/careers/${slug}`,
       title: [`${career.title} Career Guide`, career.avg_salary_min || career.avg_salary_max ? salaryText : null, career.growth_level ? `${career.growth_level} Growth` : null].filter(Boolean).join(' - '),
       description,
-      siteName: 'CareerGuide',
+      siteName: 'Snova',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${career.title} Career Guide | CareerGuide`,
+      title: `${career.title} Career Guide | Snova`,
       description,
     },
     alternates: {
-      canonical: `https://careerguide.com/careers/${slug}`,
+      canonical: `/careers/${slug}`,
     },
   }
 }

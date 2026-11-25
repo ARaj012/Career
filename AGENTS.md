@@ -1,7 +1,7 @@
-# Career Guidance Platform - Development Guide
+# Snova (career guidance platform) - Development Guide
 
 ## Project Overview
-A comprehensive student-focused career guidance platform with AI recommendations, admin panel, and content management system.
+Snova — "Know your path, own your future." A student-focused career guidance platform with AI recommendations, admin panel, and content management system. The name and tagline live in `apps/web/src/lib/brand.ts`.
 
 ## Technology Stack
 - **Frontend**: Next.js 16.2.3 (App Router, Turbopack), React, TypeScript, Tailwind CSS
@@ -130,7 +130,7 @@ RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret (optional - mock mode if mi
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 BREVO_API_KEY=your_brevo_api_key (optional - exam reminder emails; mock mode if missing)
 ALERTS_FROM_EMAIL=sender address verified in Brevo (optional)
-ALERTS_FROM_NAME=CareerGuide (optional)
+ALERTS_FROM_NAME=Snova (optional)
 ```
 
 **Exam reminder emails**: `scripts/exam-alerts.ts` runs every morning in GitHub Actions (Data Automation workflow). Without `BREVO_API_KEY` + `ALERTS_FROM_EMAIL` it still creates in-app notifications and only logs the email (mock mode). For GitHub, add `BREVO_API_KEY` as a repository secret and `ALERTS_FROM_EMAIL` as a repository variable.

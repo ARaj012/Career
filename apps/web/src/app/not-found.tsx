@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Compass, Home, Search } from 'lucide-react'
+import { BRAND_NAME } from '@/lib/brand'
 
 export default function NotFound() {
   return (
@@ -10,10 +11,7 @@ export default function NotFound() {
           <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
             <Compass className="w-6 h-6 text-white" />
           </div>
-          <span className="text-2xl font-bold">
-            <span className="text-gray-900">Career</span>
-            <span className="text-indigo-600">Guide</span>
-          </span>
+          <span className="text-2xl font-bold text-gray-900">{BRAND_NAME}</span>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-10">

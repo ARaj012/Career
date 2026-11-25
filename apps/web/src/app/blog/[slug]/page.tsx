@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   if (!post || !post.is_published) {
     return {
-      title: 'Blog Post Not Found | CareerGuide',
+      title: 'Blog Post Not Found | Snova',
       description: 'The blog post you are looking for does not exist.',
     }
   }
@@ -38,17 +38,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const categoryLabel = post.category.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
 
   return {
-    title: `${post.title} | CareerGuide Blog`,
+    title: `${post.title} | Snova Blog`,
     description,
     keywords: `${post.title}, ${categoryLabel}, career guidance, ${post.author}, ${publishDate}, blog`,
     openGraph: {
       type: 'article',
       locale: 'en_IN',
-      url: `https://careerguide.com/blog/${slug}`,
+      url: `/blog/${slug}`,
       title: post.title,
       description,
       images: post.cover_image ? [{ url: post.cover_image, width: 1200, height: 630, alt: post.title }] : [],
-      siteName: 'CareerGuide',
+      siteName: 'Snova',
       publishedTime: post.published_at,
       authors: [post.author],
     },
@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       images: post.cover_image ? [post.cover_image] : [],
     },
     alternates: {
-      canonical: `https://careerguide.com/blog/${slug}`,
+      canonical: `/blog/${slug}`,
     },
   }
 }

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Menu, X, Home, Briefcase, GraduationCap, FileText, BookOpen, DollarSign, Bell, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import NotificationCenter from './NotificationCenter'
+import { BRAND_NAME } from '@/lib/brand'
 
 export default function MobileNavigation() {
   const [isOpen, setIsOpen] = useState(false)
@@ -33,7 +34,7 @@ export default function MobileNavigation() {
       {/* Mobile Header */}
       <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
         <Link href="/dashboard" className="text-xl font-bold text-indigo-600">
-          CareerGuide
+          {BRAND_NAME}
         </Link>
         <div className="flex items-center gap-4">
           <NotificationCenter />

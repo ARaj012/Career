@@ -6,7 +6,7 @@ import { buildValueRows, type CollegeIn, type CourseIn, type PlacementIn } from 
 import ValueExplorer from '@/components/college/ValueExplorer'
 
 export const metadata: Metadata = {
-  title: 'College fees vs placements | CareerGuide',
+  title: 'College fees vs placements | Snova',
   description: 'Compare what a degree costs with the median salary its graduates get, college by college.',
 }
 

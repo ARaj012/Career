@@ -51,13 +51,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     .in('slug', [slug, slug.replace(/_/g, '-')])
     .limit(1)
     .maybeSingle()
-  if (!exam) return { title: 'Exam | CareerGuide' }
+  if (!exam) return { title: 'Exam | Snova' }
 
   const details = [exam.conducting_body, exam.exam_level && `${exam.exam_level} level`, exam.mode && `${exam.mode} mode`, exam.frequency]
     .filter(Boolean)
     .join(', ')
   return {
-    title: `${exam.name} - Dates, Syllabus, Cutoff & Preparation | CareerGuide`,
+    title: `${exam.name} - Dates, Syllabus, Cutoff & Preparation | Snova`,
     description: `${exam.name}${details ? `: ${details}` : ''}. Exam dates, eligibility, syllabus, cutoffs and preparation tips.`,
   }
 }
