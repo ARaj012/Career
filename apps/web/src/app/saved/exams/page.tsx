@@ -49,7 +49,7 @@ export default function SavedExamsPage() {
 
   const getLevelColor = (level: string) => {
     if (level === 'National') return 'bg-blue-100 text-blue-700'
-    if (level === 'State') return 'bg-green-100 text-green-700'
+    if (level === 'State') return 'bg-green-100 text-green-800'
     return 'bg-purple-100 text-purple-700'
   }
 
@@ -119,20 +119,20 @@ export default function SavedExamsPage() {
                         <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                           <div className="flex items-center gap-1 text-gray-600">
                             <Calendar className="w-3.5 h-3.5" />
-                            <span className="text-xs text-gray-400">Exam:</span>
+                            <span className="text-xs text-gray-500">Exam:</span>
                             <span className="font-medium">{formatDate(latestSchedule.exam_date_start)}</span>
                           </div>
                           <div className="flex items-center gap-1 text-gray-600">
                             <User className="w-3.5 h-3.5" />
-                            <span className="text-xs text-gray-400">Apply:</span>
+                            <span className="text-xs text-gray-500">Apply:</span>
                             <span className="font-medium">{formatDate(latestSchedule.registration_start)}</span>
                           </div>
                           <div className="flex items-center gap-1 text-gray-600">
-                            <span className="text-xs text-gray-400">Result:</span>
+                            <span className="text-xs text-gray-500">Result:</span>
                             <span className="font-medium">{formatDate(latestSchedule.result_date)}</span>
                           </div>
                           <div className="flex items-center gap-1 text-gray-600">
-                            <span className="text-xs text-gray-400">Mode:</span>
+                            <span className="text-xs text-gray-500">Mode:</span>
                             <span className="font-medium">{exam.mode}</span>
                           </div>
                         </div>
@@ -153,7 +153,7 @@ export default function SavedExamsPage() {
                     </div>
                     <button
                       onClick={() => removeSaved(saved.id)}
-                      className="ml-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className="ml-4 p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                       title="Remove from saved"
                     >
                       <X className="w-4 h-4" />

@@ -23,7 +23,7 @@ export default function CollegeScholarshipsSummary({ own, linked, collegeSlug }:
       {own.length > 0 && (
         <section className="mb-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-            Offered by the institute <BadgeCheck className="w-3.5 h-3.5 text-emerald-600" />
+            Offered by the institute <BadgeCheck className="w-3.5 h-3.5 text-emerald-700" />
           </h3>
           <ul className="space-y-2">
             {own.map((s) => (
@@ -51,7 +51,7 @@ export default function CollegeScholarshipsSummary({ own, linked, collegeSlug }:
                   ) : (
                     <span className="text-sm font-medium text-gray-900">{s.name}</span>
                   )}
-                  {s.provider && <p className="text-xs text-gray-400">{s.provider}</p>}
+                  {s.provider && <p className="text-xs text-gray-500">{s.provider}</p>}
                 </div>
                 {s.match_type && (
                   <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 capitalize">{s.match_type}</span>

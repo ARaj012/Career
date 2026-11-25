@@ -135,7 +135,7 @@ export function ExamQualifyingCutoffs({ rows, examName }: { rows: NationalCutoff
                     <tr key={cat}>
                       <td className="px-4 py-2.5">
                         <span className="font-medium text-gray-900">{cat}</span>
-                        {CATEGORY_HELP[cat] && <span className="block text-xs text-gray-400">{CATEGORY_HELP[cat]}</span>}
+                        {CATEGORY_HELP[cat] && <span className="block text-xs text-gray-500">{CATEGORY_HELP[cat]}</span>}
                       </td>
                       {years.map((y) => {
                         const r = band.rows.find((x) => x.year === y && (x.category ?? 'All candidates') === cat)
@@ -149,7 +149,7 @@ export function ExamQualifyingCutoffs({ rows, examName }: { rows: NationalCutoff
                         return (
                           <td key={y} className={`px-4 py-2.5 text-right tabular-nums whitespace-nowrap ${r ? (official ? 'font-semibold text-gray-900' : 'text-gray-500') : 'text-gray-300'}`}>
                             {text}
-                            {r && !official && <span className="text-amber-600" title="Not yet confirmed from an official notice">*</span>}
+                            {r && !official && <span className="text-amber-700" title="Not yet confirmed from an official notice">*</span>}
                           </td>
                         )
                       })}
@@ -168,13 +168,13 @@ export function ExamQualifyingCutoffs({ rows, examName }: { rows: NationalCutoff
         )}
         {sources.length > 0 && (
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <BadgeCheck className="w-3.5 h-3.5 text-emerald-600" /> Official notices:
+            <BadgeCheck className="w-3.5 h-3.5 text-emerald-700" /> Official notices:
             {sources.map((s) => (
               <a key={s.y} href={s.url!} target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline">{s.y}</a>
             ))}
           </p>
         )}
-        {anyUnverified && <p><span className="text-amber-600">*</span> Not yet confirmed from the conducting body&apos;s own notice; it is replaced as soon as the official figure is read.</p>}
+        {anyUnverified && <p><span className="text-amber-700">*</span> Not yet confirmed from the conducting body&apos;s own notice; it is replaced as soon as the official figure is read.</p>}
       </div>
     </div>
   )

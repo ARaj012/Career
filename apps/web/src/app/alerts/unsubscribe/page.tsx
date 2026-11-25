@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 export default async function UnsubscribePage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token } = await searchParams
   return (
-    <main className="min-h-[70vh] bg-gray-50 flex items-center justify-center px-4 py-12">
+    <div className="min-h-[70vh] bg-gray-50 flex items-center justify-center px-4 py-12">
       <UnsubscribeForm token={token ?? ''} />
-    </main>
+    </div>
   )
 }

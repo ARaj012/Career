@@ -53,7 +53,7 @@ export default async function DashboardPage() {
     { icon: Compass, label: 'Career matches run', value: matchRuns ?? 0, href: '/recommendation-history', tint: 'bg-indigo-50 text-indigo-600' },
     { icon: Bookmark, label: 'Saved careers', value: savedCareers ?? 0, href: '/saved/careers', tint: 'bg-pink-50 text-pink-600' },
     { icon: Building2, label: 'Saved colleges', value: savedColleges ?? 0, href: '/saved/colleges', tint: 'bg-sky-50 text-sky-600' },
-    { icon: FileText, label: 'Saved exams', value: savedExams ?? 0, href: '/saved/exams', tint: 'bg-amber-50 text-amber-600' },
+    { icon: FileText, label: 'Saved exams', value: savedExams ?? 0, href: '/saved/exams', tint: 'bg-amber-50 text-amber-700' },
   ]
 
   const actions: { icon: LucideIcon; label: string; href: string }[] = [
@@ -129,7 +129,7 @@ export default async function DashboardPage() {
                   </div>
                   <h3 className="font-semibold text-gray-900 mt-3 group-hover:text-indigo-700">{career.title}</h3>
                   {(career.avg_salary_min || career.avg_salary_max) && (
-                    <p className="text-emerald-600 text-sm font-medium mt-1">
+                    <p className="text-emerald-700 text-sm font-medium mt-1">
                       {career.avg_salary_min && career.avg_salary_max
                         ? `${lakh(career.avg_salary_min)} – ${lakh(career.avg_salary_max)} a year`
                         : `${lakh(career.avg_salary_min || career.avg_salary_max)} a year`}
@@ -172,7 +172,7 @@ export default async function DashboardPage() {
                         {item.done
                           ? <CheckCircle2 className="w-4 h-4 text-emerald-500" aria-hidden="true" />
                           : <Circle className="w-4 h-4 text-gray-300" aria-hidden="true" />}
-                        <span className={item.done ? 'text-gray-400' : 'text-gray-700'}>{item.label}</span>
+                        <span className={item.done ? 'text-gray-500' : 'text-gray-700'}>{item.label}</span>
                       </li>
                     ))}
                   </ul>
@@ -194,7 +194,7 @@ export default async function DashboardPage() {
                 {actions.map(({ icon: Icon, label, href }) => (
                   <li key={href}>
                     <Link href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-700 transition">
-                      <Icon className="w-4 h-4 text-gray-400" aria-hidden="true" />
+                      <Icon className="w-4 h-4 text-gray-500" aria-hidden="true" />
                       {label}
                     </Link>
                   </li>

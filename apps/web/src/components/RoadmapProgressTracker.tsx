@@ -147,7 +147,7 @@ export default function RoadmapProgressTracker({ roadmapId, milestones }: Roadma
                 {isUpdating ? (
                   <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
                 ) : isCompleted ? (
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <CheckCircle2 className="w-5 h-5 text-green-700" />
                 ) : (
                   <Circle className="w-5 h-5 text-gray-300" />
                 )}

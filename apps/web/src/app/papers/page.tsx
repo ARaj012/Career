@@ -35,7 +35,7 @@ export default async function PapersPage() {
     .sort((a, b) => b.s.files - a.s.files)
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-bold text-gray-900">Previous year papers</h1>
@@ -62,14 +62,14 @@ export default async function PapersPage() {
                       <span className="inline-flex items-center gap-1.5"><FileText className="w-4 h-4 text-indigo-500" />{count(s.question_papers, 'question paper')}</span>
                     )}
                     {s.answer_keys > 0 && (
-                      <span className="inline-flex items-center gap-1.5"><KeyRound className="w-4 h-4 text-emerald-600" />{count(s.answer_keys, 'answer key')}</span>
+                      <span className="inline-flex items-center gap-1.5"><KeyRound className="w-4 h-4 text-emerald-700" />{count(s.answer_keys, 'answer key')}</span>
                     )}
                     {s.files - s.question_papers - s.answer_keys > 0 && (
-                      <span className="inline-flex items-center gap-1.5"><BookOpen className="w-4 h-4 text-amber-600" />{count(s.files - s.question_papers - s.answer_keys, 'sample paper')}</span>
+                      <span className="inline-flex items-center gap-1.5"><BookOpen className="w-4 h-4 text-amber-700" />{count(s.files - s.question_papers - s.answer_keys, 'sample paper')}</span>
                     )}
                   </div>
                   {s.latest_year && (
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-gray-500 mt-2">
                       {s.earliest_year && s.earliest_year !== s.latest_year ? `${s.earliest_year}–${s.latest_year}` : s.latest_year}
                     </p>
                   )}
@@ -78,11 +78,11 @@ export default async function PapersPage() {
             ))}
           </ul>
         )}
-        <p className="text-xs text-gray-400 mt-8">
+        <p className="text-xs text-gray-500 mt-8">
           Some boards (for example UPSC and the NTA&apos;s NEET and JEE Main sites) don&apos;t let automated readers open their pages, so
           their papers can&apos;t be listed here — find them on the board&apos;s own website.
         </p>
       </div>
-    </main>
+    </div>
   )
 }

@@ -89,7 +89,7 @@ export default function BlogPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center gap-3">
@@ -108,9 +108,10 @@ export default function BlogPage() {
         <div className="bg-white rounded-2xl p-6 shadow-sm mb-8">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
               <input
                 type="text"
+                aria-label="Search articles"
                 placeholder="Search articles..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -156,7 +157,7 @@ export default function BlogPage() {
                       <span className={`text-xs font-semibold px-2 py-1 rounded-full ${catColor.bg} ${catColor.text}`}>
                         {post.category.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
                       </span>
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <span className="text-xs text-gray-500 flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {formatDate(post.published_at as string | null)}
                       </span>
@@ -168,7 +169,7 @@ export default function BlogPage() {
                       {post.excerpt}
                     </p>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400">By {post.author}</span>
+                      <span className="text-xs text-gray-500">By {post.author}</span>
                       <span className="text-xs text-purple-600 font-medium">Read more →</span>
                     </div>
                   </div>
@@ -186,6 +187,6 @@ export default function BlogPage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   )
 }

@@ -90,7 +90,7 @@ export default function SaveCareerButton({ careerId }: SaveCareerButtonProps) {
 
   if (loading) {
     return (
-      <button disabled className="inline-flex items-center gap-2 border border-gray-200 text-gray-400 text-sm font-medium px-4 py-2.5 rounded-lg">
+      <button disabled className="inline-flex items-center gap-2 border border-gray-200 text-gray-500 text-sm font-medium px-4 py-2.5 rounded-lg">
         <Heart className="w-4 h-4" /> Save
       </button>
     )

@@ -56,8 +56,8 @@ export default function EmailAlertsToggle() {
             Before registration opens and closes, on exam day and when results are due — for every exam you track.
             {email && <> Sent to <span className="text-gray-700">{email}</span>.</>}
           </p>
-          {last && <p className="text-[11px] text-gray-400 mt-1">Last email {new Date(last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>}
-          {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+          {last && <p className="text-[11px] text-gray-500 mt-1">Last email {new Date(last).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>}
+          {error && <p className="text-xs text-red-700 mt-1">{error}</p>}
         </div>
         <button type="button" role="switch" aria-checked={on} aria-label="Email reminders" onClick={toggle} disabled={saving}
           className={`relative shrink-0 w-11 h-6 rounded-full transition ${on ? 'bg-indigo-600' : 'bg-gray-300'} disabled:opacity-60`}>

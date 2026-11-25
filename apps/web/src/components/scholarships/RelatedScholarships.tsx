@@ -47,13 +47,13 @@ function Item({ s }: { s: RelatedScholarship }) {
             {s.via && <span className="font-medium text-gray-700">Through {s.via}: </span>}
             {s.note}
           </p>
-          <p className="text-xs text-gray-400 mt-1 flex flex-wrap items-center gap-x-2">
+          <p className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-x-2">
             <span className="font-medium text-emerald-700">{formatScholarshipAmount(s)}</span>
             {local && <span className="inline-flex items-center gap-0.5"><MapPin className="w-3 h-3" />{s.state} only</span>}
             {s.provider && <span className="truncate max-w-full">{s.provider}</span>}
           </p>
         </div>
-        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-emerald-600 shrink-0 mt-0.5" />
+        <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-emerald-600 shrink-0 mt-0.5" />
       </Link>
     </li>
   )
@@ -71,9 +71,9 @@ export default function RelatedScholarships({ items, title = 'Scholarships', sub
   return (
     <section className={`bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6 ${className}`}>
       <h2 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2">
-        <Award className="w-5 h-5 text-emerald-600" />
+        <Award className="w-5 h-5 text-emerald-700" />
         {title}
-        <span className="text-sm font-normal text-gray-400">({items.length})</span>
+        <span className="text-sm font-normal text-gray-500">({items.length})</span>
       </h2>
       {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
       <ul className="mt-4 space-y-2">

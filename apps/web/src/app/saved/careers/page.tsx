@@ -106,7 +106,7 @@ export default function SavedCareersPage() {
                       <p className="text-gray-500 text-sm mt-2 line-clamp-2">{saved.careers.description}</p>
                     )}
                     <div className="flex items-center gap-4 mt-3 text-sm">
-                      <div className="flex items-center gap-1 text-green-600">
+                      <div className="flex items-center gap-1 text-green-700">
                         <IndianRupee className="w-3.5 h-3.5" />
                         {formatSalary(saved.careers.avg_salary_min, saved.careers.avg_salary_max)}
                       </div>
@@ -123,7 +123,7 @@ export default function SavedCareersPage() {
                   </div>
                   <button
                     onClick={() => removeSaved(saved.id)}
-                    className="ml-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="ml-4 p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     title="Remove from saved"
                   >
                     <X className="w-4 h-4" />

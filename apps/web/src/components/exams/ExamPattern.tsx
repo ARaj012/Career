@@ -190,8 +190,8 @@ function StatTile({
   const accents = {
     indigo: 'bg-indigo-50 text-indigo-600',
     blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    amber: 'bg-amber-50 text-amber-600',
+    green: 'bg-green-50 text-green-700',
+    amber: 'bg-amber-50 text-amber-700',
   } as const
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-start gap-3 hover:border-gray-300 transition-colors">
@@ -217,7 +217,7 @@ function SectionMarkingChip({ section }: { section: ExamPatternSection }) {
       {marksPerQ != null && <span className="text-green-700">+{formatMarks(marksPerQ)}</span>}
       {marksPerQ != null && neg != null && <span className="text-gray-300">/</span>}
       {neg != null && (
-        <span className={hasNeg ? 'text-red-600' : 'text-gray-400'}>
+        <span className={hasNeg ? 'text-red-700' : 'text-gray-500'}>
           {hasNeg ? `−${formatMarks(neg)}` : 'no negative'}
         </span>
       )}
@@ -354,7 +354,7 @@ function StagePatternCard({ pattern, label }: { pattern: ExamPatternData; label:
             <div className="flex flex-wrap gap-2">
               {pattern.sections!.map((s, idx) => (
                 <span key={idx} className="inline-flex items-center gap-1.5 text-xs">
-                  <span className="text-indigo-400">{s.name.split('–')[0].split('—')[0].trim()}:</span>
+                  <span className="text-indigo-600">{s.name.split('–')[0].split('—')[0].trim()}:</span>
                   <SectionMarkingChip section={s} />
                 </span>
               ))}
@@ -457,7 +457,7 @@ function StagePatternCard({ pattern, label }: { pattern: ExamPatternData; label:
                       />
                     </div>
                   )}
-                  {s.note && <p className="text-xs text-gray-400 mt-1.5 italic">{s.note}</p>}
+                  {s.note && <p className="text-xs text-gray-500 mt-1.5 italic">{s.note}</p>}
                 </div>
               )
             })}
@@ -515,7 +515,7 @@ export default function ExamPattern({ patterns, examName }: ExamPatternProps) {
               >
                 <span
                   className={`w-5 h-5 rounded-full text-[11px] flex items-center justify-center font-semibold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+                    isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
                   }`}
                 >
                   {idx + 1}
@@ -529,7 +529,7 @@ export default function ExamPattern({ patterns, examName }: ExamPatternProps) {
 
       {active && <StagePatternCard pattern={active} label={active.stage ?? label} />}
 
-      <p className="text-xs text-gray-400 mt-4">
+      <p className="text-xs text-gray-500 mt-4">
         Exam pattern details are set by the conducting body and can be revised year to year — always cross-check the
         latest official notification before exam day for the exact, current-year pattern.
       </p>

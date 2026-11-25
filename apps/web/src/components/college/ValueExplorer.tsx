@@ -73,8 +73,8 @@ export default function ValueExplorer({ rows }: { rows: ValueRow[] }) {
             Official fees only
           </label>
           <div className="relative">
-            <Search className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find a college or city"
+            <Search className="w-4 h-4 text-gray-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Find a college or city" placeholder="Find a college or city"
               className="pl-8 pr-3 py-1.5 border border-gray-200 rounded-lg text-sm w-48 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
         </div>
@@ -124,11 +124,11 @@ export default function ValueExplorer({ rows }: { rows: ValueRow[] }) {
                       <span className="w-2 h-2 rounded-full shrink-0" style={{ background: TYPE_COLOR[r.type] }} aria-hidden />
                       <Link href={`/colleges/${r.slug}`} className="font-medium text-gray-900 hover:text-indigo-700">{r.name}</Link>
                     </div>
-                    <p className="text-xs text-gray-400 ml-4">{r.type}{r.place ? ` · ${r.place}` : ''}{r.nirfRank ? ` · NIRF #${r.nirfRank}` : ''}</p>
+                    <p className="text-xs text-gray-500 ml-4">{r.type}{r.place ? ` · ${r.place}` : ''}{r.nirfRank ? ` · NIRF #${r.nirfRank}` : ''}</p>
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <span className="font-medium text-gray-900">{rupees(r.totalFee)}</span>
-                    <p className="text-xs text-gray-400 flex items-center justify-end gap-1">
+                    <p className="text-xs text-gray-500 flex items-center justify-end gap-1">
                       {rupees(r.annualFee)} a year ·{' '}
                       {r.feeOfficial
                         ? <span className="text-emerald-700 inline-flex items-center gap-0.5"><BadgeCheck className="w-3 h-3" />official</span>
@@ -137,13 +137,13 @@ export default function ValueExplorer({ rows }: { rows: ValueRow[] }) {
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <span className="font-medium text-gray-900">{rupees(r.median)}</span>
-                    <p className="text-xs text-gray-400">NIRF {r.placementYear}{r.placed ? ` · ${r.placed.toLocaleString('en-IN')} placed` : ''}</p>
+                    <p className="text-xs text-gray-500">NIRF {r.placementYear}{r.placed ? ` · ${r.placed.toLocaleString('en-IN')} placed` : ''}</p>
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap font-medium text-gray-900">{payback(r.ratio)}</td>
                 </tr>
               ))}
               {shown.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400">No colleges match these filters.</td></tr>
+                <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-500">No colleges match these filters.</td></tr>
               )}
             </tbody>
           </table>
@@ -194,7 +194,7 @@ function ticks(min: number, max: number): number[] {
 }
 
 function Scatter({ rows, active, setActive }: { rows: ValueRow[]; active: string | null; setActive: (id: string | null) => void }) {
-  if (!rows.length) return <div className="h-64 flex items-center justify-center text-sm text-gray-400">No colleges to plot.</div>
+  if (!rows.length) return <div className="h-64 flex items-center justify-center text-sm text-gray-500">No colleges to plot.</div>
 
   const values = rows.flatMap((r) => [r.totalFee, r.median])
   const lo = Math.pow(10, Math.floor(Math.log10(Math.min(...values)) * 2) / 2)

@@ -50,7 +50,7 @@ export default function ExamRoadmap({ examId, examTitle, examDate }: ExamRoadmap
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-6 h-6 text-red-700 flex-shrink-0 mt-0.5" />
           <div>
             <h3 className="font-semibold text-red-900 mb-2">Limited Time for Preparation</h3>
             <p className="text-sm text-red-700 mb-3">
@@ -97,7 +97,7 @@ export default function ExamRoadmap({ examId, examTitle, examDate }: ExamRoadmap
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
       <div className="flex items-center gap-2 mb-4">
-        <CheckCircle className="w-5 h-5 text-green-600" />
+        <CheckCircle className="w-5 h-5 text-green-700" />
         <h3 className="font-semibold text-gray-900">Your Personalized Roadmap</h3>
       </div>
       
@@ -112,7 +112,7 @@ export default function ExamRoadmap({ examId, examTitle, examDate }: ExamRoadmap
             <ul className="space-y-1 text-sm text-gray-600">
               {phase.tasks?.map((task: string, taskIndex: number) => (
                 <li key={taskIndex} className="flex items-start gap-2">
-                  <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="w-3 h-3 text-green-700 flex-shrink-0 mt-0.5" />
                   <span>{task}</span>
                 </li>
               ))}

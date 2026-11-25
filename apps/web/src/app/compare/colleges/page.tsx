@@ -80,14 +80,14 @@ export default function CompareCollegesPage() {
   }
 
   const getTypeColor = (type: string) => {
-    if (type === 'Government') return 'bg-green-100 text-green-700'
+    if (type === 'Government') return 'bg-green-100 text-green-800'
     if (type === 'Private') return 'bg-blue-100 text-blue-700'
     return 'bg-purple-100 text-purple-700'
   }
 
   const getNAACColor = (grade: string) => {
     if (grade === 'A++') return 'bg-emerald-100 text-emerald-700'
-    if (grade === 'A+') return 'bg-green-100 text-green-700'
+    if (grade === 'A+') return 'bg-green-100 text-green-800'
     if (grade === 'A') return 'bg-lime-100 text-lime-700'
     if (grade === 'B+') return 'bg-yellow-100 text-yellow-700'
     return 'bg-gray-100 text-gray-600'
@@ -142,7 +142,7 @@ export default function CompareCollegesPage() {
                 </Link>
                 <button
                   onClick={() => removeCollege(college.id)}
-                  className="absolute -top-2 -right-2 p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors"
+                  className="absolute -top-2 -right-2 p-1 bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
                   title="Remove from comparison"
                 >
                   <X className="w-3 h-3" />
@@ -205,7 +205,7 @@ export default function CompareCollegesPage() {
                 <Award className="w-4 h-4" /> QS Rank
               </div>
               {colleges.map((college) => (
-                <div key={college.id} className="text-sm font-bold text-amber-600">
+                <div key={college.id} className="text-sm font-bold text-amber-700">
                   {college.qs_rank ? `#${college.qs_rank}` : 'N/A'}
                 </div>
               ))}
@@ -233,7 +233,7 @@ export default function CompareCollegesPage() {
                 <IndianRupee className="w-4 h-4" /> Annual Fees
               </div>
               {colleges.map((college) => (
-                <div key={college.id} className="text-sm font-semibold text-green-600">
+                <div key={college.id} className="text-sm font-semibold text-green-700">
                   {formatFees(college.annual_fees_min, college.annual_fees_max)}
                 </div>
               ))}
@@ -276,7 +276,7 @@ export default function CompareCollegesPage() {
                       <Star className="w-3 h-3" /> Yes
                     </span>
                   ) : (
-                    <span className="text-gray-400 text-sm">No</span>
+                    <span className="text-gray-500 text-sm">No</span>
                   )}
                 </div>
               ))}

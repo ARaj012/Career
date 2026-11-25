@@ -50,7 +50,7 @@ export default function OfficialCareerFacts({
           </a>
         )}
       </div>
-      <p className="text-xs text-gray-400 mb-5">
+      <p className="text-xs text-gray-500 mb-5">
         {[...elig, ...steps].some((i) => i.translated)
           ? 'Translated from the official notice, which is in Hindi'
           : <>In the official body&apos;s own words</>}{verifiedAt ? `, checked ${new Date(verifiedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}.

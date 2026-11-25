@@ -130,7 +130,7 @@ export default function CutoffExplorer({ rows }: { rows: OfficialCutoff[] }) {
         <div className="mt-6">
           <h3 className="text-sm font-semibold text-gray-600 mb-3">Closing rank by year · {chosen}</h3>
           <SimpleBarChart data={trend} barColorClass="bg-orange-500" valueFormatter={(v) => `Rank ${Math.round(v).toLocaleString('en-IN')}`} />
-          <p className="text-xs text-gray-400 mt-2">Click a programme above to change. Hover a rank to see the opening rank (the best rank admitted).</p>
+          <p className="text-xs text-gray-500 mt-2">Click a programme above to change. Hover a rank to see the opening rank (the best rank admitted).</p>
         </div>
       )}
     </div>

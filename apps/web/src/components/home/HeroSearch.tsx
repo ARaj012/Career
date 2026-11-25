@@ -92,7 +92,7 @@ export default function HeroSearch() {
     <div ref={box} className="relative w-full max-w-2xl mx-auto text-left">
       <label htmlFor="site-search" className="sr-only">Search careers, colleges, exams and scholarships</label>
       <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 sm:px-5 h-14 shadow-sm focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-100 transition">
-        <Search className="w-5 h-5 text-gray-400 shrink-0" aria-hidden="true" />
+        <Search className="w-5 h-5 text-gray-500 shrink-0" aria-hidden="true" />
         <input
           id="site-search"
           type="search"
@@ -106,9 +106,9 @@ export default function HeroSearch() {
           onFocus={() => setOpen(true)}
           onKeyDown={onKey}
           placeholder="Search a career, college, exam or scholarship"
-          className="flex-1 min-w-0 bg-transparent outline-none text-base text-gray-900 placeholder:text-gray-400"
+          className="flex-1 min-w-0 bg-transparent outline-none text-base text-gray-900 placeholder:text-gray-500"
         />
-        {loading && <Loader2 className="w-4 h-4 text-gray-400 animate-spin shrink-0" aria-hidden="true" />}
+        {loading && <Loader2 className="w-4 h-4 text-gray-500 animate-spin shrink-0" aria-hidden="true" />}
       </div>
 
       {open && !short && !loading && (
@@ -134,7 +134,7 @@ export default function HeroSearch() {
                   <span className="block text-sm font-medium text-gray-900 truncate">{hit.title}</span>
                   {hit.sub && <span className="block text-xs text-gray-500 truncate">{hit.sub}</span>}
                 </span>
-                <span className="text-xs text-gray-400 shrink-0">{label}</span>
+                <span className="text-xs text-gray-500 shrink-0">{label}</span>
               </li>
             )
           })}

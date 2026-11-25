@@ -203,13 +203,13 @@ export default function ScholarshipsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-100 rounded-lg">
-              <GraduationCap className="w-6 h-6 text-emerald-600" aria-hidden="true" />
+              <GraduationCap className="w-6 h-6 text-emerald-700" aria-hidden="true" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Scholarships and financial aid</h1>
@@ -220,7 +220,7 @@ export default function ScholarshipsPage() {
           </div>
           <Link
             href="/scholarships/match"
-            className="inline-flex items-center justify-center gap-2 bg-emerald-600 text-white font-semibold px-5 py-3 rounded-xl hover:bg-emerald-700 transition shrink-0"
+            className="inline-flex items-center justify-center gap-2 bg-emerald-700 text-white font-semibold px-5 py-3 rounded-xl hover:bg-emerald-800 transition shrink-0"
           >
             <Sparkles className="w-5 h-5" aria-hidden="true" /> Find the ones I qualify for
           </Link>
@@ -232,9 +232,10 @@ export default function ScholarshipsPage() {
         <div className="bg-white rounded-2xl p-6 shadow-sm mb-8">
           <div className="flex flex-col md:flex-row gap-4 mb-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
               <input
                 type="text"
+                aria-label="Search scholarships"
                 placeholder="Search scholarships by name, provider, or eligibility..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -251,7 +252,7 @@ export default function ScholarshipsPage() {
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition"
+                className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition"
               >
                 <X className="w-5 h-5" />
                 Clear Filters
@@ -262,10 +263,10 @@ export default function ScholarshipsPage() {
           {showFilters && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="scholarships-category" className="block text-sm font-medium text-gray-700 mb-2">
                   Category
                 </label>
-                <select
+                <select id="scholarships-category"
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -278,10 +279,10 @@ export default function ScholarshipsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="scholarships-education-level" className="block text-sm font-medium text-gray-700 mb-2">
                   Education Level
                 </label>
-                <select
+                <select id="scholarships-education-level"
                   value={selectedLevel}
                   onChange={(e) => setSelectedLevel(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -294,10 +295,10 @@ export default function ScholarshipsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="scholarships-amount-type" className="block text-sm font-medium text-gray-700 mb-2">
                   Amount Type
                 </label>
-                <select
+                <select id="scholarships-amount-type"
                   value={selectedAmountType}
                   onChange={(e) => setSelectedAmountType(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -310,10 +311,10 @@ export default function ScholarshipsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="scholarships-state" className="block text-sm font-medium text-gray-700 mb-2">
                   State
                 </label>
-                <select
+                <select id="scholarships-state"
                   value={selectedState}
                   onChange={(e) => setSelectedState(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -367,7 +368,7 @@ export default function ScholarshipsPage() {
                       .replace(/\b\w/g, (l: string) => l.toUpperCase())}
                   </span>
                   {deadlineSoon && (
-                    <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-full">
+                    <span className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded-full">
                       Deadline Soon
                     </span>
                   )}
@@ -382,7 +383,7 @@ export default function ScholarshipsPage() {
                     {scholarship.name}
                   </h2>
                 </Link>
-                <p className="text-xs text-emerald-600 font-medium mb-2">
+                <p className="text-xs text-emerald-700 font-medium mb-2">
                   {scholarship.provider}
                 </p>
                 <p className="text-gray-500 text-sm mb-4 line-clamp-2">
@@ -392,7 +393,7 @@ export default function ScholarshipsPage() {
                 {/* Amount */}
                 <div className="bg-emerald-50 rounded-xl p-3 mb-3">
                   <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-emerald-600" />
+                    <DollarSign className="w-4 h-4 text-emerald-700" />
                     <span className="font-semibold text-emerald-700">
                       {formatAmount(scholarship)}
                     </span>
@@ -421,7 +422,7 @@ export default function ScholarshipsPage() {
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Calendar className="w-4 h-4" />
                     <span
-                      className={deadlineSoon ? "text-red-600 font-medium" : ""}
+                      className={deadlineSoon ? "text-red-700 font-medium" : ""}
                     >
                       {formatDate(scholarship.application_deadline)}
                     </span>
@@ -432,7 +433,7 @@ export default function ScholarshipsPage() {
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
                   <Link
                     href={`/scholarships/${scholarship.slug}`}
-                    className="text-xs text-emerald-600 font-medium hover:underline"
+                    className="text-xs text-emerald-700 font-medium hover:underline"
                   >
                     View Details →
                   </Link>
@@ -441,7 +442,7 @@ export default function ScholarshipsPage() {
                       href={scholarship.application_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition font-medium flex items-center gap-1"
+                      className="text-xs bg-emerald-700 text-white px-4 py-2 rounded-lg hover:bg-emerald-800 transition font-medium flex items-center gap-1"
                     >
                       Apply <ExternalLink className="w-3 h-3" />
                     </a>
@@ -463,13 +464,13 @@ export default function ScholarshipsPage() {
             </p>
             <button
               onClick={clearFilters}
-              className="text-emerald-600 font-medium hover:underline"
+              className="text-emerald-700 font-medium hover:underline"
             >
               Clear all filters
             </button>
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }

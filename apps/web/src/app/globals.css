@@ -126,4 +126,14 @@
   body {
     @apply bg-background text-foreground font-sans;
   }
+  /* A clear outline on whatever has keyboard focus (mouse clicks don't show it) */
+  :focus-visible {
+    outline: 2px solid var(--color-indigo-600);
+    outline-offset: 2px;
+  }
+  /* Respect "reduce motion": no smooth scrolling or long animations */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
 }

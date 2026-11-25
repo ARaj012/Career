@@ -174,7 +174,7 @@ export default function ChatWidget() {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-white text-gray-400 border border-gray-200 rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm flex items-center gap-2">
+                <div className="bg-white text-gray-500 border border-gray-200 rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm flex items-center gap-2">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Looking that up...
                 </div>
               </div>

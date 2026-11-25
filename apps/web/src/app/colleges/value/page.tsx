@@ -38,7 +38,7 @@ export default async function CollegeValuePage() {
   const rows = buildValueRows(colleges, courses, placements)
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <div className="bg-gradient-to-r from-indigo-700 to-indigo-500 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <Link href="/colleges" className="inline-flex items-center gap-1.5 text-sm text-indigo-100 hover:text-white mb-4">
@@ -54,6 +54,6 @@ export default async function CollegeValuePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <ValueExplorer rows={rows} />
       </div>
-    </main>
+    </div>
   )
 }

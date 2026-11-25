@@ -24,7 +24,7 @@ export default function ExamCountdown({ examDate, showLabel = true }: ExamCountd
 
   if (diffDays === 0) {
     return (
-      <div className="flex items-center gap-2 text-red-600 font-semibold">
+      <div className="flex items-center gap-2 text-red-700 font-semibold">
         <Clock className="w-4 h-4" />
         <span className="text-sm">Exam Today!</span>
       </div>
@@ -32,8 +32,8 @@ export default function ExamCountdown({ examDate, showLabel = true }: ExamCountd
   }
 
   const getUrgencyColor = (days: number) => {
-    if (days <= 3) return 'text-red-600'
-    if (days <= 7) return 'text-orange-600'
+    if (days <= 3) return 'text-red-700'
+    if (days <= 7) return 'text-orange-700'
     if (days <= 15) return 'text-yellow-600'
     return 'text-blue-600'
   }

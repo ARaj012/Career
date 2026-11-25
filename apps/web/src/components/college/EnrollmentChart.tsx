@@ -42,7 +42,7 @@ export default function EnrollmentChart({ data }: { data: EnrollmentRow[] }) {
         emptyMessage="This institution has not reported its student strength to NIRF"
       />
       {rows.length > 0 && (
-        <p className="mt-3 text-xs text-gray-400">
+        <p className="mt-3 text-xs text-gray-500">
           UG and PG students across all years of study, as reported by the institution to NIRF (Ministry of Education);
           PhD scholars are reported separately. Each NIRF edition reports the academic year before it.
         </p>

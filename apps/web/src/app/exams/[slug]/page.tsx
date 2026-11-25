@@ -53,7 +53,7 @@ const EXAM_SECTIONS: NavSection[] = [
   { id: 'papers', label: 'Previous papers' },
   { id: 'scholarships', label: 'Scholarships' },
   { id: 'toppers', label: 'Toppers' },
-  { id: 'cutoffs', label: 'Cutoffs' },
+  { id: 'exam-cutoffs', label: 'Cutoffs' },
   { id: 'careers', label: 'Careers' },
 ]
 
@@ -511,7 +511,7 @@ export default async function ExamDetailPage({
           )}
         </div>
 
-        <div id="cutoffs" className="scroll-mt-32">
+        <div id="exam-cutoffs" className="scroll-mt-32">
         {nationalCutoffs.length > 0 ? (
           <ExamQualifyingCutoffs rows={nationalCutoffs} examName={exam.name} />
         ) : est.cutoffs ? (
@@ -576,16 +576,16 @@ export default async function ExamDetailPage({
                         </td>
                         <td className="px-3 py-2 text-gray-600">
                           {row.category ?? '—'}
-                          {row.quota && <span className="block text-xs text-gray-400">{row.quota}</span>}
+                          {row.quota && <span className="block text-xs text-gray-500">{row.quota}</span>}
                         </td>
                         <td className="px-3 py-2 text-gray-600">{row.cutoff_score ?? '—'}</td>
                         <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
                           {row.cutoff_rank ? `#${row.cutoff_rank.toLocaleString('en-IN')}` : '—'}
                           {row.source_type === 'official' ? (
                             row.source_url ? (
-                              <a href={row.source_url} target="_blank" rel="noopener noreferrer" className="ml-1 text-emerald-600 hover:underline" title="Official notice">✓</a>
-                            ) : <span className="ml-1 text-emerald-600" title="Official notice">✓</span>
-                          ) : <span className="ml-1 text-amber-600" title="Not yet confirmed from an official notice">*</span>}
+                              <a href={row.source_url} target="_blank" rel="noopener noreferrer" className="ml-1 text-emerald-700 hover:underline" title="Official notice">✓</a>
+                            ) : <span className="ml-1 text-emerald-700" title="Official notice">✓</span>
+                          ) : <span className="ml-1 text-amber-700" title="Not yet confirmed from an official notice">*</span>}
                         </td>
                       </tr>
                     ))}

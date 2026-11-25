@@ -27,7 +27,7 @@ function LoginForm() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center px-4">
       <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-10">
         
         {/* Logo */}
@@ -60,7 +60,7 @@ function LoginForm() {
 
         {/* What signing in adds */}
         <div className="mt-8 pt-6 border-t border-gray-100">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">With a free account you can</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">With a free account you can</p>
           <ul className="space-y-2.5">
             {[
               'Save careers, colleges and exams',
@@ -77,13 +77,13 @@ function LoginForm() {
         </div>
 
         {/* Terms */}
-        <p className="text-center text-xs text-gray-400 mt-8">
+        <p className="text-center text-xs text-gray-500 mt-8">
           By signing in, you agree to our{' '}
           <Link href="/terms" className="underline underline-offset-2 hover:text-gray-600">Terms of Use</Link> and{' '}
           <Link href="/privacy" className="underline underline-offset-2 hover:text-gray-600">Privacy Policy</Link>
         </p>
       </div>
-    </main>
+    </div>
   )
 }
 

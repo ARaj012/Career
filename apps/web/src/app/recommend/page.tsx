@@ -144,9 +144,9 @@ function marksBand(score: number) {
  * at interest 3 gives 45%. Bands follow that scale rather than exam grades.
  */
 function scoreBand(score: number) {
-  if (score >= 70) return { label: 'Strong match', text: 'text-emerald-600', pill: 'bg-emerald-50 text-emerald-700', bar: 'bg-emerald-500', ring: '#10b981' }
+  if (score >= 70) return { label: 'Strong match', text: 'text-emerald-700', pill: 'bg-emerald-50 text-emerald-700', bar: 'bg-emerald-500', ring: '#10b981' }
   if (score >= 50) return { label: 'Good match', text: 'text-indigo-600', pill: 'bg-indigo-50 text-indigo-700', bar: 'bg-indigo-500', ring: '#6366f1' }
-  if (score >= 30) return { label: 'Fair match', text: 'text-amber-600', pill: 'bg-amber-50 text-amber-700', bar: 'bg-amber-500', ring: '#f59e0b' }
+  if (score >= 30) return { label: 'Fair match', text: 'text-amber-700', pill: 'bg-amber-50 text-amber-700', bar: 'bg-amber-500', ring: '#f59e0b' }
   return { label: 'Weak match', text: 'text-gray-500', pill: 'bg-gray-100 text-gray-600', bar: 'bg-gray-400', ring: '#9ca3af' }
 }
 
@@ -340,7 +340,7 @@ export default function RecommendPage() {
   const topAdvice = top ? adviceBySlug.get(top.slug) : undefined
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-indigo-50/70 via-gray-50 to-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50/70 via-gray-50 to-gray-50">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:py-12">
 
         {/* Header */}
@@ -373,12 +373,12 @@ export default function RecommendPage() {
                   <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-all ${
                     done ? 'bg-indigo-600 text-white' :
                     current ? 'bg-indigo-600 text-white ring-4 ring-indigo-100' :
-                    'border border-gray-200 bg-white text-gray-400'
+                    'border border-gray-200 bg-white text-gray-500'
                   }`}>
                     {done ? <Check className="h-4 w-4" /> : num}
                   </span>
                   <span className={`whitespace-nowrap text-xs font-semibold sm:text-sm ${
-                    current ? 'text-gray-900' : done ? 'text-indigo-600' : 'text-gray-400'
+                    current ? 'text-gray-900' : done ? 'text-indigo-600' : 'text-gray-500'
                   }`}>
                     {label}
                   </span>
@@ -493,7 +493,7 @@ export default function RecommendPage() {
                       </div>
                     </div>
                     <span className="shrink-0 text-2xl font-extrabold tabular-nums text-indigo-600">
-                      {subject.score}<span className="text-sm font-semibold text-gray-400">/100</span>
+                      {subject.score}<span className="text-sm font-semibold text-gray-500">/100</span>
                     </span>
                   </div>
 
@@ -510,7 +510,7 @@ export default function RecommendPage() {
                       className="mt-3 h-2 w-full cursor-pointer appearance-none rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-4 [&::-moz-range-thumb]:border-indigo-600 [&::-moz-range-thumb]:bg-white [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-indigo-600 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow"
                     />
                   </label>
-                  <div className="mt-1.5 flex justify-between text-xs text-gray-400">
+                  <div className="mt-1.5 flex justify-between text-xs text-gray-500">
                     <span>0</span>
                     <span>50</span>
                     <span>100</span>
@@ -551,7 +551,7 @@ export default function RecommendPage() {
                         )
                       })}
                     </div>
-                    <div className="mt-1.5 flex justify-between text-xs text-gray-400">
+                    <div className="mt-1.5 flex justify-between text-xs text-gray-500">
                       <span>Low</span>
                       <span>High</span>
                     </div>
@@ -653,7 +653,7 @@ export default function RecommendPage() {
 
             {results.length === 0 ? (
               <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-                <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-500">
+                <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-600">
                   <SearchX className="h-7 w-7" />
                 </span>
                 <p className="mt-4 text-lg font-semibold text-gray-900">No matches found</p>
@@ -717,7 +717,7 @@ export default function RecommendPage() {
                     >
                       <div className="flex h-[88px] w-[88px] flex-col items-center justify-center rounded-full bg-white">
                         <span className={`text-3xl font-extrabold tabular-nums ${scoreBand(top.match_score).text}`}>{top.match_score}%</span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">match</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">match</span>
                       </div>
                     </div>
                     <div className="min-w-0 flex-1 text-center sm:text-left">
@@ -781,7 +781,7 @@ export default function RecommendPage() {
                         </div>
                         <div className="shrink-0 text-right">
                           <div className={`text-2xl font-extrabold tabular-nums ${band.text}`}>{career.match_score}%</div>
-                          <div className="text-xs font-medium text-gray-400">{band.label}</div>
+                          <div className="text-xs font-medium text-gray-500">{band.label}</div>
                         </div>
                       </div>
                       <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
@@ -825,6 +825,6 @@ export default function RecommendPage() {
           </section>
         )}
       </div>
-    </main>
+    </div>
   )
 }

@@ -152,7 +152,7 @@ export default function SubscriptionPage() {
     switch (planId) {
       case 'free': return 'text-gray-600 bg-gray-100'
       case 'premium': return 'text-indigo-600 bg-indigo-100'
-      case 'pro': return 'text-amber-600 bg-amber-100'
+      case 'pro': return 'text-amber-700 bg-amber-100'
       default: return 'text-gray-600 bg-gray-100'
     }
   }
@@ -202,15 +202,15 @@ export default function SubscriptionPage() {
                   <h2 className="text-2xl font-bold text-gray-900">{plan.name} Plan</h2>
                   <div className="flex items-center gap-2 mt-1">
                     {subscription.status === 'active' ? (
-                      <span className="flex items-center gap-1 text-green-600 text-sm">
+                      <span className="flex items-center gap-1 text-green-700 text-sm">
                         <CheckCircle2 className="w-4 h-4" /> Active
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-red-600 text-sm">
+                      <span className="flex items-center gap-1 text-red-700 text-sm">
                         <XCircle className="w-4 h-4" /> {subscription.status}
                       </span>
                     )}
-                    <span className="text-gray-400">•</span>
+                    <span className="text-gray-500">•</span>
                     <span className="text-gray-500 text-sm capitalize">{subscription.billing_cycle}</span>
                   </div>
                 </div>
@@ -227,7 +227,7 @@ export default function SubscriptionPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                <Calendar className="w-5 h-5 text-gray-400" />
+                <Calendar className="w-5 h-5 text-gray-500" />
                 <div>
                   <p className="text-xs text-gray-500">Current Period</p>
                   <p className="text-sm font-medium text-gray-900">
@@ -236,7 +236,7 @@ export default function SubscriptionPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                <CreditCard className="w-5 h-5 text-gray-400" />
+                <CreditCard className="w-5 h-5 text-gray-500" />
                 <div>
                   <p className="text-xs text-gray-500">Billing Cycle</p>
                   <p className="text-sm font-medium text-gray-900 capitalize">{subscription.billing_cycle || 'N/A'}</p>
@@ -263,7 +263,7 @@ export default function SubscriptionPage() {
               <button
                 onClick={handleCancelSubscription}
                 disabled={cancelling}
-                className="text-red-600 text-sm hover:underline disabled:opacity-50"
+                className="text-red-700 text-sm hover:underline disabled:opacity-50"
               >
                 {cancelling ? 'Processing...' : 'Cancel Subscription'}
               </button>
@@ -308,7 +308,7 @@ export default function SubscriptionPage() {
                 return (
                   <div key={key} className="flex items-center gap-2">
                     {isIncluded ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      <CheckCircle2 className="w-5 h-5 text-green-700" />
                     ) : (
                       <XCircle className="w-5 h-5 text-gray-300" />
                     )}

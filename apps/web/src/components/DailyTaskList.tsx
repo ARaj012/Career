@@ -132,7 +132,7 @@ export default function DailyTaskList({ examId, examTitle, daysRemaining }: Dail
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'study': return 'bg-blue-100 text-blue-700'
-      case 'practice': return 'bg-green-100 text-green-700'
+      case 'practice': return 'bg-green-100 text-green-800'
       case 'revision': return 'bg-purple-100 text-purple-700'
       default: return 'bg-gray-100 text-gray-700'
     }
@@ -202,10 +202,10 @@ export default function DailyTaskList({ examId, examTitle, daysRemaining }: Dail
             >
               <button
                 onClick={() => toggleTask(task.id)}
-                className="flex-shrink-0 transition-all duration-200 text-gray-400 hover:text-indigo-600"
+                className="flex-shrink-0 transition-all duration-200 text-gray-500 hover:text-indigo-600"
               >
                 {task.completed ? (
-                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <CheckCircle className="w-6 h-6 text-green-700" />
                 ) : (
                   <Circle className="w-6 h-6" />
                 )}

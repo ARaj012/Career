@@ -196,7 +196,7 @@ export default async function CollegeScholarshipsPage({
           <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
-                <Award className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+                <Award className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-700" />
               </div>
               <div className="min-w-0">
                 <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
@@ -274,7 +274,7 @@ export default async function CollegeScholarshipsPage({
             {categorizedCollegeScholarships.stateSpecific.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 overflow-hidden">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                  <Landmark className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+                  <Landmark className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-700" />
                   <span>State-Specific Scholarships</span>
                   <span className="text-xs sm:text-sm font-normal text-gray-500">
                     ({categorizedCollegeScholarships.stateSpecific.filter((s: any) => !s.notEligible).length} eligible out of {categorizedCollegeScholarships.stateSpecific.length})
@@ -330,7 +330,7 @@ export default async function CollegeScholarshipsPage({
                           </div>
                         </div>
                         <div className="text-right sm:text-left">
-                          <p className="text-lg sm:text-xl font-bold text-emerald-600">{formatScholarshipAmount(scholarship)}</p>
+                          <p className="text-lg sm:text-xl font-bold text-emerald-700">{formatScholarshipAmount(scholarship)}</p>
                           {scholarship.application_url && !scholarship.notEligible && (
                             <a
                               href={scholarship.application_url}
@@ -342,7 +342,7 @@ export default async function CollegeScholarshipsPage({
                             </a>
                           )}
                           {scholarship.application_url && scholarship.notEligible && (
-                            <span className="inline-flex items-center gap-1 text-xs sm:text-sm text-gray-400 mt-1">
+                            <span className="inline-flex items-center gap-1 text-xs sm:text-sm text-gray-500 mt-1">
                               Not Eligible
                             </span>
                           )}
@@ -361,7 +361,7 @@ export default async function CollegeScholarshipsPage({
             {stateScholarships.length > 0 && (
               <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl border border-orange-200 p-4 sm:p-6 overflow-hidden">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                  <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+                  <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-orange-700" />
                   <span>Scholarships for {userProfile?.belonging_state}</span>
                   <span className="text-xs sm:text-sm font-normal text-gray-500">
                     ({stateScholarships.length} schemes available)
@@ -404,7 +404,7 @@ export default async function CollegeScholarshipsPage({
                           </div>
                         </div>
                         <div className="text-right sm:text-left">
-                          <p className="text-lg sm:text-xl font-bold text-orange-600">{formatScholarshipAmount(scholarship)}</p>
+                          <p className="text-lg sm:text-xl font-bold text-orange-700">{formatScholarshipAmount(scholarship)}</p>
                           {scholarship.application_url && (
                             <a
                               href={scholarship.application_url}
@@ -468,7 +468,7 @@ export default async function CollegeScholarshipsPage({
                           </div>
                         </div>
                         <div className="text-right sm:text-left">
-                          <p className="text-lg sm:text-xl font-bold text-emerald-600">{formatScholarshipAmount(scholarship)}</p>
+                          <p className="text-lg sm:text-xl font-bold text-emerald-700">{formatScholarshipAmount(scholarship)}</p>
                           {scholarship.application_url && (
                             <a
                               href={scholarship.application_url}
@@ -532,7 +532,7 @@ export default async function CollegeScholarshipsPage({
                           </div>
                         </div>
                         <div className="text-right sm:text-left">
-                          <p className="text-lg sm:text-xl font-bold text-emerald-600">{formatScholarshipAmount(scholarship)}</p>
+                          <p className="text-lg sm:text-xl font-bold text-emerald-700">{formatScholarshipAmount(scholarship)}</p>
                           {scholarship.application_url && (
                             <a
                               href={scholarship.application_url}
@@ -573,7 +573,7 @@ export default async function CollegeScholarshipsPage({
             )}
             <Link
               href="/scholarships"
-              className="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg hover:bg-emerald-700 transition text-sm sm:text-base"
+              className="inline-flex items-center gap-2 bg-emerald-700 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg hover:bg-emerald-800 transition text-sm sm:text-base"
             >
               Browse All Scholarships
               <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -593,7 +593,7 @@ export default async function CollegeScholarshipsPage({
               className="flex items-center gap-2 sm:gap-3 bg-white rounded-xl p-3 sm:p-4 hover:shadow-md transition border border-gray-200"
             >
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
-                <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+                <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-700" />
               </div>
               <div className="min-w-0">
                 <p className="font-medium text-gray-900 text-sm sm:text-base">All Scholarships</p>
@@ -619,7 +619,7 @@ export default async function CollegeScholarshipsPage({
             {userProfile?.belonging_state && (
               <div className="flex items-center gap-2 sm:gap-3 bg-white rounded-xl p-3 sm:p-4 border border-gray-200">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-orange-100 rounded-lg flex items-center justify-center shrink-0">
-                  <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+                  <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-orange-700" />
                 </div>
                 <div className="min-w-0">
                   <p className="font-medium text-gray-900 text-sm sm:text-base">Your State: {userProfile.belonging_state}</p>

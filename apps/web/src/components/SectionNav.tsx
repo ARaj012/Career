@@ -72,7 +72,13 @@ export default function SectionNav({ sections, className = '' }: { sections: Nav
 
   const go = (e: React.MouseEvent, id: string) => {
     e.preventDefault()
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const el = document.getElementById(id)
+    if (!el) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+    // move keyboard and screen-reader focus to the section too, so Tab continues from there
+    if (!el.hasAttribute('tabindex')) { el.setAttribute('tabindex', '-1'); el.style.outline = 'none' }
+    el.focus({ preventScroll: true })
     history.replaceState(null, '', `#${id}`)
     setActive(id)
   }

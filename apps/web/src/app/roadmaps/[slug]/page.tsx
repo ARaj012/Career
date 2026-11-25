@@ -579,7 +579,7 @@ const STATIC_ROADMAPS: Record<string, any> = {
 const PHASE_COLORS = [
   { badge: 'bg-indigo-600', line: 'bg-indigo-200', chip: 'bg-indigo-50 text-indigo-700' },
   { badge: 'bg-blue-600', line: 'bg-blue-200', chip: 'bg-blue-50 text-blue-700' },
-  { badge: 'bg-emerald-600', line: 'bg-emerald-200', chip: 'bg-emerald-50 text-emerald-700' },
+  { badge: 'bg-emerald-700', line: 'bg-emerald-200', chip: 'bg-emerald-50 text-emerald-700' },
   { badge: 'bg-amber-600', line: 'bg-amber-200', chip: 'bg-amber-50 text-amber-700' },
   { badge: 'bg-purple-600', line: 'bg-purple-200', chip: 'bg-purple-50 text-purple-700' },
   { badge: 'bg-rose-600', line: 'bg-rose-200', chip: 'bg-rose-50 text-rose-700' },
@@ -1027,7 +1027,7 @@ export default async function RoadmapPage({
                         <div className="flex-1">
                           <p className="font-medium text-gray-900">
                             {node.title}
-                            {node.is_optional && <span className="ml-2 text-xs text-gray-400 font-normal">(optional)</span>}
+                            {node.is_optional && <span className="ml-2 text-xs text-gray-500 font-normal">(optional)</span>}
                           </p>
                           {node.description && <p className="text-sm text-gray-500 mt-1">{node.description}</p>}
                           <div className="flex items-center gap-3 mt-2">
@@ -1175,7 +1175,7 @@ export default async function RoadmapPage({
                       </Link>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-400 mt-3">
+                    <p className="text-sm text-gray-500 mt-3">
                       Cutoff data isn&apos;t available for this exam yet.{' '}
                       <Link href={`/exams/${exam.slug}`} className="text-indigo-600 hover:underline">
                         View exam details →
@@ -1251,7 +1251,7 @@ export default async function RoadmapPage({
         </div>
 
         {source === 'generated' && (
-          <p className="text-center text-xs text-gray-400 mt-6">
+          <p className="text-center text-xs text-gray-500 mt-6">
             This roadmap was auto-generated from career data and category best-practices. A hand-curated version may be added later.
           </p>
         )}

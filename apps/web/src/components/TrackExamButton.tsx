@@ -133,7 +133,7 @@ export default function TrackExamButton({ examId, examSlug }: TrackExamButtonPro
 
   if (loading || checkingSubscription) {
     return (
-      <button disabled className="inline-flex items-center gap-2 border border-gray-200 text-gray-400 text-sm font-medium px-4 py-2.5 rounded-lg">
+      <button disabled className="inline-flex items-center gap-2 border border-gray-200 text-gray-500 text-sm font-medium px-4 py-2.5 rounded-lg">
         <Heart className="w-4 h-4" /> Save
       </button>
     )
@@ -147,7 +147,7 @@ export default function TrackExamButton({ examId, examSlug }: TrackExamButtonPro
           disabled={toggling}
           className={`inline-flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg transition-colors ${
             trackingType === 'definitely_giving'
-              ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+              ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'
               : 'bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-100'
           }`}
         >
@@ -173,7 +173,7 @@ export default function TrackExamButton({ examId, examSlug }: TrackExamButtonPro
               <hr className="my-1" />
               <button
                 onClick={untrackExam}
-                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                className="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-50"
               >
                 Untrack Exam
               </button>

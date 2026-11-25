@@ -42,7 +42,7 @@ export default function NotFound() {
           </div>
         </div>
 
-        <p className="text-xs text-gray-400 mt-6">
+        <p className="text-xs text-gray-500 mt-6">
           Every wrong turn is still part of finding the right path.
         </p>
       </div>

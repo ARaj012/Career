@@ -69,17 +69,17 @@ export default function CompareCareersPage() {
   }
 
   const getGrowthColor = (level: string) => {
-    if (level === 'Very High') return 'text-emerald-600 bg-emerald-50'
-    if (level === 'High') return 'text-green-600 bg-green-50'
+    if (level === 'Very High') return 'text-emerald-700 bg-emerald-50'
+    if (level === 'High') return 'text-green-700 bg-green-50'
     if (level === 'Medium') return 'text-yellow-600 bg-yellow-50'
-    return 'text-red-600 bg-red-50'
+    return 'text-red-700 bg-red-50'
   }
 
   const getCompetitionColor = (level: string) => {
-    if (level === 'Very High') return 'text-red-600 bg-red-50'
-    if (level === 'High') return 'text-orange-600 bg-orange-50'
+    if (level === 'Very High') return 'text-red-700 bg-red-50'
+    if (level === 'High') return 'text-orange-700 bg-orange-50'
     if (level === 'Medium') return 'text-yellow-600 bg-yellow-50'
-    return 'text-green-600 bg-green-50'
+    return 'text-green-700 bg-green-50'
   }
 
   if (loading) {
@@ -131,7 +131,7 @@ export default function CompareCareersPage() {
                 </Link>
                 <button
                   onClick={() => removeCareer(career.id)}
-                  className="absolute -top-2 -right-2 p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors"
+                  className="absolute -top-2 -right-2 p-1 bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
                   title="Remove from comparison"
                 >
                   <X className="w-3 h-3" />
@@ -170,7 +170,7 @@ export default function CompareCareersPage() {
                 <IndianRupee className="w-4 h-4" /> Average Salary
               </div>
               {careers.map((career) => (
-                <div key={career.id} className="text-sm font-semibold text-green-600">
+                <div key={career.id} className="text-sm font-semibold text-green-700">
                   {formatSalary(career.avg_salary_min, career.avg_salary_max)}
                 </div>
               ))}
@@ -259,7 +259,7 @@ export default function CompareCareersPage() {
                       🔥 Yes
                     </span>
                   ) : (
-                    <span className="text-gray-400 text-sm">No</span>
+                    <span className="text-gray-500 text-sm">No</span>
                   )}
                 </div>
               ))}

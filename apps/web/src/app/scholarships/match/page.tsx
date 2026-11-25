@@ -25,14 +25,14 @@ const STORE_KEY = 'scholarship-match-answers'
 
 const chip = (on: boolean) =>
   `px-3 py-1.5 rounded-lg text-sm border transition ${on
-    ? 'bg-emerald-600 border-emerald-600 text-white'
+    ? 'bg-emerald-700 border-emerald-600 text-white'
     : 'bg-white border-gray-200 text-gray-700 hover:border-emerald-400'}`
 
 function Question({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
       <p className="text-sm font-medium text-gray-800">{label}</p>
-      {hint && <p className="text-xs text-gray-400 mb-2">{hint}</p>}
+      {hint && <p className="text-xs text-gray-500 mb-2">{hint}</p>}
       <div className={hint ? '' : 'mt-2'}>{children}</div>
     </div>
   )
@@ -110,7 +110,7 @@ export default function ScholarshipMatchPage() {
   const answered = [answers.level, answers.state, answers.social, answers.gender, answers.income, answers.field].filter((x) => x !== undefined).length
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <div className="bg-gradient-to-r from-emerald-600 to-teal-500 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <Link href="/scholarships" className="inline-flex items-center gap-1.5 text-sm text-emerald-100 hover:text-white mb-4">
@@ -130,14 +130,14 @@ export default function ScholarshipMatchPage() {
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">About you</h2>
             <button type="button" onClick={() => { setAnswers({ special: [] }); setFromProfile(false); try { localStorage.removeItem(STORE_KEY) } catch {} }}
-              className="text-xs text-gray-400 hover:text-red-600">Reset</button>
+              className="text-xs text-gray-500 hover:text-red-600">Reset</button>
           </div>
           {fromProfile && (
             <p className="text-xs text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2">Filled in from your profile — change anything that&apos;s different.</p>
           )}
 
           <Question label="What are you studying (or about to start)?">
-            <select value={answers.level ?? ''} onChange={(e) => set({ level: (e.target.value || undefined) as Level | undefined })}
+            <select aria-label="What you are studying" value={answers.level ?? ''} onChange={(e) => set({ level: (e.target.value || undefined) as Level | undefined })}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <option value="">Choose…</option>
               {(Object.keys(LEVEL_LABEL) as Level[]).map((l) => <option key={l} value={l}>{LEVEL_LABEL[l]}</option>)}
@@ -145,7 +145,7 @@ export default function ScholarshipMatchPage() {
           </Question>
 
           <Question label="Your home state (domicile)">
-            <select value={answers.state ?? ''} onChange={(e) => set({ state: e.target.value || undefined })}
+            <select aria-label="Your home state" value={answers.state ?? ''} onChange={(e) => set({ state: e.target.value || undefined })}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <option value="">Choose…</option>
               {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -177,7 +177,7 @@ export default function ScholarshipMatchPage() {
           <Question label="Family income a year" hint="All sources, as on your income certificate">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">₹</span>
-              <input type="number" min={0} step={0.5} inputMode="decimal" placeholder="e.g. 2.5"
+              <input aria-label="Family income a year, in lakh rupees" type="number" min={0} step={0.5} inputMode="decimal" placeholder="e.g. 2.5"
                 value={answers.income ?? ''}
                 onChange={(e) => set({ income: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value)) })}
                 className="w-28 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
@@ -190,7 +190,7 @@ export default function ScholarshipMatchPage() {
           </Question>
 
           <Question label="Field of study">
-            <select value={answers.field ?? ''} onChange={(e) => set({ field: (e.target.value || undefined) as Field | undefined })}
+            <select aria-label="Field of study" value={answers.field ?? ''} onChange={(e) => set({ field: (e.target.value || undefined) as Field | undefined })}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
               <option value="">Choose…</option>
               {(Object.keys(FIELD_LABEL) as Field[]).map((f) => <option key={f} value={f}>{FIELD_LABEL[f]}</option>)}
@@ -202,7 +202,7 @@ export default function ScholarshipMatchPage() {
               {(Object.keys(SPECIAL_LABEL) as Special[]).map((s) => (
                 <label key={s} className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
                   <input type="checkbox" checked={!!answers.special?.includes(s)} onChange={() => toggleSpecial(s)}
-                    className="mt-0.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" />
+                    className="mt-0.5 rounded border-gray-300 text-emerald-700 focus:ring-emerald-500" />
                   {SPECIAL_LABEL[s]}
                 </label>
               ))}
@@ -215,9 +215,9 @@ export default function ScholarshipMatchPage() {
           {loading ? <ListSkeleton count={4} /> : (
             <>
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-wrap gap-6 items-center">
-                <Stat n={results.eligible.length} label="you qualify for" tone="text-emerald-600" />
-                <Stat n={results.check.length} label="worth checking" tone="text-amber-600" />
-                <Stat n={results.no.length} label="not for you" tone="text-gray-400" />
+                <Stat n={results.eligible.length} label="you qualify for" tone="text-emerald-700" />
+                <Stat n={results.check.length} label="worth checking" tone="text-amber-700" />
+                <Stat n={results.no.length} label="not for you" tone="text-gray-500" />
                 {answered < 4 && (
                   <p className="text-sm text-gray-500 flex items-center gap-1.5 basis-full sm:basis-auto sm:ml-auto">
                     <Info className="w-4 h-4" /> Answer more questions for a sharper list.
@@ -225,7 +225,7 @@ export default function ScholarshipMatchPage() {
                 )}
               </div>
 
-              <Group title="You qualify" icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />} rows={results.eligible}
+              <Group title="You qualify" icon={<CheckCircle2 className="w-5 h-5 text-emerald-700" />} rows={results.eligible}
                 empty="None yet where every rule is confirmed — see the ones worth checking below." />
               <Group title="Worth checking" icon={<CircleHelp className="w-5 h-5 text-amber-500" />} rows={results.check}
                 subtitle="You may qualify — confirm the points marked ? on the official portal."
@@ -253,7 +253,7 @@ export default function ScholarshipMatchPage() {
                 </div>
               )}
 
-              <p className="text-xs text-gray-400 leading-relaxed">
+              <p className="text-xs text-gray-500 leading-relaxed">
                 Matching uses each scholarship&apos;s published eligibility rules as listed on this site. Rules and income limits can
                 change each year — always read the official notice before you apply.
               </p>
@@ -261,7 +261,7 @@ export default function ScholarshipMatchPage() {
           )}
         </section>
       </div>
-    </main>
+    </div>
   )
 }
 
@@ -283,7 +283,7 @@ function Group({ title, subtitle, icon, rows, empty }: {
       <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">{icon}{title}</h2>
       {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
       {rows.length === 0 ? (
-        <p className="text-sm text-gray-400 mt-3">{empty}</p>
+        <p className="text-sm text-gray-500 mt-3">{empty}</p>
       ) : (
         <div className="grid md:grid-cols-2 gap-4 mt-3">
           {rows.map(({ s, v }) => <ResultCard key={s.id} s={s} v={v} />)}
@@ -301,7 +301,7 @@ function ResultCard({ s, v }: { s: Scholarship; v: Verdict }) {
           <Link href={`/scholarships/${s.slug}`} className="font-semibold text-gray-900 hover:text-emerald-700 leading-snug">{s.name}</Link>
           {s.provider && <p className="text-xs text-gray-500 mt-0.5">{s.provider}</p>}
         </div>
-        {v.closed && <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Closed this year</span>}
+        {v.closed && <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Closed this year</span>}
       </div>
       <p className="mt-3 text-sm font-semibold text-emerald-700 flex items-center gap-1.5">
         <Sparkles className="w-4 h-4" /> {formatScholarshipAmount(s)}
@@ -325,7 +325,7 @@ function ResultCard({ s, v }: { s: Scholarship; v: Verdict }) {
         <Link href={`/scholarships/${s.slug}`} className="text-xs font-medium text-emerald-700 hover:underline">Full details →</Link>
         {s.application_url && (
           <a href={s.application_url} target="_blank" rel="noopener noreferrer"
-            className="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 font-medium inline-flex items-center gap-1">
+            className="text-xs bg-emerald-700 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-800 font-medium inline-flex items-center gap-1">
             Official portal <ExternalLink className="w-3 h-3" />
           </a>
         )}

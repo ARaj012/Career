@@ -101,11 +101,11 @@ export default function RecommendationHistoryPage() {
                         <div className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-sm font-medium">
                           {session.stream}
                         </div>
-                        <div className="flex items-center gap-1 text-gray-400 text-sm">
+                        <div className="flex items-center gap-1 text-gray-500 text-sm">
                           <Calendar className="w-4 h-4" />
                           {formatDate(session.created_at)}
                         </div>
-                        <div className="flex items-center gap-1 text-gray-400 text-sm">
+                        <div className="flex items-center gap-1 text-gray-500 text-sm">
                           <Clock className="w-4 h-4" />
                           {session.subjects.length} subjects
                         </div>
@@ -122,13 +122,13 @@ export default function RecommendationHistoryPage() {
                             </div>
                             <div className="text-right">
                               <div className={`text-2xl font-bold ${
-                                topCareer.match_score >= 70 ? 'text-green-600' :
+                                topCareer.match_score >= 70 ? 'text-green-700' :
                                 topCareer.match_score >= 50 ? 'text-yellow-600' :
                                 'text-red-500'
                               }`}>
                                 {topCareer.match_score}%
                               </div>
-                              <p className="text-xs text-gray-400">Match Score</p>
+                              <p className="text-xs text-gray-500">Match Score</p>
                             </div>
                           </div>
                         </div>
@@ -146,7 +146,7 @@ export default function RecommendationHistoryPage() {
 
                     <button
                       onClick={() => deleteSession(session.id)}
-                      className="ml-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className="ml-4 p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                       title="Delete session"
                     >
                       <Trash2 className="w-4 h-4" />

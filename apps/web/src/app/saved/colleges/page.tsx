@@ -55,7 +55,7 @@ export default function SavedCollegesPage() {
   }
 
   const TYPE_COLORS: Record<string, string> = {
-    Government: 'bg-green-100 text-green-700',
+    Government: 'bg-green-100 text-green-800',
     Private: 'bg-blue-100 text-blue-700',
     Deemed: 'bg-purple-100 text-purple-700',
   }
@@ -131,13 +131,13 @@ export default function SavedCollegesPage() {
                             <div className="text-base font-bold text-indigo-700">
                               #{saved.colleges.nirf_rank || saved.colleges.qs_rank}
                             </div>
-                            <div className="text-xs text-indigo-400">{saved.colleges.nirf_rank ? 'NIRF' : 'QS'}</div>
+                            <div className="text-xs text-indigo-600">{saved.colleges.nirf_rank ? 'NIRF' : 'QS'}</div>
                           </div>
                         )}
                       </div>
                     </Link>
                     <div className="flex items-center gap-4 mt-3 text-sm">
-                      <div className="flex items-center gap-1 text-green-600">
+                      <div className="flex items-center gap-1 text-green-700">
                         <IndianRupee className="w-3.5 h-3.5" />
                         {formatFees(saved.colleges.annual_fees_min, saved.colleges.annual_fees_max)}
                       </div>
@@ -145,7 +145,7 @@ export default function SavedCollegesPage() {
                   </div>
                   <button
                     onClick={() => removeSaved(saved.id)}
-                    className="ml-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="ml-4 p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     title="Remove from saved"
                   >
                     <X className="w-4 h-4" />

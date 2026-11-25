@@ -227,7 +227,7 @@ export default function CollegeScholarships({
         <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <Landmark className="w-5 h-5 text-indigo-500" />
           Scholarships & Govt. Schemes
-          <span className="text-sm font-normal text-gray-400">
+          <span className="text-sm font-normal text-gray-500">
             ({scholarships.length} for {collegeName})
           </span>
         </h2>
@@ -304,11 +304,11 @@ export default function CollegeScholarships({
                 </div>
                 <div className="flex-shrink-0 text-right">
                   <div className="flex items-center gap-1 text-sm font-semibold text-gray-800">
-                    <Wallet className="w-3.5 h-3.5 text-green-600" />
+                    <Wallet className="w-3.5 h-3.5 text-green-700" />
                     {formatAmount(s)}
                   </div>
                   {deadline && (
-                    <div className="flex items-center gap-1 text-xs text-gray-400 mt-1 justify-end">
+                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-1 justify-end">
                       <CalendarClock className="w-3 h-3" />
                       {deadline}
                     </div>
@@ -400,7 +400,7 @@ export default function CollegeScholarships({
       </div>
 
       <div className="mt-5 flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl p-3">
-        <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+        <ShieldAlert className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-amber-700">
           Matches are based on state, stream, and education level from your profile. Category (SC/ST/OBC/EWS), income, gender, and disability criteria aren&apos;t tracked yet — always verify those against the official eligibility before applying.
         </p>

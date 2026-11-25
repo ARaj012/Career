@@ -56,7 +56,7 @@ export default function OfficialSyllabus({
         {sourceUrl && (
           <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-emerald-700 hover:underline">
             <BadgeCheck className="w-4 h-4" /> Official source
-            {verifiedAt && <span className="text-gray-400">· checked {new Date(verifiedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
+            {verifiedAt && <span className="text-gray-500">· checked {new Date(verifiedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         )}

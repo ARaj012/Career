@@ -61,7 +61,7 @@ export default function OfficialCollegeCutoffs({ rows }: { rows: OfficialNoticeC
                         <td className="px-3 py-2 text-gray-900">{l.program_name ?? 'All programmes'}</td>
                         <td className="px-3 py-2 text-gray-600">
                           {l.category ?? '—'}
-                          {l.quota && <span className="block text-xs text-gray-400">{l.quota}</span>}
+                          {l.quota && <span className="block text-xs text-gray-500">{l.quota}</span>}
                         </td>
                         {years.map((y) => {
                           const r = list.find((x) => x.year === y && key(x) === key(l))

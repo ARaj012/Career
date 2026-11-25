@@ -137,7 +137,7 @@ export default function CollegeReviews({ collegeId }: { collegeId: string }) {
             <span className="text-sm font-semibold text-gray-700">
               {avgRating.toFixed(1)}
             </span>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-500">
               ({reviews.length} review{reviews.length !== 1 ? 's' : ''})
             </span>
           </div>
@@ -215,11 +215,11 @@ export default function CollegeReviews({ collegeId }: { collegeId: string }) {
 
       {/* Reviews list */}
       {loading ? (
-        <p className="text-sm text-gray-400 text-center py-6">
+        <p className="text-sm text-gray-500 text-center py-6">
           Loading reviews...
         </p>
       ) : reviews.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-6">
+        <p className="text-sm text-gray-500 text-center py-6">
           No reviews yet — be the first to share your experience.
         </p>
       ) : (
@@ -232,7 +232,7 @@ export default function CollegeReviews({ collegeId }: { collegeId: string }) {
                     {r.reviewer_name}
                   </span>
                   {r.is_current_student && (
-                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
                       Current / Alumni Student
                     </span>
                   )}

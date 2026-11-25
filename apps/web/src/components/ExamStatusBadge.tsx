@@ -13,7 +13,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
   exam_approaching: { label: 'Exam Approaching', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
   exam_today: { label: 'Exam Today', color: 'bg-red-100 text-red-700', icon: AlertTriangle },
   exam_completed: { label: 'Exam Completed', color: 'bg-gray-100 text-gray-700', icon: CheckCircle },
-  result_declared: { label: 'Result Declared', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+  result_declared: { label: 'Result Declared', color: 'bg-green-100 text-green-800', icon: CheckCircle },
 }
 
 export default function ExamStatusBadge({ status }: ExamStatusBadgeProps) {

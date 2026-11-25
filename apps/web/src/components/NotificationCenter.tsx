@@ -125,7 +125,7 @@ export default function NotificationCenter() {
       case 'exam_reminder':
         return <Calendar className="w-5 h-5 text-blue-500" />
       case 'saved_item_update':
-        return <BookOpen className="w-5 h-5 text-green-500" />
+        return <BookOpen className="w-5 h-5 text-green-700" />
       case 'recommendation':
         return <AlertCircle className="w-5 h-5 text-purple-500" />
       case 'scholarship':
@@ -221,7 +221,7 @@ export default function NotificationCenter() {
                           </p>
                           <button
                             onClick={() => deleteNotification(notification.id)}
-                            className="text-gray-400 hover:text-red-500 transition"
+                            className="text-gray-500 hover:text-red-500 transition"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -230,7 +230,7 @@ export default function NotificationCenter() {
                           {notification.message}
                         </p>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-xs text-gray-400">{formatTime(notification.created_at)}</span>
+                          <span className="text-xs text-gray-500">{formatTime(notification.created_at)}</span>
                           {notification.link && (
                             <Link
                               href={notification.link}

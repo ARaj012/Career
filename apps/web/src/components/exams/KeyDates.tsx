@@ -129,7 +129,7 @@ function ExpectedSchedule({ estimate, year }: { estimate: Estimate; year: number
       </div>
 
       <p className="flex items-start gap-1.5 border-t border-gray-100 px-4 py-2.5 text-xs text-gray-500">
-        <Info className="mt-px h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden />
+        <Info className="mt-px h-3.5 w-3.5 shrink-0 text-gray-500" aria-hidden />
         <span>
           {estimate.basis ? `${estimate.basis} ` : ''}We'll replace this with the official dates as soon as they're published.
         </span>

@@ -109,7 +109,7 @@ export default function PlacementSummary({ rows }: { rows: PlacementRow[] }) {
 
       {(main?.top_recruiters || unverified?.top_recruiters) && (
         <div className="mt-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
             <Briefcase className="w-3 h-3" /> Top Recruiters
           </p>
           <p className="text-sm text-gray-600">{main?.top_recruiters ?? unverified?.top_recruiters}</p>

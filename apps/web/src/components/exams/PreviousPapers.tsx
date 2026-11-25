@@ -54,7 +54,7 @@ export default function PreviousPapers({ papers, examName, officialUrl }: {
     <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
         <h2 className="text-base sm:text-lg font-semibold text-gray-900">Previous year papers</h2>
-        <span className="text-xs text-gray-400">{papers.length} files · {groups.filter(([y]) => y !== 'Other').length} years</span>
+        <span className="text-xs text-gray-500">{papers.length} files · {groups.filter(([y]) => y !== 'Other').length} years</span>
       </div>
       <p className="text-xs text-gray-500 mb-4">
         Official copies — each link opens the file on {hosts.slice(0, 2).join(' / ')}.
@@ -74,7 +74,7 @@ export default function PreviousPapers({ papers, examName, officialUrl }: {
                       <span className={`shrink-0 rounded-lg p-1.5 ${k.tone}`}><k.Icon className="w-4 h-4" /></span>
                       <span className="min-w-0">
                         <span className="block text-sm text-gray-800 group-hover:text-indigo-700 leading-snug">{p.title}</span>
-                        <span className="block text-[11px] text-gray-400 truncate">{k.label} · {fileName(p.url)}</span>
+                        <span className="block text-[11px] text-gray-500 truncate">{k.label} · {fileName(p.url)}</span>
                       </span>
                       <ExternalLink className="w-3.5 h-3.5 text-gray-300 group-hover:text-indigo-500 shrink-0 mt-1 ml-auto" />
                     </a>

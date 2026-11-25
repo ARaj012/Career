@@ -108,7 +108,7 @@ export function ExamCollegeCutoffs({
                       {e.college!.slug ? (
                         <Link href={`/colleges/${e.college!.slug}#cutoffs`} className="text-indigo-600 hover:underline">{e.college!.name}</Link>
                       ) : e.college!.name}
-                      {e.quota && <span className="block text-xs text-gray-400">{QUOTA[e.quota] ?? e.quota} quota</span>}
+                      {e.quota && <span className="block text-xs text-gray-500">{QUOTA[e.quota] ?? e.quota} quota</span>}
                     </td>
                     {years.map((y) => {
                       const v = e.byYear.get(y)
@@ -122,7 +122,7 @@ export function ExamCollegeCutoffs({
         </div>
       )}
       <p className="text-xs text-gray-500 mt-3 flex items-start gap-1.5">
-        <BadgeCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+        <BadgeCheck className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
         <span>
           Official JoSAA opening and closing ranks, gender-neutral seats. For OPEN, compare your common rank (CRL); for other
           categories, your category rank. NITs and IIITs show the Other State quota (students from outside the college&apos;s

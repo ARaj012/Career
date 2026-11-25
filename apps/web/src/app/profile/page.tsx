@@ -284,7 +284,7 @@ export default function ProfilePage() {
             {/* Avatar card */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm text-center">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="avatar" className="w-16 h-16 rounded-full mx-auto mb-3 border-4 border-indigo-100" />
+                <img src={avatarUrl} alt="" className="w-16 h-16 rounded-full mx-auto mb-3 border-4 border-indigo-100" />
               ) : (
                 <div className="w-16 h-16 rounded-full bg-indigo-600 flex items-center justify-center mx-auto mb-3">
                   <span className="text-white text-xl font-bold">{firstName.charAt(0)}</span>
@@ -317,10 +317,10 @@ export default function ProfilePage() {
               <div className="space-y-1.5">
                 {sections.map(s => (
                   <div key={s.label} className="flex items-center gap-2">
-                    <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 text-xs ${s.done ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                    <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 text-xs ${s.done ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
                       {s.done ? '✓' : ''}
                     </div>
-                    <span className={`text-xs ${s.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{s.label}</span>
+                    <span className={`text-xs ${s.done ? 'text-gray-500 line-through' : 'text-gray-700'}`}>{s.label}</span>
                   </div>
                 ))}
               </div>
@@ -330,7 +330,7 @@ export default function ProfilePage() {
             <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Info</h3>
               <div className="space-y-2 text-xs">
-                {education && <div className="flex gap-2"><GraduationCap className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0 mt-0.5" /><span className="text-gray-700">{education}</span></div>}
+                {education && <div className="flex gap-2"><GraduationCap className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0 mt-0.5" /><span className="text-gray-700">{education}</span></div>}
                 {stream    && <div className="flex gap-2"><BookOpen className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" /><span className="text-gray-700">{stream}</span></div>}
                 {state     && <div className="flex gap-2"><MapPin className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" /><span className="text-gray-700">{state}</span></div>}
                 {percentage && <div className="flex gap-2"><Trophy className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-0.5" /><span className="text-gray-700">{percentage}%</span></div>}
@@ -354,16 +354,16 @@ export default function ProfilePage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <UserIcon className="w-4 h-4 text-gray-400" />
+                  <UserIcon className="w-4 h-4 text-gray-500" />
                   <div>
-                    <p className="text-xs text-gray-400">Full Name</p>
+                    <p className="text-xs text-gray-500">Full Name</p>
                     <p className="text-sm font-medium text-gray-800">{fullName}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Mail className="w-4 h-4 text-gray-400" />
+                  <Mail className="w-4 h-4 text-gray-500" />
                   <div>
-                    <p className="text-xs text-gray-400">Email</p>
+                    <p className="text-xs text-gray-500">Email</p>
                     <p className="text-sm font-medium text-gray-800 truncate">{user?.email}</p>
                   </div>
                 </div>
@@ -400,44 +400,44 @@ export default function ProfilePage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Current Education Level *</label>
+                        <label htmlFor="profile-current-education-level" className="block text-xs font-medium text-gray-500 mb-1.5">Current Education Level *</label>
                         <div className="relative">
-                          <select value={education} onChange={e => setEducation(e.target.value)}
+                          <select id="profile-current-education-level" value={education} onChange={e => setEducation(e.target.value)}
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
                             <option value="">Select level...</option>
                             {EDUCATION_OPTIONS.map(o => <option key={o}>{o}</option>)}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Stream / Branch</label>
+                        <label htmlFor="profile-stream-branch" className="block text-xs font-medium text-gray-500 mb-1.5">Stream / Branch</label>
                         <div className="relative">
-                          <select value={stream} onChange={e => setStream(e.target.value)}
+                          <select id="profile-stream-branch" value={stream} onChange={e => setStream(e.target.value)}
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
                             <option value="">Select stream...</option>
                             {STREAM_OPTIONS.map(o => <option key={o}>{o}</option>)}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Board *</label>
+                        <label htmlFor="profile-board" className="block text-xs font-medium text-gray-500 mb-1.5">Board *</label>
                         <div className="relative">
-                          <select value={board} onChange={e => setBoard(e.target.value)}
+                          <select id="profile-board" value={board} onChange={e => setBoard(e.target.value)}
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
                             <option value="">Select board...</option>
                             {BOARD_OPTIONS.map(o => <option key={o}>{o}</option>)}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Marks / CGPA (%)</label>
-                        <input
+                        <label htmlFor="profile-marks-cgpa" className="block text-xs font-medium text-gray-500 mb-1.5">Marks / CGPA (%)</label>
+                        <input id="profile-marks-cgpa"
                           type="number" min="0" max="100" step="0.1"
                           placeholder="e.g. 85.5"
                           value={percentage}
@@ -447,62 +447,62 @@ export default function ProfilePage() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Home State *</label>
+                        <label htmlFor="profile-home-state" className="block text-xs font-medium text-gray-500 mb-1.5">Home State *</label>
                         <div className="relative">
-                          <select value={state} onChange={e => setState(e.target.value)}
+                          <select id="profile-home-state" value={state} onChange={e => setState(e.target.value)}
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
                             <option value="">Select state...</option>
                             {INDIAN_STATES.map(o => <option key={o}>{o}</option>)}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Class 10 Study State</label>
+                        <label htmlFor="profile-class-10-study-state" className="block text-xs font-medium text-gray-500 mb-1.5">Class 10 Study State</label>
                         <div className="relative">
-                          <select value={class10State} onChange={e => setClass10State(e.target.value)}
+                          <select id="profile-class-10-study-state" value={class10State} onChange={e => setClass10State(e.target.value)}
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
                             <option value="">Select state...</option>
                             {INDIAN_STATES.map(o => <option key={o}>{o}</option>)}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Class 12 Study State</label>
+                        <label htmlFor="profile-class-12-study-state" className="block text-xs font-medium text-gray-500 mb-1.5">Class 12 Study State</label>
                         <div className="relative">
-                          <select value={class12State} onChange={e => setClass12State(e.target.value)}
+                          <select id="profile-class-12-study-state" value={class12State} onChange={e => setClass12State(e.target.value)}
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
                             <option value="">Select state...</option>
                             {INDIAN_STATES.map(o => <option key={o}>{o}</option>)}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Belonging State (Domicile)</label>
+                        <label htmlFor="profile-belonging-state-domicile" className="block text-xs font-medium text-gray-500 mb-1.5">Belonging State (Domicile)</label>
                         <div className="relative">
-                          <select value={belongingState} onChange={e => setBelongingState(e.target.value)}
+                          <select id="profile-belonging-state-domicile" value={belongingState} onChange={e => setBelongingState(e.target.value)}
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
                             <option value="">Select state...</option>
                             {INDIAN_STATES.map(o => <option key={o}>{o}</option>)}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                         </div>
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1.5">Education Budget</label>
+                        <label htmlFor="profile-education-budget" className="block text-xs font-medium text-gray-500 mb-1.5">Education Budget</label>
                         <div className="relative">
-                          <select value={budgetRange} onChange={e => setBudgetRange(e.target.value)}
+                          <select id="profile-education-budget" value={budgetRange} onChange={e => setBudgetRange(e.target.value)}
                             className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none">
                             <option value="">Select budget...</option>
                             {BUDGET_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                           </select>
-                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                         </div>
                       </div>
                     </div>
@@ -515,7 +515,7 @@ export default function ProfilePage() {
                     <h3 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
                       <BookOpen className="w-5 h-5 text-blue-500" /> My Subjects
                     </h3>
-                    <p className="text-xs text-gray-400 mb-4">Add subjects you are studying — this helps us match you with the right careers and exams</p>
+                    <p className="text-xs text-gray-500 mb-4">Add subjects you are studying — this helps us match you with the right careers and exams</p>
 
                     {/* Selected */}
                     {subjects.length > 0 && (
@@ -535,7 +535,7 @@ export default function ProfilePage() {
                     )}
 
                     {/* Popular */}
-                    <p className="text-xs text-gray-400 mb-2">Popular subjects — click to add:</p>
+                    <p className="text-xs text-gray-500 mb-2">Popular subjects — click to add:</p>
                     <div className="flex flex-wrap gap-2 mb-4">
                       {POPULAR_SUBJECTS.filter(s => !subjects.includes(s)).map(s => (
                         <button key={s} onClick={() => toggle(subjects, setSubjects, s)}
@@ -562,7 +562,7 @@ export default function ProfilePage() {
                       <h3 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
                         <Trophy className="w-5 h-5 text-orange-500" /> Target Exams
                       </h3>
-                      <p className="text-xs text-gray-400 mb-3">Which exams are you preparing for?</p>
+                      <p className="text-xs text-gray-500 mb-3">Which exams are you preparing for?</p>
 
                       {targetExams.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -596,7 +596,7 @@ export default function ProfilePage() {
                       <h3 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
                         <Target className="w-5 h-5 text-purple-500" /> Career Goal
                       </h3>
-                      <p className="text-xs text-gray-400 mb-3">What do you want to become? Be specific!</p>
+                      <p className="text-xs text-gray-500 mb-3">What do you want to become? Be specific!</p>
                       <input
                         type="text"
                         placeholder="e.g. IAS Officer, Software Engineer at Google, Cardiologist, CA..."
@@ -613,9 +613,9 @@ export default function ProfilePage() {
 
                     <div className="border-t border-gray-100 pt-5">
                       <h3 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
-                        <IndianRupee className="w-5 h-5 text-green-500" /> Education Budget
+                        <IndianRupee className="w-5 h-5 text-green-700" /> Education Budget
                       </h3>
-                      <p className="text-xs text-gray-400 mb-3">How much can you spend on your education in total?</p>
+                      <p className="text-xs text-gray-500 mb-3">How much can you spend on your education in total?</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {BUDGET_OPTIONS.map(o => (
                           <button key={o.value} onClick={() => setBudgetRange(o.value)}
@@ -639,7 +639,7 @@ export default function ProfilePage() {
                       <h3 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
                         <Flame className="w-5 h-5 text-orange-500" /> Career Domain Interests
                       </h3>
-                      <p className="text-xs text-gray-400 mb-3">Select domains you are interested in (select all that apply)</p>
+                      <p className="text-xs text-gray-500 mb-3">Select domains you are interested in (select all that apply)</p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {CAREER_DOMAINS.map(domain => (
                           <button key={domain} onClick={() => toggle(preferences, setPreferences, domain)}
@@ -658,7 +658,7 @@ export default function ProfilePage() {
                       <h3 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
                         <Heart className="w-5 h-5 text-pink-500" /> Work Style Preferences
                       </h3>
-                      <p className="text-xs text-gray-400 mb-3">What kind of work environment do you prefer?</p>
+                      <p className="text-xs text-gray-500 mb-3">What kind of work environment do you prefer?</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {WORK_PREFERENCES.map(pref => (
                           <button key={pref} onClick={() => toggle(workPrefs, setWorkPrefs, pref)}

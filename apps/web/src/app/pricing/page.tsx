@@ -160,7 +160,7 @@ export default function PricingPage() {
     switch (planId) {
       case 'free': return 'text-gray-600 bg-gray-100'
       case 'premium': return 'text-indigo-600 bg-indigo-100'
-      case 'pro': return 'text-amber-600 bg-amber-100'
+      case 'pro': return 'text-amber-700 bg-amber-100'
       default: return 'text-gray-600 bg-gray-100'
     }
   }
@@ -372,7 +372,7 @@ export default function PricingPage() {
                 billingCycle === 'yearly' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Yearly <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full ml-1">Save 17%</span>
+              Yearly <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full ml-1">Save 17%</span>
             </button>
           </div>
         </div>
@@ -406,7 +406,7 @@ export default function PricingPage() {
                     <Icon className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
+                    <h2 className="text-xl font-bold text-gray-900">{plan.name}</h2>
                     <p className="text-sm text-gray-500">{plan.description}</p>
                   </div>
                 </div>
@@ -425,7 +425,7 @@ export default function PricingPage() {
                     return (
                       <div key={key} className="flex items-start gap-3">
                         {isIncluded ? (
-                          <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                          <Check className="w-5 h-5 text-green-700 flex-shrink-0 mt-0.5" />
                         ) : (
                           <X className="w-5 h-5 text-gray-300 flex-shrink-0 mt-0.5" />
                         )}
@@ -445,7 +445,7 @@ export default function PricingPage() {
                   disabled={isCurrentPlan}
                   className={`w-full py-3 rounded-xl font-medium transition-colors ${
                     isCurrentPlan 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                      ? 'bg-gray-100 text-gray-600 cursor-not-allowed' 
                       : buttonColor
                   }`}
                 >
@@ -498,7 +498,7 @@ export default function PricingPage() {
                       return (
                         <td key={plan.id} className="text-center py-3 px-4">
                           {isIncluded ? (
-                            <Check className="w-5 h-5 text-green-500 mx-auto" />
+                            <Check className="w-5 h-5 text-green-700 mx-auto" />
                           ) : (
                             <X className="w-5 h-5 text-gray-300 mx-auto" />
                           )}

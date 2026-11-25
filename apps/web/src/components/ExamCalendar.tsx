@@ -47,7 +47,7 @@ export default function ExamCalendar({ trackedExams }: ExamCalendarProps) {
           <span className="text-2xl">⚠️</span>
         </div>
         <p className="text-sm mb-2">Calendar needs exam dates</p>
-        <p className="text-xs text-gray-400">Re-track exams from exam pages to see calendar</p>
+        <p className="text-xs text-gray-500">Re-track exams from exam pages to see calendar</p>
       </div>
     )
   }

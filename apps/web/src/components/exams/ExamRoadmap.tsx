@@ -70,7 +70,7 @@ function StageRoadmap({ rows }: { rows: SyllabusRow[] }) {
   const [openSubject, setOpenSubject] = useState<string | null>(subjects[0] ?? null)
 
   if (subjects.length === 0) {
-    return <p className="text-sm text-gray-400 italic">Topic-wise breakdown for this stage is coming soon.</p>
+    return <p className="text-sm text-gray-500 italic">Topic-wise breakdown for this stage is coming soon.</p>
   }
 
   const maxTopicWeightage = Math.max(
@@ -133,7 +133,7 @@ function StageRoadmap({ rows }: { rows: SyllabusRow[] }) {
                     {bySubject[s].total != null ? ` · ${bySubject[s].total}% of paper` : ''}
                   </span>
                 </div>
-                <span className={`text-gray-400 transition-transform ${isOpen ? 'rotate-90' : ''}`}>›</span>
+                <span className={`text-gray-500 transition-transform ${isOpen ? 'rotate-90' : ''}`}>›</span>
               </button>
 
               {isOpen && topics.length > 0 && (
@@ -154,7 +154,7 @@ function StageRoadmap({ rows }: { rows: SyllabusRow[] }) {
                               style={{ width: `${Math.min(100, (t.weightage / maxTopicWeightage) * 100)}%` }}
                             />
                           </div>
-                          <p className="text-[11px] text-gray-400 mt-1">{priorityLabel(t.weightage)}</p>
+                          <p className="text-[11px] text-gray-500 mt-1">{priorityLabel(t.weightage)}</p>
                         </>
                       )}
                     </div>
@@ -244,7 +244,7 @@ export default function ExamRoadmap({ syllabusRows, examName, stageOrder }: Exam
               >
                 <span
                   className={`w-5 h-5 rounded-full text-[11px] flex items-center justify-center font-semibold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+                    isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
                   }`}
                 >
                   {idx + 1}
@@ -258,7 +258,7 @@ export default function ExamRoadmap({ syllabusRows, examName, stageOrder }: Exam
 
       <StageRoadmap rows={currentRows} />
 
-      <p className="text-xs text-gray-400 mt-4">
+      <p className="text-xs text-gray-500 mt-4">
         This list highlights where questions have concentrated in recent papers — it isn&apos;t the syllabus itself
         and isn&apos;t a promise about the next session&apos;s paper. Skipping a topic because it doesn&apos;t appear
         above is how avoidable marks get left on the table; cover everything in the official syllabus, and use this

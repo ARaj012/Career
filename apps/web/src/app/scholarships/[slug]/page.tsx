@@ -285,14 +285,14 @@ export default async function ScholarshipDetailPage({
 
         {/* Apply Button */}
         {scholarship.application_url && (
-          <div className="bg-emerald-600 rounded-2xl p-8 text-center mb-8">
+          <div className="bg-emerald-700 rounded-2xl p-8 text-center mb-8">
             <h3 className="text-white text-xl font-semibold mb-2">Ready to Apply?</h3>
             <p className="text-emerald-100 mb-4">Make sure you have all required documents before applying</p>
             <a
               href={scholarship.application_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-white text-emerald-600 font-medium px-8 py-3 rounded-lg hover:bg-emerald-50 transition"
+              className="inline-flex items-center gap-2 bg-white text-emerald-700 font-medium px-8 py-3 rounded-lg hover:bg-emerald-50 transition"
             >
               Apply Now <ExternalLink className="w-4 h-4" />
             </a>
@@ -301,7 +301,7 @@ export default async function ScholarshipDetailPage({
 
         {/* Back to Scholarships */}
         <div className="text-center">
-          <Link href="/scholarships" className="text-emerald-600 hover:text-emerald-800 text-sm font-medium">
+          <Link href="/scholarships" className="text-emerald-700 hover:text-emerald-800 text-sm font-medium">
             ← Back to all scholarships
           </Link>
         </div>

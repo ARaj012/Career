@@ -228,7 +228,7 @@ export default function ExamPreferencesPage({ params }: { params: Promise<{ exam
               ].map((item) => (
                 <div key={item.key} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5 text-gray-400" />
+                    <item.icon className="w-5 h-5 text-gray-500" />
                     <span className="text-gray-700">{item.label}</span>
                   </div>
                   <button

@@ -79,7 +79,7 @@ export default function UpcomingExams() {
             <Calendar className="w-5 h-5" />
             Upcoming Exams
           </h3>
-          <Lock className="w-4 h-4 text-gray-400" />
+          <Lock className="w-4 h-4 text-gray-500" />
         </div>
         <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-4 text-center">
           <p className="text-sm text-gray-600 mb-3">
@@ -150,7 +150,7 @@ export default function UpcomingExams() {
                   <p className="text-sm text-gray-500">{exam.conducting_body}</p>
                 </div>
                 {item.tracking_type === 'definitely_giving' && (
-                  <Target className="w-4 h-4 text-green-600 flex-shrink-0 ml-2" />
+                  <Target className="w-4 h-4 text-green-700 flex-shrink-0 ml-2" />
                 )}
               </div>
               {schedule && (

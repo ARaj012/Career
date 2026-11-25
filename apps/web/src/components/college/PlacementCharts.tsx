@@ -45,7 +45,7 @@ export default function PlacementCharts({ data }: { data: PlacementRow[] }) {
           <TrendingUp className="w-5 h-5 text-emerald-500" />
           {years >= 2 ? `Placement Trends (Last ${years} Years)` : 'Placement Data'}
         </h2>
-        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
@@ -64,7 +64,7 @@ export default function PlacementCharts({ data }: { data: PlacementRow[] }) {
                         role="tab"
                         aria-selected={l === level}
                         onClick={() => setLevel(l)}
-                        className={`px-2.5 py-1 text-xs rounded-full border ${l === level ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                        className={`px-2.5 py-1 text-xs rounded-full border ${l === level ? 'bg-emerald-700 border-emerald-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
                       >
                         {levelLabel(l)}
                       </button>
@@ -91,7 +91,7 @@ export default function PlacementCharts({ data }: { data: PlacementRow[] }) {
                         <td className={cell}>{d.total_eligible_students ?? '—'}</td>
                         <td className={cell}>
                           {d.students_placed ?? '—'}
-                          {d.placement_rate != null && <span className="text-gray-400"> ({d.placement_rate}%)</span>}
+                          {d.placement_rate != null && <span className="text-gray-500"> ({d.placement_rate}%)</span>}
                         </td>
                         <td className={cell}>{d.higher_studies ?? '—'}</td>
                         <td className={`${cell} font-semibold text-gray-900`}>{formatPackage(d.median_package) ?? '—'}</td>

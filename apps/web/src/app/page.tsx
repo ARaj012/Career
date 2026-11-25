@@ -86,14 +86,14 @@ export default async function Home() {
   const tools: Tool[] = [
     { href: "/recommend", icon: Compass, tint: "bg-indigo-50 text-indigo-600", title: "Career matches", desc: "Answer a few questions and see the careers that fit your subjects and interests." },
     { href: "/colleges", icon: Building2, tint: "bg-sky-50 text-sky-600", title: "College finder", desc: `Compare fees, NIRF ranks, cutoffs and placements${counts.colleges ? ` of ${counts.colleges.toLocaleString("en-IN")} colleges` : ""}.` },
-    { href: "/colleges/value", icon: TrendingUp, tint: "bg-emerald-50 text-emerald-600", title: "Fees vs placements", desc: "See which colleges pay back their fees fastest, using official NIRF salaries." },
-    { href: "/exams", icon: CalendarClock, tint: "bg-amber-50 text-amber-600", title: "Exams and reminders", desc: "Dates, syllabus and cutoffs — with email reminders before every deadline." },
-    { href: "/papers", icon: FileText, tint: "bg-rose-50 text-rose-600", title: "Previous year papers", desc: "Official question papers and answer keys, straight from the exam boards." },
+    { href: "/colleges/value", icon: TrendingUp, tint: "bg-emerald-50 text-emerald-700", title: "Fees vs placements", desc: "See which colleges pay back their fees fastest, using official NIRF salaries." },
+    { href: "/exams", icon: CalendarClock, tint: "bg-amber-50 text-amber-700", title: "Exams and reminders", desc: "Dates, syllabus and cutoffs — with email reminders before every deadline." },
+    { href: "/papers", icon: FileText, tint: "bg-rose-50 text-rose-700", title: "Previous year papers", desc: "Official question papers and answer keys, straight from the exam boards." },
     { href: "/scholarships/match", icon: Award, tint: "bg-violet-50 text-violet-600", title: "Scholarship matcher", desc: "Check which scholarships you qualify for, and what each one pays." },
   ];
 
   return (
-    <main className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
       {/* Hero */}
       <section className="bg-gradient-to-b from-indigo-50 via-indigo-50/60 to-white px-4 pt-16 sm:pt-20 md:pt-24 pb-12 sm:pb-16">
         <div className="max-w-4xl mx-auto text-center">
@@ -227,6 +227,6 @@ export default async function Home() {
           </Link>
         </div>
       </section>
-    </main>
+    </div>
   )
 }

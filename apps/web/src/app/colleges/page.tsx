@@ -35,14 +35,14 @@ interface College {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  Government: 'bg-green-100 text-green-700 border-green-200',
+  Government: 'bg-green-100 text-green-800 border-green-200',
   Private: 'bg-blue-100 text-blue-700 border-blue-200',
   Deemed: 'bg-purple-100 text-purple-700 border-purple-200',
 }
 
 const NAAC_COLORS: Record<string, string> = {
   'A++': 'bg-emerald-100 text-emerald-700',
-  'A+': 'bg-green-100 text-green-700',
+  'A+': 'bg-green-100 text-green-800',
   'A': 'bg-lime-100 text-lime-700',
   'B+': 'bg-yellow-100 text-yellow-700',
 }
@@ -231,14 +231,14 @@ export default function CollegesPage() {
           </div>
           <div className="flex flex-wrap gap-4 mt-4 ml-14">
             {[
-              { label: 'Government', count: colleges.filter(c => c.type === 'Government').length, color: 'text-green-600' },
+              { label: 'Government', count: colleges.filter(c => c.type === 'Government').length, color: 'text-green-700' },
               { label: 'Private', count: colleges.filter(c => c.type === 'Private').length, color: 'text-blue-600' },
               { label: 'Deemed', count: colleges.filter(c => c.type === 'Deemed').length, color: 'text-purple-600' },
               { label: 'Featured', count: colleges.filter(c => c.is_featured).length, color: 'text-indigo-600' },
             ].map(s => (
               <div key={s.label} className="text-sm">
                 <span className={`font-semibold ${s.color}`}>{s.count}</span>
-                <span className="text-gray-400 ml-1">{s.label}</span>
+                <span className="text-gray-500 ml-1">{s.label}</span>
               </div>
             ))}
             <Link href="/colleges/value" className="text-sm font-medium text-indigo-600 hover:text-indigo-800 sm:ml-auto">
@@ -253,9 +253,10 @@ export default function CollegesPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input
                 type="text"
+                aria-label="Search colleges"
                 placeholder="Search colleges, cities, states..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -272,6 +273,7 @@ export default function CollegesPage() {
               <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </button>
             <select
+              aria-label="Sort colleges"
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
               className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
@@ -289,8 +291,9 @@ export default function CollegesPage() {
           {showFilters && (
             <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-4 items-end">
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Domain</label>
+                <label htmlFor="filter-domain" className="block text-xs font-medium text-gray-500 mb-1.5">Domain</label>
                 <select
+                  id="filter-domain"
                   value={selectedDomain}
                   onChange={e => setSelectedDomain(e.target.value)}
                   className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
@@ -299,8 +302,9 @@ export default function CollegesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">State</label>
+                <label htmlFor="filter-state" className="block text-xs font-medium text-gray-500 mb-1.5">State</label>
                 <select
+                  id="filter-state"
                   value={selectedState}
                   onChange={e => setSelectedState(e.target.value)}
                   className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
@@ -309,7 +313,7 @@ export default function CollegesPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Type</label>
+                <p className="block text-xs font-medium text-gray-500 mb-1.5">Type</p>
                 <div className="flex gap-2">
                   {['All Types', 'Government', 'Private', 'Deemed'].map(t => (
                     <button
@@ -323,7 +327,7 @@ export default function CollegesPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Show</label>
+                <p className="block text-xs font-medium text-gray-500 mb-1.5">Show</p>
                 <button
                   onClick={() => setFeaturedOnly(!featuredOnly)}
                   className={`px-3 py-2 rounded-lg text-sm border flex items-center gap-2 transition-colors ${featuredOnly ? 'bg-amber-500 text-white border-amber-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
@@ -412,7 +416,7 @@ export default function CollegesPage() {
                         className={`p-1.5 rounded-lg transition-colors ${
                           selectedForCompare.has(college.id)
                             ? 'bg-indigo-100 text-indigo-600'
-                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                         title={selectedForCompare.has(college.id) ? 'Remove from comparison' : 'Add to comparison'}
                       >
@@ -421,11 +425,11 @@ export default function CollegesPage() {
                       {college.nirf_rank || college.nirf_band ? (
                         <div className="flex-shrink-0 text-center bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5" title={college.nirf_note ?? undefined}>
                           <div className="text-base font-bold text-indigo-700 leading-none">{college.nirf_rank ? `#${college.nirf_rank}` : college.nirf_band}</div>
-                          <div className="text-xs text-indigo-400 mt-0.5">NIRF</div>
+                          <div className="text-xs text-indigo-600 mt-0.5">NIRF</div>
                         </div>
                       ) : college.qs_rank ? (
                         <div className="flex-shrink-0 text-center bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5">
-                          <div className="text-base font-bold text-amber-600 leading-none">#{college.qs_rank}</div>
+                          <div className="text-base font-bold text-amber-700 leading-none">#{college.qs_rank}</div>
                           <div className="text-xs text-amber-400 mt-0.5">QS</div>
                         </div>
                       ) : null}
@@ -433,14 +437,14 @@ export default function CollegesPage() {
                   </div>
 
                   <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
-                    <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-500" />
                     <span>{college.city ? `${college.city}, ` : ''}{college.state}</span>
                   </div>
 
                   {/* Fees + Scholarships Badges */}
                   <div className="flex flex-wrap items-center gap-1.5 mb-3">
                     <div className="flex items-center gap-1.5">
-                      <IndianRupee className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                      <IndianRupee className="w-3.5 h-3.5 text-green-700 flex-shrink-0" />
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${college.annual_fees_min === 0 && college.annual_fees_max === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-50 text-gray-700'}`}>
                         {formatFees(college.annual_fees_min, college.annual_fees_max)}
                       </span>
@@ -459,7 +463,7 @@ export default function CollegesPage() {
                     </p>
                   )}
 
-                  <div className="flex items-center gap-3 text-xs text-gray-400 mt-auto pt-3 border-t border-gray-100">
+                  <div className="flex items-center gap-3 text-xs text-gray-500 mt-auto pt-3 border-t border-gray-100">
                     {college.established_year && (
                       <span className="flex items-center gap-1">
                         <GraduationCap className="w-3.5 h-3.5" />
