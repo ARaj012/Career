@@ -61,6 +61,25 @@ export default function ChatWidget() {
     if (open) inputRef.current?.focus()
   }, [open])
 
+  // On phones the button would sit on top of what you're reading, so it slides away while
+  // you scroll down and comes back when you scroll up or reach the end of the page.
+  const [tucked, setTucked] = useState(false)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    const phone = window.matchMedia('(max-width: 639px)')
+    let last = window.scrollY
+    const onScroll = () => {
+      const y = window.scrollY
+      const atEnd = window.innerHeight + y >= document.documentElement.scrollHeight - 40
+      if (!phone.matches || open || atEnd || y < 200 || document.activeElement === buttonRef.current) setTucked(false)
+      else if (y > last + 8) setTucked(true)
+      else if (y < last - 8) setTucked(false)
+      if (Math.abs(y - last) > 8) last = y
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [open])
+
   async function sendMessage() {
     const text = input.trim()
     if (!text || loading) return
@@ -115,16 +134,20 @@ export default function ChatWidget() {
     <>
       {/* Floating toggle button */}
       <button
+        ref={buttonRef}
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? 'Close chat' : 'Open chat'}
-        className="fixed bottom-5 right-5 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
+        tabIndex={tucked ? -1 : undefined}
+        className={`fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg hover:shadow-xl active:scale-95 transition-all duration-300 motion-reduce:transition-none ${
+          tucked ? 'translate-y-24 opacity-0 pointer-events-none' : 'hover:scale-105'
+        }`}
       >
-        {open ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
+        {open ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />}
       </button>
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-5 z-50 w-[92vw] max-w-sm h-[70vh] max-h-[560px] bg-white rounded-2xl border border-gray-200 shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed bottom-20 right-3 sm:bottom-24 sm:right-5 z-50 w-[calc(100vw-1.5rem)] sm:w-[92vw] max-w-sm h-[70vh] max-h-[560px] bg-white rounded-2xl border border-gray-200 shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white px-4 py-3.5 flex items-center gap-2 flex-shrink-0">
             <Sparkles className="w-5 h-5" />

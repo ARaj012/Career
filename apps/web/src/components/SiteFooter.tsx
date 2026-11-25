@@ -10,7 +10,7 @@ const COLUMNS: { head: string; links: [string, string][] }[] = [
 /** The footer on every student-facing page */
 export default function SiteFooter() {
   return (
-    <footer className="bg-gray-900 text-gray-400 px-4 sm:px-6 pt-12 pb-8">
+    <footer className="bg-gray-900 text-gray-400 px-4 sm:px-6 pt-12 pb-24 sm:pb-8">
       <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
         <div className="col-span-2 md:col-span-1">
           <p className="text-white text-lg font-bold">{BRAND_NAME}</p>
