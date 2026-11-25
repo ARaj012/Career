@@ -2,6 +2,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import SectionNav, { type NavSection } from '@/components/SectionNav'
 import { Metadata } from 'next'
 import SaveCareerButton from '@/components/SaveCareerButton'
 import OfficialCareerFacts from '@/components/careers/OfficialCareerFacts'
@@ -109,6 +110,19 @@ function relatedCareers(id: string, category: string | null, weights: WeightRow[
 }
 
 // ── Metadata ───────────────────────────────────────────────────────────────
+
+// "On this page" links in page order; sections a career has no data for are left out by the bar
+const CAREER_SECTIONS: NavSection[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'how-to-get-in', label: 'How to get in' },
+  { id: 'path', label: 'Career path' },
+  { id: 'skills', label: 'Skills' },
+  { id: 'work', label: 'Where they work' },
+  { id: 'exams', label: 'Exams' },
+  { id: 'colleges', label: 'Colleges' },
+  { id: 'scholarships', label: 'Scholarships' },
+  { id: 'salary', label: 'Salary' },
+]
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -291,13 +305,15 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
           <ArrowLeft className="w-4 h-4" /> Back to Careers
         </Link>
 
+        <SectionNav sections={CAREER_SECTIONS} className="-mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 bg-gray-50 mb-4" />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* ── LEFT ── */}
           <div className="lg:col-span-2 space-y-6">
 
             {/* Hero Card */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <div id="overview" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 {career.category && (
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${categoryColor}`}>{career.category}</span>
@@ -376,6 +392,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
               </div>
             </div>
 
+            <div id="how-to-get-in" className="space-y-6 scroll-mt-32">
             <OfficialCareerFacts
               title={career.title}
               officialBody={career.official_body}
@@ -403,10 +420,11 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
                 </div>
               ) : null
             })()}
+            </div>
 
             {/* Career Path Steps, written for this career (the official route, when known, is shown above) */}
             {careerSteps.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <div id="path" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
               <h2 className="text-lg font-semibold text-gray-900 mb-5 flex items-center gap-2">
                 <ArrowRight className="w-5 h-5 text-green-500" />
                 How to Become a {career.title}
@@ -426,7 +444,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
 
             {/* Skills */}
             {careerSkills.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <div id="skills" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-indigo-500" />
                   Skills Required
@@ -459,7 +477,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
 
             {/* Where they work */}
             {topEmployers.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <div id="work" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-blue-500" /> Where They Work
               </h2>
@@ -475,7 +493,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
 
             {/* Entrance Exams */}
             {careerExams.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <div id="exams" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-orange-500" />
                   Entrance Exams
@@ -504,7 +522,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
             )}
 
             {careerExams.length === 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <div id="exams" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
                 <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-orange-500" /> Entrance Exams
                 </h2>
@@ -519,7 +537,7 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
 
             {/* Colleges for this career */}
             {relatedColleges.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <div id="colleges" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
                 <h2 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-purple-500" />
                   {collegesFromExams ? 'Colleges That Admit Through These Exams' : `Where to Study`}
@@ -562,15 +580,17 @@ export default async function CareerDetailPage({ params }: { params: Promise<{ s
               </div>
             )}
 
-            <RelatedScholarships
-              items={scholarships}
-              title="Scholarships on the Way"
-              subtitle="For the studies and entrance exams that lead into this career"
-            />
+            <div id="scholarships" className="scroll-mt-32">
+              <RelatedScholarships
+                items={scholarships}
+                title="Scholarships on the Way"
+                subtitle="For the studies and entrance exams that lead into this career"
+              />
+            </div>
 
             {/* Salary by Experience */}
             {generic && (career.avg_salary_min || career.avg_salary_max) && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <div id="salary" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <IndianRupee className="w-5 h-5 text-green-500" /> Salary by Experience
               </h2>

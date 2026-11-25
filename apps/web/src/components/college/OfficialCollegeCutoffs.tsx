@@ -24,7 +24,7 @@ export default function OfficialCollegeCutoffs({ rows }: { rows: OfficialNoticeC
   if (!rows.length) return null
   const exams = [...new Set(rows.map((r) => r.exam_name ?? 'Entrance exam'))]
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm" id="official-cutoffs">
+    <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32" id="official-cutoffs">
       <div className="flex flex-wrap items-start justify-between gap-2 mb-1">
         <h2 className="text-lg font-semibold text-gray-900">Admission Cutoffs</h2>
         <span className="inline-flex items-center gap-1 text-xs text-emerald-700">

@@ -2,6 +2,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import SectionNav, { type NavSection } from "@/components/SectionNav";
 import { Metadata } from "next";
 import SaveCollegeButton from "@/components/SaveCollegeButton";
 import EnrollmentChart from "@/components/college/EnrollmentChart";
@@ -77,6 +78,24 @@ function formatFees(min: number | null, max: number | null): string {
   return `Up to ${fmt(max!)}/yr`;
 }
 
+
+// "On this page" links; sections a college has no data for are left out by the bar itself.
+// Cutoffs appear once: the official tables when there are any, else the summary card.
+const COLLEGE_SECTIONS: NavSection[] = [
+  { id: "overview", label: "Overview" },
+  { id: "fees", label: "Fees" },
+  { id: "courses", label: "Courses" },
+  { id: "admission", label: "Admission" },
+  { id: "cutoffs", label: "Cutoffs" },
+  { id: "official-cutoffs", label: "Cutoffs" },
+  { id: "cutoff-summary", label: "Cutoffs" },
+  { id: "placements", label: "Placements" },
+  { id: "fees-vs-salary", label: "Fees vs salary" },
+  { id: "scholarships", label: "Scholarships" },
+  { id: "campus", label: "Campus life" },
+  { id: "faqs", label: "FAQs" },
+  { id: "reviews", label: "Reviews" },
+];
 
 export async function generateMetadata({
   params,
@@ -310,7 +329,7 @@ export default async function CollegeDetailPage({
         </Link>
 
         {/* Header Card */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6 shadow-sm">
+        <div id="overview" className="bg-white rounded-2xl border border-gray-200 p-6 mb-6 shadow-sm scroll-mt-32">
           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
             {/* Logo */}
             {college.logo_url && (
@@ -501,6 +520,8 @@ export default async function CollegeDetailPage({
           )}
         </div>
 
+        <SectionNav sections={COLLEGE_SECTIONS} className="-mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 bg-gray-50 mb-4" />
+
         {/* Why Join This College */}
         {(college.why_join || bestKnownFor.length > 0) && (
           <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-6 mb-6 shadow-sm text-white">
@@ -556,7 +577,7 @@ export default async function CollegeDetailPage({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Courses */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <div id="courses" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-indigo-500" />
                 Courses Offered
@@ -672,7 +693,7 @@ export default async function CollegeDetailPage({
 
             {/* Admission Process */}
             {college.admission_process && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <div id="admission" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
                 <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                   <ClipboardList className="w-5 h-5 text-indigo-500" />
                   Admission Process
@@ -698,7 +719,7 @@ export default async function CollegeDetailPage({
 
             {/* Campus Life */}
             {college.campus_life && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <div id="campus" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
                 <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                   <Home className="w-5 h-5 text-indigo-500" />
                   Campus Life
@@ -720,32 +741,40 @@ export default async function CollegeDetailPage({
             )}
 
             {/* Placement Trends — click to expand (avg & highest package vs year, last 5 years) */}
-            <PlacementCharts data={placements} />
-            {placements.length === 0 && est.placements && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-3">Placement Data</h2>
-                <EstimateNote estimate={est.placements} />
-              </div>
-            )}
+            <div id="placements" className="space-y-6 scroll-mt-32">
+              <PlacementCharts data={placements} />
+              {placements.length === 0 && est.placements && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">Placement Data</h2>
+                  <EstimateNote estimate={est.placements} />
+                </div>
+              )}
+            </div>
 
             {/* Admission Cutoff Trends — click to expand, only shown for exam/category series with 2+ real years */}
             <CutoffExplorer rows={officialCutoffs} />
             <OfficialCollegeCutoffs rows={noticeCutoffs} />
             {officialCutoffs.length === 0 && noticeCutoffs.length === 0 && <CutoffTrendsChart cutoffs={cutoffTrendData} />}
 
-            <CollegeScholarshipsSummary own={ownScholarships} linked={linkedScholarships} collegeSlug={college.slug} />
+            <div id="scholarships" className="scroll-mt-32">
+              <CollegeScholarshipsSummary own={ownScholarships} linked={linkedScholarships} collegeSlug={college.slug} />
+            </div>
 
             {/* FAQs */}
-            <CollegeFaqs faqs={faqs} />
+            <div id="faqs" className="scroll-mt-32">
+              <CollegeFaqs faqs={faqs} />
+            </div>
 
             {/* Student ratings & comments */}
-            <CollegeReviews collegeId={college.id} />
+            <div id="reviews" className="scroll-mt-32">
+              <CollegeReviews collegeId={college.id} />
+            </div>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-5">
             {/* Exam Cutoffs */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <div id="cutoff-summary" className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm scroll-mt-32">
               <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-orange-500" /> Admission Cutoffs
               </h2>
@@ -830,7 +859,7 @@ export default async function CollegeDetailPage({
             {/* Placements: official NIRF figures first, third-party numbers only when labelled */}
             <PlacementSummary rows={placements} />
             {valueRows.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+              <div id="fees-vs-salary" className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 scroll-mt-32">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                   <IndianRupee className="w-4 h-4 text-indigo-500" /> Fees vs salary
                 </h3>
@@ -856,7 +885,7 @@ export default async function CollegeDetailPage({
             )}
 
             {/* Fees Summary */}
-            <div className="bg-green-50 rounded-2xl border border-green-100 p-5">
+            <div id="fees" className="bg-green-50 rounded-2xl border border-green-100 p-5 scroll-mt-32">
               <h3 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
                 <IndianRupee className="w-4 h-4" /> Fee Summary
               </h3>

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from 'next/link'
+import SectionNav, { type NavSection } from '@/components/SectionNav'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Metadata } from 'next'
@@ -41,6 +42,20 @@ const STRATEGY_STEPS = [
 
 const SCHEDULE_FIELDS =
   'year, session, registration_start, registration_end, exam_date_start, exam_date_end, result_date, data_status, source_url, verified_at, total_applicants, total_selected'
+
+// "On this page" links in page order; sections an exam has no data for are left out by the bar
+const EXAM_SECTIONS: NavSection[] = [
+  { id: 'dates', label: 'Key dates' },
+  { id: 'eligibility', label: 'Eligibility' },
+  { id: 'selection', label: 'Selection stats' },
+  { id: 'prepare', label: 'How to prepare' },
+  { id: 'syllabus', label: 'Syllabus' },
+  { id: 'papers', label: 'Previous papers' },
+  { id: 'scholarships', label: 'Scholarships' },
+  { id: 'toppers', label: 'Toppers' },
+  { id: 'cutoffs', label: 'Cutoffs' },
+  { id: 'careers', label: 'Careers' },
+]
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -313,7 +328,9 @@ export default async function ExamDetailPage({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-8 sm:pb-12">
+        <SectionNav sections={EXAM_SECTIONS} className="-mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-gray-50 mb-4 sm:mb-6" />
+
         {est.status?.kind === 'discontinued' && (
           <div className="mb-6 sm:mb-8">
             <EstimateNote estimate={est.status} />
@@ -321,11 +338,13 @@ export default async function ExamDetailPage({
         )}
 
         {/* Key dates */}
-        <KeyDates schedules={schedules as ScheduleRow[]} officialUrl={exam.official_url} estimate={est.status?.kind === 'discontinued' ? undefined : est.dates} />
+        <div id="dates" className="scroll-mt-32">
+          <KeyDates schedules={schedules as ScheduleRow[]} officialUrl={exam.official_url} estimate={est.status?.kind === 'discontinued' ? undefined : est.dates} />
+        </div>
 
         {/* Eligibility */}
         {eligibility && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+          <div id="eligibility" className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8 scroll-mt-32">
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">Eligibility</h2>
             <div className="flex flex-wrap gap-2">
               {eligibility.class_required && (
@@ -354,7 +373,7 @@ export default async function ExamDetailPage({
 
         {/* Selection overview */}
         {hasSelectionStats && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+          <div id="selection" className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8 scroll-mt-32">
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">🎯 Selection Overview (Latest Cycle)</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="bg-gray-50 rounded-xl p-3 sm:p-4 text-center">
@@ -391,7 +410,7 @@ export default async function ExamDetailPage({
         </div>
 
         {/* How to crack this exam — generic evergreen strategy */}
-        <div className="mb-8 sm:mb-10">
+        <div id="prepare" className="mb-8 sm:mb-10 scroll-mt-32">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">How to Crack This Exam</h2>
           <p className="text-gray-500 text-sm sm:text-base mb-4 sm:mb-6">A proven, general preparation strategy — adapt the timeline to how much time you have left</p>
           <div className="relative">
@@ -416,7 +435,7 @@ export default async function ExamDetailPage({
         {/* Subject-wise syllabus weightage now lives on its own page — link out
             instead of rendering it inline, to keep this page from getting bulky */}
         {syllabusCount != null && syllabusCount > 0 && (
-          <div className="mb-8 sm:mb-10">
+          <div id="syllabus" className="mb-8 sm:mb-10 scroll-mt-32">
             <Link
               href={`/exams/${slug}/roadmap`}
               className="group flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-2xl p-4 sm:p-6 hover:shadow-lg transition"
@@ -433,17 +452,17 @@ export default async function ExamDetailPage({
         )}
 
         {!syllabusCount && est.syllabus && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+          <div id="syllabus" className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8 scroll-mt-32">
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">Syllabus Overview</h2>
             <EstimateNote estimate={est.syllabus} />
           </div>
         )}
 
-        <div id="papers" className="scroll-mt-20">
+        <div id="papers" className="scroll-mt-32">
           <PreviousPapers papers={papers} examName={exam.name} officialUrl={exam.official_url} />
         </div>
 
-        <div id="scholarships" className="scroll-mt-20">
+        <div id="scholarships" className="scroll-mt-32">
           <RelatedScholarships
             items={scholarships}
             title={`Scholarships linked to ${exam.name}`}
@@ -453,7 +472,7 @@ export default async function ExamDetailPage({
         </div>
 
         {/* Toppers */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-10">
+        <div id="toppers" className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-10 scroll-mt-32">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
             🏆 Toppers {toppersYear ? `(${toppersYear})` : ''}
           </h2>
@@ -492,6 +511,7 @@ export default async function ExamDetailPage({
           )}
         </div>
 
+        <div id="cutoffs" className="scroll-mt-32">
         {nationalCutoffs.length > 0 ? (
           <ExamQualifyingCutoffs rows={nationalCutoffs} examName={exam.name} />
         ) : est.cutoffs ? (
@@ -575,9 +595,10 @@ export default async function ExamDetailPage({
             </div>
           ))}
         </div>
+        </div>
 
         {relatedCareers.length > 0 && (
-          <div className="mt-10">
+          <div id="careers" className="mt-10 scroll-mt-32">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Careers That Require This Exam</h2>
             <div className="flex flex-wrap gap-2">
               {relatedCareers.map((c: any) => (

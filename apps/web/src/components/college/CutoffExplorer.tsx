@@ -63,7 +63,7 @@ export default function CutoffExplorer({ rows }: { rows: OfficialCutoff[] }) {
   const select = 'px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500'
 
   return (
-    <div id="cutoffs" className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 scroll-mt-24">
+    <div id="cutoffs" className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 scroll-mt-32">
       <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
         <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <Trophy className="w-5 h-5 text-orange-500" /> Admission Cutoffs ({meta?.exam_name ?? 'JEE'}), {years[0]}–{latest}
