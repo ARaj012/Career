@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { safeRedirectPath } from '@/lib/safe-redirect'
 import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
 import { CheckCircle2 } from 'lucide-react'
+import Link from 'next/link'
 
 function LoginForm() {
   const [loading, setLoading] = useState(false)
@@ -77,7 +78,9 @@ function LoginForm() {
 
         {/* Terms */}
         <p className="text-center text-xs text-gray-400 mt-8">
-          By signing in, you agree to our Terms of Service and Privacy Policy
+          By signing in, you agree to our{' '}
+          <Link href="/terms" className="underline underline-offset-2 hover:text-gray-600">Terms of Use</Link> and{' '}
+          <Link href="/privacy" className="underline underline-offset-2 hover:text-gray-600">Privacy Policy</Link>
         </p>
       </div>
     </main>

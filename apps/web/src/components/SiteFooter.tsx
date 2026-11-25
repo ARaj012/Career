@@ -28,7 +28,11 @@ export default function SiteFooter() {
         ))}
       </div>
       <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-gray-800 flex flex-col sm:flex-row justify-between gap-2 text-xs">
-        <p>© 2026 {BRAND_NAME} · Built for Indian students</p>
+        <p>
+          © 2026 {BRAND_NAME} · Built for Indian students ·{' '}
+          <Link href="/privacy" className="hover:text-white transition">Privacy</Link> ·{' '}
+          <Link href="/terms" className="hover:text-white transition">Terms</Link>
+        </p>
         <p>Data from official sources: NIRF, exam boards and scholarship portals</p>
       </div>
     </footer>

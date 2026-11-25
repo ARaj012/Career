@@ -131,6 +131,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 BREVO_API_KEY=your_brevo_api_key (optional - exam reminder emails; mock mode if missing)
 ALERTS_FROM_EMAIL=sender address verified in Brevo (optional)
 ALERTS_FROM_NAME=Snova (optional)
+NEXT_PUBLIC_CONTACT_EMAIL=inbox shown on /privacy and /terms for data and account requests
 ```
 
 **Exam reminder emails**: `scripts/exam-alerts.ts` runs every morning in GitHub Actions (Data Automation workflow). Without `BREVO_API_KEY` + `ALERTS_FROM_EMAIL` it still creates in-app notifications and only logs the email (mock mode). For GitHub, add `BREVO_API_KEY` as a repository secret and `ALERTS_FROM_EMAIL` as a repository variable.
