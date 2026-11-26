@@ -104,7 +104,20 @@ function show(v: unknown, field = ''): string {
     // Money fields get a rupee sign; counts such as total marks (1,750) do not
     return /fee|amount|pay|package|salary|stipend/.test(field) ? `₹${v.toLocaleString('en-IN')}` : v.toLocaleString('en-IN')
   }
+  if (Array.isArray(v)) return v.map((item) => show(item, field)).join(' · ')
+  // Quoted facts are stored as { text, source_url }
+  if (typeof v === 'object') return 'text' in v ? String((v as { text: unknown }).text) : JSON.stringify(v)
   return String(v)
+}
+
+/** A list value (e.g. eligibility facts) as bullet points; anything else as plain text */
+function ValueList({ v, field, className = '' }: { v: unknown; field: string; className?: string }) {
+  if (!Array.isArray(v) || v.length === 0) return <span className={className}>{show(v, field)}</span>
+  return (
+    <ul className={`list-disc pl-4 space-y-1 ${className}`}>
+      {v.map((item, i) => <li key={i}>{show(item, field)}</li>)}
+    </ul>
+  )
 }
 
 const ago = (iso: string) => {
@@ -411,9 +424,10 @@ export default function AutomationPage() {
                       {p.reviewed_by && p.reviewed_by !== 'automation' ? `, by ${p.reviewed_by}` : ''}
                     </span>
                   </div>
-                  {p.reason && tab === 'pending' && (
+                  {p.reason && (tab === 'pending' || tab === 'rejected') && (
                     <p className="flex items-start gap-1.5 text-sm text-amber-700 mt-1">
-                      <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> {p.reason}
+                      <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+                      <span>{tab === 'rejected' && <span className="font-medium">Why it was rejected: </span>}{p.reason}</span>
                     </p>
                   )}
 
@@ -422,13 +436,29 @@ export default function AutomationPage() {
                       <div key={field} className="py-2 grid sm:grid-cols-[10rem_1fr] gap-x-4 gap-y-1">
                         <div className="text-sm text-gray-500">{FIELD_LABELS[field] ?? field}</div>
                         <div>
-                          <div className="text-sm">
-                            <span className="text-gray-400 line-through decoration-gray-300">{show(c.old, field)}</span>
-                            <span className="text-gray-300 mx-2" aria-hidden>→</span>
-                            <span className={`font-medium ${c.new === null ? 'text-red-600' : 'text-gray-900'}`}>
-                              {c.new === null ? 'clear' : show(c.new, field)}
-                            </span>
-                          </div>
+                          {Array.isArray(c.old) || Array.isArray(c.new) ? (
+                            // Lists of facts: show both versions in full so added or dropped items are easy to spot
+                            <div className="text-sm grid gap-2 sm:grid-cols-2">
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 mb-1">Before ({Array.isArray(c.old) ? c.old.length : 0})</p>
+                                <ValueList v={c.old} field={field} className="text-gray-500" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-medium text-gray-500 mb-1">Proposed ({Array.isArray(c.new) ? c.new.length : 0})</p>
+                                {c.new === null
+                                  ? <span className="font-medium text-red-700">clear</span>
+                                  : <ValueList v={c.new} field={field} className="text-gray-900" />}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm">
+                              <span className="text-gray-500 line-through decoration-gray-300">{show(c.old, field)}</span>
+                              <span className="text-gray-300 mx-2" aria-hidden>→</span>
+                              <span className={`font-medium ${c.new === null ? 'text-red-700' : 'text-gray-900'}`}>
+                                {c.new === null ? 'clear' : show(c.new, field)}
+                              </span>
+                            </div>
+                          )}
                           {c.evidence && (
                             <blockquote className="mt-1 border-l-2 border-emerald-400 pl-3 text-sm text-gray-600 italic">
                               “{c.evidence}”
