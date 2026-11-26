@@ -19,14 +19,6 @@ if (razorpayConfigured()) {
   })
 }
 
-// Mock plan prices (paise) - matching database plan IDs
-const MOCK_PLANS: Record<string, { amount: number; name: string }> = {
-  basic: { amount: 29900, name: 'Basic Plan' },
-  premium: { amount: 59900, name: 'Premium Plan' },
-  pro: { amount: 99900, name: 'Pro Plan' },
-  enterprise: { amount: 249900, name: 'Enterprise Plan' },
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}))
@@ -57,16 +49,35 @@ export async function POST(req: NextRequest) {
     // payment_history is written by the server only
     const admin = createAdminSupabaseClient()
 
+    // The price always comes from subscription_plans, the same table the Pricing page shows,
+    // so a student is charged exactly what they saw (test mode included)
+    const { data: plan } = await supabase
+      .from('subscription_plans')
+      .select('*')
+      .eq('id', planId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (!plan) {
+      return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
+    }
+
+    const amount = Math.round(
+      Number(billingCycle === 'yearly' ? plan.price_yearly : plan.price_monthly) * 100 // in paise
+    )
+    if (!(amount > 0)) {
+      return NextResponse.json({ error: 'This plan has no price to pay' }, { status: 400 })
+    }
+
     // Mock mode for testing without real Razorpay (never in production)
     if (mockPaymentsAllowed()) {
-      const plan = MOCK_PLANS[planId]
       const mockOrderId = `order_mock_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`
 
       const { error: orderError } = await admin.from('payment_history').insert({
         user_id: user.id,
         razorpay_order_id: mockOrderId,
-        amount: plan.amount / 100, // Convert to rupees
-        currency: 'INR',
+        amount: amount / 100, // Convert to rupees
+        currency: plan.currency || 'INR',
         status: 'pending',
         payment_method: 'mock',
         metadata: { plan_id: planId, billing_cycle: billingCycle },
@@ -78,8 +89,8 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         orderId: mockOrderId,
-        amount: plan.amount,
-        currency: 'INR',
+        amount,
+        currency: plan.currency || 'INR',
         keyId: 'rzp_mock_test_key',
         notes: { planId, billingCycle },
       })
@@ -88,21 +99,6 @@ export async function POST(req: NextRequest) {
     if (!razorpay) {
       return NextResponse.json({ error: 'Payments are not available right now.' }, { status: 503 })
     }
-
-    const { data: plan } = await supabase
-      .from('subscription_plans')
-      .select('*')
-      .eq('id', planId)
-      .single()
-
-    if (!plan) {
-      return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
-    }
-
-    // Calculate amount based on billing cycle
-    const amount = Math.round(
-      (billingCycle === 'yearly' ? plan.price_yearly : plan.price_monthly) * 100 // Razorpay expects paise
-    )
 
     const options = {
       amount,

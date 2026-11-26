@@ -69,7 +69,7 @@ export default function PricingPage() {
             name: 'Premium',
             description: 'For serious students',
             price_monthly: 299,
-            price_yearly: 2499,
+            price_yearly: 2999,
             currency: 'INR',
             features: {
               career_browsing: true,
@@ -94,7 +94,7 @@ export default function PricingPage() {
             name: 'Pro',
             description: 'For career-focused students',
             price_monthly: 599,
-            price_yearly: 4999,
+            price_yearly: 5999,
             currency: 'INR',
             features: {
               career_browsing: true,
@@ -341,6 +341,11 @@ export default function PricingPage() {
     )
   }
 
+  // What paying yearly saves against 12 monthly payments, from the real prices (rounded down)
+  const yearlySaving = Math.max(0, ...plans
+    .filter((p) => Number(p.price_monthly) > 0 && Number(p.price_yearly) > 0)
+    .map((p) => Math.floor((1 - Number(p.price_yearly) / (Number(p.price_monthly) * 12)) * 100)))
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
@@ -372,7 +377,7 @@ export default function PricingPage() {
                 billingCycle === 'yearly' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Yearly <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full ml-1">Save 17%</span>
+              Yearly {yearlySaving > 0 && <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full ml-1">Save {yearlySaving}%</span>}
             </button>
           </div>
         </div>
