@@ -8,6 +8,68 @@ type Stats = {
   counts: { careers: number; colleges: number; exams: number; students: number; scholarships: number; blogPosts: number }
   alerts: { id: string; severity: string; title: string; reason: string; href: string }[]
   alertCount: number
+  added30: { careers: number; scholarships: number; blogPosts: number; signups: number }
+  health: {
+    database: { ok: boolean; ms: number; error: string | null }
+    automation: { startedAt: string; finishedAt: string | null; status: string; failedSources: number } | null
+    reviewQueue: number
+  }
+}
+
+type Level = 'ok' | 'check' | 'problem'
+type HealthRow = { label: string; level: Level; detail: string; href?: string }
+
+const LEVEL_STYLE: Record<Level, { badge: string; icon: string; word: string }> = {
+  ok: { badge: 'bg-emerald-100 text-emerald-800', icon: 'text-emerald-600', word: 'OK' },
+  check: { badge: 'bg-amber-100 text-amber-800', icon: 'text-amber-600', word: 'Check' },
+  problem: { badge: 'bg-red-100 text-red-800', icon: 'text-red-600', word: 'Problem' },
+}
+
+function ago(iso: string): string {
+  const h = (Date.now() - new Date(iso).getTime()) / 3_600_000
+  if (h < 1) return 'less than an hour ago'
+  if (h < 24) return `${Math.round(h)} h ago`
+  const d = Math.round(h / 24)
+  return `${d} day${d === 1 ? '' : 's'} ago`
+}
+
+/** Turns the measured numbers into plain status lines (nothing here is assumed) */
+function healthRows(s: Stats): HealthRow[] {
+  const { database, automation, reviewQueue } = s.health
+  const rows: HealthRow[] = [
+    database.ok
+      ? { label: 'Database', level: database.ms < 800 ? 'ok' : 'check', detail: `Answered in ${database.ms} ms${database.ms < 800 ? '' : ' (slow)'}` }
+      : { label: 'Database', level: 'problem', detail: database.error || 'Not answering' },
+  ]
+
+  if (!automation) {
+    rows.push({ label: 'Data automation', level: 'check', detail: 'No runs recorded yet', href: '/admin/automation' })
+  } else {
+    const hours = (Date.now() - new Date(automation.startedAt).getTime()) / 3_600_000
+    const failed = automation.failedSources >= 200 ? '200+' : String(automation.failedSources)
+    const running = !automation.finishedAt && hours < 6
+    rows.push({
+      label: 'Data automation',
+      level: running ? 'ok' : !automation.finishedAt || hours > 36 ? 'check' : 'ok',
+      detail: running
+        ? `Running now (started ${ago(automation.startedAt)})`
+        : !automation.finishedAt
+          ? `Last run started ${ago(automation.startedAt)} and didn't finish`
+          : `Last run ${ago(automation.startedAt)}` +
+            (automation.failedSources > 0 ? ` · ${failed} official pages couldn't be read (sites down, slow or blocking)` : ' · every source read'),
+      href: '/admin/automation',
+    })
+  }
+
+  rows.push(reviewQueue === 0
+    ? { label: 'Changes to review', level: 'ok', detail: 'Nothing waiting', href: '/admin/automation' }
+    : { label: 'Changes to review', level: 'check', detail: `${reviewQueue} waiting for you`, href: '/admin/automation' })
+
+  rows.push(s.alertCount === 0
+    ? { label: 'Data freshness', level: 'ok', detail: 'No stale records', href: '/admin/alerts' }
+    : { label: 'Data freshness', level: 'check', detail: `${s.alertCount} record${s.alertCount === 1 ? '' : 's'} need a refresh`, href: '/admin/alerts' })
+
+  return rows
 }
 
 type ActivityItem = {
@@ -32,7 +94,8 @@ export default function AdminHomePage() {
       else setStats(statsJson)
       
       if (!auditJson.error) {
-        setRecentActivity(auditJson.logs?.map((log: any) => ({
+        type AuditLog = { id: string; action_type: string; table_name: string; created_at: string }
+        setRecentActivity((auditJson.logs as AuditLog[] | undefined)?.map((log) => ({
           id: log.id,
           type: log.action_type,
           description: `${log.action_type} on ${log.table_name}`,
@@ -44,20 +107,17 @@ export default function AdminHomePage() {
     })
   }, [])
 
-  const cards = [
-    { label: 'Careers', href: '/admin/careers', value: stats?.counts.careers, icon: Briefcase, color: 'bg-indigo-50 text-indigo-700', trend: '+12%' },
-    { label: 'Colleges', href: '/admin/colleges', value: stats?.counts.colleges, icon: Building2, color: 'bg-blue-50 text-blue-700', trend: '+8%' },
-    { label: 'Exams', href: '/admin/exams', value: stats?.counts.exams, icon: FileText, color: 'bg-emerald-50 text-emerald-700', trend: '+5%' },
-    { label: 'Student profiles', href: '/admin/students', value: stats?.counts.students, icon: Users, color: 'bg-amber-50 text-amber-700', trend: '+15%' },
-    { label: 'Scholarships', href: '/admin/scholarships', value: stats?.counts.scholarships, icon: DollarSign, color: 'bg-teal-50 text-teal-700', trend: '+10%' },
-    { label: 'Blog Posts', href: '/admin/blog', value: stats?.counts.blogPosts, icon: BookOpen, color: 'bg-rose-50 text-rose-700', trend: '+20%' },
+  // "New" shows real additions in the last 30 days, only where the table records when rows were added
+  const cards: { label: string; href: string; value?: number; icon: typeof Briefcase; color: string; recent?: string }[] = [
+    { label: 'Careers', href: '/admin/careers', value: stats?.counts.careers, icon: Briefcase, color: 'bg-indigo-50 text-indigo-700', recent: stats ? `${stats.added30.careers} added in 30 days` : undefined },
+    { label: 'Colleges', href: '/admin/colleges', value: stats?.counts.colleges, icon: Building2, color: 'bg-blue-50 text-blue-700' },
+    { label: 'Exams', href: '/admin/exams', value: stats?.counts.exams, icon: FileText, color: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Student profiles', href: '/admin/students', value: stats?.counts.students, icon: Users, color: 'bg-amber-50 text-amber-700', recent: stats ? `${stats.added30.signups} signed up in 30 days` : undefined },
+    { label: 'Scholarships', href: '/admin/scholarships', value: stats?.counts.scholarships, icon: DollarSign, color: 'bg-teal-50 text-teal-700', recent: stats ? `${stats.added30.scholarships} added in 30 days` : undefined },
+    { label: 'Blog posts', href: '/admin/blog', value: stats?.counts.blogPosts, icon: BookOpen, color: 'bg-rose-50 text-rose-700', recent: stats ? `${stats.added30.blogPosts} added in 30 days` : undefined },
   ]
 
-  const systemHealth = [
-    { label: 'Database Connection', status: 'healthy', icon: CheckCircle },
-    { label: 'API Response Time', status: 'good', icon: Activity },
-    { label: 'Data Freshness', status: stats?.alertCount === 0 ? 'excellent' : 'attention', icon: Clock },
-  ]
+  const systemHealth = stats?.health ? healthRows(stats) : []
 
   return (
     <div>
@@ -84,12 +144,14 @@ export default function AdminHomePage() {
           <Link key={card.label} href={card.href} className="bg-white border border-gray-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition">
             <div className="flex items-start justify-between mb-3">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${card.color}`}>
-                <card.icon className="w-5 h-5" />
+                <card.icon className="w-5 h-5" aria-hidden="true" />
               </div>
-              <div className="flex items-center gap-1 text-xs text-emerald-600">
-                <TrendingUp className="w-3 h-3" />
-                {card.trend}
-              </div>
+              {card.recent && (
+                <div className="flex items-center gap-1 text-xs text-gray-600">
+                  <TrendingUp className="w-3 h-3" aria-hidden="true" />
+                  {card.recent}
+                </div>
+              )}
             </div>
             <p className="text-2xl font-bold text-gray-900">{card.value ?? '—'}</p>
             <p className="text-sm text-gray-500">{card.label}</p>
@@ -104,25 +166,37 @@ export default function AdminHomePage() {
             <Activity className="w-4 h-4 text-emerald-500" />
             System Health
           </h2>
-          <div className="space-y-3">
-            {systemHealth.map((item) => (
-              <div key={item.label} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <item.icon className={`w-4 h-4 ${
-                    item.status === 'healthy' || item.status === 'excellent' ? 'text-emerald-500' : 
-                    item.status === 'good' ? 'text-blue-500' : 'text-amber-500'
-                  }`} />
-                  <span className="text-sm text-gray-700">{item.label}</span>
-                </div>
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                  item.status === 'healthy' || item.status === 'excellent' ? 'bg-emerald-100 text-emerald-700' : 
-                  item.status === 'good' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                </span>
-              </div>
-            ))}
-          </div>
+          {systemHealth.length === 0 ? (
+            <p className="text-sm text-gray-500">{loading ? 'Checking…' : 'Could not check right now.'}</p>
+          ) : (
+            <ul className="space-y-3">
+              {systemHealth.map((item) => {
+                const style = LEVEL_STYLE[item.level]
+                const Icon = item.level === 'ok' ? CheckCircle : AlertTriangle
+                const body = (
+                  <>
+                    <div className="flex items-start gap-3 min-w-0">
+                      <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${style.icon}`} aria-hidden="true" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900">{item.label}</p>
+                        <p className="text-xs text-gray-600">{item.detail}</p>
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-xs font-medium px-2 py-1 rounded-full ${style.badge}`}>{style.word}</span>
+                  </>
+                )
+                return (
+                  <li key={item.label}>
+                    {item.href ? (
+                      <Link href={item.href} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">{body}</Link>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-lg">{body}</div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
 
         {/* Recent Activity */}

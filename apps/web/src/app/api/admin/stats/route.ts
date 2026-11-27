@@ -9,6 +9,25 @@ export async function GET() {
 
   try {
     const supabase = createAdminSupabaseClient()
+
+    // Health: how long one small database query takes, measured now
+    const t0 = Date.now()
+    const ping = await supabase.from('careers').select('id', { count: 'exact', head: true })
+    const dbMs = Date.now() - t0
+
+    const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    const added = (table: string, key = 'id') =>
+      supabase.from(table).select(key, { count: 'exact', head: true }).gte('created_at', since30)
+
+    const [lastRun, reviewQueue, newCareers, newScholarships, newPosts, newSignups] = await Promise.all([
+      supabase.from('automation_runs').select('started_at, finished_at, status, errors').order('started_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('automation_proposals').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      added('careers'),
+      added('scholarships'),
+      added('blog_posts'),
+      added('user_accounts', 'user_id'),
+    ])
+
     const [
       careers,
       colleges,
@@ -52,6 +71,25 @@ export async function GET() {
       alerts: alerts.slice(0, 12),
       alertCount: alerts.length,
       auditCount: auditCount ?? 0,
+      // Added in the last 30 days (only tables that record when a row was added)
+      added30: {
+        careers: newCareers.count ?? 0,
+        scholarships: newScholarships.count ?? 0,
+        blogPosts: newPosts.count ?? 0,
+        signups: newSignups.count ?? 0,
+      },
+      health: {
+        database: { ok: !ping.error, ms: dbMs, error: ping.error?.message ?? null },
+        automation: lastRun.data
+          ? {
+              startedAt: lastRun.data.started_at,
+              finishedAt: lastRun.data.finished_at,
+              status: lastRun.data.status,
+              failedSources: Array.isArray(lastRun.data.errors) ? lastRun.data.errors.length : 0,
+            }
+          : null,
+        reviewQueue: reviewQueue.count ?? 0,
+      },
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to load admin stats'
