@@ -5,9 +5,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   await requireAdmin()
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    // Phones: menu bar on top, page below. Large screens: sidebar on the left.
+    <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50">
       <AdminSidebar />
-      <div className="flex-1 min-w-0 p-6 lg:p-8">{children}</div>
+      <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">{children}</div>
     </div>
   )
 }
